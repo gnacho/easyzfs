@@ -45,12 +45,18 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
 
-      - name: Tests Go
-        run: go test ./...
-
       - name: Build frontend
         working-directory: web
         run: npm ci --no-audit --no-fund && npm run build
+
+      # go:embed dist lo exige presente para compilar/tests; dist/ no se trackea
+      # (regenerado en CI, ver .gitignore). Antes del go test para que no falle
+      # con 'pattern dist: no matching files found'.
+      - name: Prepara dist/ para go:embed
+        run: rm -rf dist && cp -r web/dist dist
+
+      - name: Tests Go
+        run: go test ./...
 
       - name: Build binario estático (front embebido)
         env:
@@ -58,7 +64,6 @@ jobs:
         run: |
           VERSION="${REF#v}"
           [ "${{ github.ref_type }}" = "tag" ] || VERSION="0.0.0-SNAPSHOT-${GITHUB_SHA::7}"
-          rm -rf dist && cp -r web/dist dist
           CGO_ENABLED=0 go build -trimpath \
             -ldflags="-s -w -X main.version=${VERSION} -X main.build=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             -o "easyzfs_linux_${{ matrix.goarch }}" .
