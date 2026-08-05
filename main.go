@@ -35,6 +35,7 @@ import (
 	"easyzfs/internal/replication"
 	"easyzfs/internal/scheduler"
 	"easyzfs/internal/settings"
+	"easyzfs/internal/updater"
 	"easyzfs/internal/users"
 )
 
@@ -110,6 +111,10 @@ func main() {
 	backupStore := backup.New(database, cfg.DBPath, stStore)
 	go backupStore.RunLoop(ctx)
 
+	// Updater: detecta releases semver y prepara el apply (el swap lo hace la
+	// unit easyzfs-update.path). Inerte si version=dev o sin DATA_DIR escribible.
+	updaterSvc := updater.New(version, cfg.DataDir())
+
 	// Versión de OpenZFS del host (una vez, al arranque).
 	zfsVersion := "mock"
 	if !cfg.Mock {
@@ -124,7 +129,7 @@ func main() {
 		Pools: providers.Pools, Disks: providers.Disks, SysTimers: providers.SysTimers,
 		Perf: providers.Perf, Caps: providers.Caps,
 		Actions: act, Sched: sched, Jobs: jobStore, Hub: h, Push: pushSender,
-		Backup: backupStore, LongOps: longOps, Repl: replRunner,
+		Backup: backupStore, LongOps: longOps, Repl: replRunner, Updater: updaterSvc,
 		Version: version, Build: build, ZFSVersion: zfsVersion,
 	})
 

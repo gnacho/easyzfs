@@ -26,6 +26,7 @@ import (
 	"easyzfs/internal/replication"
 	"easyzfs/internal/scheduler"
 	"easyzfs/internal/settings"
+	"easyzfs/internal/updater"
 	"easyzfs/internal/users"
 )
 
@@ -50,6 +51,7 @@ type Server struct {
 	backup     *backup.Store
 	longOps    *longops.Manager
 	repl       *replication.Runner
+	updater    *updater.Updater
 	started    time.Time
 	version    string
 	build      string
@@ -79,6 +81,7 @@ type Deps struct {
 	Backup     *backup.Store
 	LongOps    *longops.Manager
 	Repl       *replication.Runner
+	Updater    *updater.Updater
 	Version    string
 	Build      string
 	ZFSVersion string
@@ -93,6 +96,7 @@ func NewServer(d Deps) *Server {
 		perf: d.Perf, caps: d.Caps,
 		act: d.Actions, sched: d.Sched, jstore: d.Jobs, h: d.Hub, push: d.Push,
 		backup: d.Backup, longOps: d.LongOps, repl: d.Repl,
+		updater: d.Updater,
 		started: time.Now(), version: d.Version, build: d.Build, zfsVersion: d.ZFSVersion,
 		loginLimiter: newLoginLimiter(),
 	}
@@ -206,6 +210,8 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("POST /api/backup/run", s.auth.RequireAdmin(s.backupRun))
 	a.HandleFunc("GET /api/backup/download", s.auth.RequireAdmin(s.backupDownload))
 	a.HandleFunc("POST /api/backup/import", s.auth.RequireAdmin(s.backupImport))
+	// Actualizaciones (solo admin; wireUpdater registra las rutas si hay updater)
+	s.wireUpdater(a)
 	// SSE (con el usuario de la sesión para la regla no-duplicar push/SSE)
 	a.Handle("GET /api/events", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		s.h.ServeSSE(w, r, actor(r))

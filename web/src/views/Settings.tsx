@@ -107,24 +107,43 @@ function ReleaseIcon({ version }: { version: string | undefined }) {
   return null;
 }
 
-// Fila "Comprobar actualizaciones" (Acerca de, solo admin): botón manual que
-// fuerza la consulta a GitHub al momento (además del check pasivo semanal de
-// releasecheck.ts). Muestra el resultado inline: al día, nueva versión
-// (enlace a las novedades) o error con reintento.
+// Fila "Comprobar actualizaciones" (Acerca de, solo admin): consulta al
+// servidor (/api/update/status) que detecta releases semver del repo público;
+// si hay versión nueva, botón "Actualizar" que aplica (el servidor descarga+
+// valida y easyzfs-update.path reinicia con el binario nuevo). Muestra el
+// resultado inline: al día, nueva versión, aplicando o error.
 function UpdateCheckRow({ version }: { version: string | undefined }) {
   const { t } = useApp();
-  const rel = useReleaseCheck(version, true);
-  const [checking, setChecking] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
+  const [applying, setApplying] = useState(false);
+  const [latest, setLatest] = useState('');
 
   const check = async () => {
-    setChecking(true); setFailed(false);
+    setState('checking');
     try {
-      await checkReleaseNow(version);
+      const st = await getProvider().getUpdateStatus();
+      if (st.available) {
+        setLatest(st.latest);
+        setState('available');
+      } else {
+        setState('uptodate');
+      }
     } catch {
-      setFailed(true);
+      setState('error');
     }
-    setChecking(false);
+  };
+
+  const apply = async () => {
+    setApplying(true);
+    try {
+      await getProvider().applyUpdate();
+      // El servidor reinicia el servicio; la app se recarga con el build nuevo.
+      setState('uptodate');
+    } catch {
+      setState('error');
+    } finally {
+      setApplying(false);
+    }
   };
 
   return (
@@ -135,18 +154,21 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
       <div className="grow">
         <b>{t('ab_checkupd')}</b>
         <div className="d">
-          {checking ? t('ab_checking')
-            : failed ? t('ab_upderr')
-            : rel.kind === 'available' ? t('ab_newver', { v: rel.version })
-            : rel.kind === 'uptodate' ? t('ab_uptodate', { v: version ?? '' })
+          {state === 'checking' ? t('ab_checking')
+            : applying ? t('ab_updapp')
+            : state === 'available' ? t('ab_newver', { v: latest })
+            : state === 'error' ? t('ab_upderr')
+            : state === 'uptodate' ? t('ab_uptodate', { v: version ?? '' })
             : t('s_about_d')}
         </div>
       </div>
-      {rel.kind === 'available' && !failed && (
-        <a className="btn sm" href={rel.url} target="_blank" rel="noreferrer">{t('ab_viewrel')}</a>
+      {state === 'available' && (
+        <button className="btn sm primary" disabled={applying} onClick={() => { void apply(); }}>
+          {applying ? t('ab_updapp') : t('upd_rel_upd')}
+        </button>
       )}
-      <button className="btn sm primary" disabled={checking} onClick={() => { void check(); }}>
-        {checking ? t('ab_checking') : failed ? t('ab_retry') : t('ab_checkupd')}
+      <button className="btn sm" disabled={state === 'checking' || applying} onClick={() => { void check(); }}>
+        {state === 'checking' ? t('ab_checking') : state === 'error' ? t('ab_retry') : t('ab_checkupd')}
       </button>
     </div>
   );

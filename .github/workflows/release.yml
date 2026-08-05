@@ -1,9 +1,17 @@
 name: release
 
 # Release estable por tag v*: compila el frontend (web/) y el binario Go
-# estático (CGO_ENABLED=0, front embebido) para amd64 y arm64, genera
-# checksums.txt y publica los assets. deploy/install.sh verifica cada
-# descarga contra checksums.txt (regla del skill installer-one-liner).
+# estático (CGO_ENABLED=0, front embebido) para amd64 y arm64, consolida un
+# checksums.txt ÚNICO y publica los assets.
+#
+# Naming GOARCH estándar (easyzfs_linux_amd64 / easyzfs_linux_arm64): es lo que
+# espera creativeprojects/go-selfupdate ({cmd}_{goos}_{goarch}) para el
+# auto-update in-app. install.sh resuelve también los nombres viejos
+# (easyzfs-linux-{x86_64,aarch64} + checksums-<arch>.txt) para releases antiguas.
+#
+# La carrera de checksums.txt (v2.1.2) se resuelve consolidando en un job final:
+# cada build sube su binario como artifact y 'consolidate' genera el
+# checksums.txt único + publica todo (un solo publisher).
 
 on:
   push:
@@ -19,9 +27,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
+          - goarch: amd64
             runs-on: ubuntu-latest
-          - arch: aarch64
+          - goarch: arm64
             runs-on: ubuntu-24.04-arm
     runs-on: ${{ matrix.runs-on }}
     steps:
@@ -53,32 +61,48 @@ jobs:
           rm -rf dist && cp -r web/dist dist
           CGO_ENABLED=0 go build -trimpath \
             -ldflags="-s -w -X main.version=${VERSION} -X main.build=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            -o "easyzfs-linux-${{ matrix.arch }}" .
-          ls -la "easyzfs-linux-${{ matrix.arch }}"
-          file "easyzfs-linux-${{ matrix.arch }}" || true
+            -o "easyzfs_linux_${{ matrix.goarch }}" .
+          ls -la "easyzfs_linux_${{ matrix.goarch }}"
+          file "easyzfs_linux_${{ matrix.goarch }}" || true
 
-      - name: Checksums
+      - name: Sube binario como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: easyzfs-bin-linux-${{ matrix.goarch }}
+          path: easyzfs_linux_${{ matrix.goarch }}
+          if-no-files-found: error
+
+  consolidate:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descarga binarios de ambos archs
+        uses: actions/download-artifact@v4
+        with:
+          path: bin
+          pattern: easyzfs-bin-linux-*
+          merge-multiple: true
+
+      - name: Genera checksums.txt único y lista
         run: |
-          # Un fichero POR arch: ambos jobs de la matrix publican en la misma
-          # release y un checksums.txt compartido llegaba pisado (carrera
-          # vista en v2.1.2: solo quedó la línea aarch64).
-          sha256sum easyzfs-linux-${{ matrix.arch }} > checksums-${{ matrix.arch }}.txt
-          cat checksums-${{ matrix.arch }}.txt
+          sha256sum bin/easyzfs_linux_* > checksums.txt
+          cat checksums.txt
+          ls -la bin/
 
       - name: Publica en la release (solo tags)
         if: github.ref_type == 'tag'
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            easyzfs-linux-${{ matrix.arch }}
-            checksums-${{ matrix.arch }}.txt
+            bin/easyzfs_linux_*
+            checksums.txt
 
       - name: Sube artifact de prueba (solo workflow_dispatch)
         if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v4
         with:
-          name: easyzfs-snapshot-linux-${{ matrix.arch }}
+          name: easyzfs-snapshot
           path: |
-            easyzfs-linux-${{ matrix.arch }}
-            checksums-${{ matrix.arch }}.txt
+            bin/easyzfs_linux_*
+            checksums.txt
           retention-days: 7
