@@ -1,12 +1,13 @@
-// Vista Snapshots: árbol por dataset con acciones de restaurar/eliminar.
+// Vista Snapshots: árbol por dataset con acciones de restaurar/eliminar/clonar/diff.
 import { useEffect, useMemo, useState } from 'react';
 import { useData } from '../ui/useData';
-import { useApp } from '../ui/store';
+import { useApp, errorMessage } from '../ui/store';
 import { fmtBytes, timeAgo } from '../ui/format';
 import { Badge, Spinner } from '../components/ui';
 import { IconChev } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { subscribeEvents } from '../data/events';
+import { getProvider } from '../data';
 
 export default function Snapshots() {
   const { t, isAdmin } = useApp();
@@ -15,13 +16,12 @@ export default function Snapshots() {
   const [poolFilter, setPoolFilter] = useState<string>('');
   const { data, loading, reload } = useData((p) => p.getSnapshots());
   const [open, setOpen] = useState<Set<string>>(new Set());
+  const [err, setErr] = useState('');
 
   useEffect(() => { if (!poolFilter && pools.data?.length) setPoolFilter(pools.data[0].name); }, [pools.data, poolFilter]);
 
-  // Refresca al crear snapshots o terminar tareas
   useEffect(() => subscribeEvents((ev) => {
     if (ev.type === 'job.finished' || ev.type === 'overview') reload();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
 
   const groups = useMemo(
@@ -33,6 +33,16 @@ export default function Snapshots() {
     if (n.has(ds)) n.delete(ds); else n.add(ds);
     return n;
   });
+
+  const cloneSnap = async (full: string) => { setErr('');
+    try {
+      const target = prompt(t('clone_target_ph'));
+      if (!target) return;
+      const mount = prompt(t('clone_mount_ph'));
+      await getProvider().cloneSnapshot(full, target, mount || undefined);
+      reload();
+    } catch (e) { setErr(errorMessage(e, t)); }
+  };
 
   return (
     <div className="view">
@@ -46,6 +56,7 @@ export default function Snapshots() {
         </button>
       </div>
       {loading && !data && <Spinner label={t('loading')} />}
+      {err && <p className="form-err" role="alert">{err}</p>}
       <div className="grid snaps">
         {groups.map((g) => (
           <div className={`card snapgroup ${open.has(g.dataset) ? 'open' : ''}`} key={g.dataset}>
@@ -69,6 +80,8 @@ export default function Snapshots() {
                       onClick={() => openModal('rollback', { full: s.full })}>{t('snap_restore')}</button>
                     <button className="btn sm danger" disabled={!isAdmin} title={!isAdmin ? t('no_permission') : undefined}
                       onClick={() => openModal('delsnap', { full: s.full })}>{t('snap_delete')}</button>
+                    <button className="btn sm" disabled={!isAdmin}
+                      onClick={() => cloneSnap(s.full)}>{t('snap_clone')}</button>
                   </span>
                 </div>
               ))}

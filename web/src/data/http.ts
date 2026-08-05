@@ -4,7 +4,7 @@ import { ApiError } from './types';
 import { notifyAuthExpired } from './events';
 import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
+  Dataset, DiffEntry, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UserInfo, VersionInfo,
 } from './types';
@@ -208,4 +208,17 @@ export class HttpProvider implements DataProvider {
   getPushQuietHours = () => get<PushQuietHours>('/push/quiet-hours');
   putPushQuietHours = (q: { enabled: boolean; start: number; end: number }) =>
     put<void>('/push/quiet-hours', q);
+
+  // --- Nuevos: snapshot, dataset, pool ---
+  cloneSnapshot = (full: string, target: string, mountpoint?: string) =>
+    post<{ name: string }>(`/snapshots/${enc(full)}/clone`, { target, mountpoint });
+  snapshotDiff = (from: string, to: string) =>
+    get<DiffEntry[]>(`/snapshots/diff?from=${enc(from)}&to=${enc(to)}`);
+  renameDataset = (name: string, newName: string) =>
+    patch<void>(`/datasets/${enc(name)}/rename`, { new_name: newName });
+  mountDataset = (name: string) => post<void>(`/datasets/${enc(name)}/mount`, {});
+  unmountDataset = (name: string) => post<void>(`/datasets/${enc(name)}/unmount`, {});
+  promoteDataset = (name: string) => post<void>(`/datasets/${enc(name)}/promote`, {});
+  clearPool = (pool: string, dev?: string) =>
+    post<void>(`/pools/${enc(pool)}/clear`, dev ? { dev } : {});
 }

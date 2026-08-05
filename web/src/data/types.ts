@@ -194,6 +194,13 @@ export interface SnapshotGroup {
   snaps: Snapshot[];
 }
 
+// Entrada de 'zfs diff -FHt' (GET /api/snapshots/diff?from=&to=)
+export interface DiffEntry {
+  type: string;    // M, +, -, R
+  path: string;
+  new_path?: string;
+}
+
 export type JobType = 'snapshot' | 'scrub' | 'trim' | 'smart_short' | 'smart_long' | 'poweroff' | 'replication';
 
 // Job de replicación ZFS send/recv (GET /api/replication).

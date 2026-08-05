@@ -223,9 +223,13 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
           <button className="btn sm" title={t('xpd_hint')}
             onClick={() => openModal('expand', { pool })}>{t('xpd_btn')}</button>
         )}
-        <button className="btn sm danger" disabled={!isAdmin} title={!isAdmin ? t('no_permission') : t('pool_export_hint')}
+        <button className="btn sm" disabled={!isAdmin} title={!isAdmin ? t('no_permission') : t('pool_export_hint')}
           onClick={() => openModal('export', { pool: pool.name })}>
           {t('pool_export')}
+        </button>
+        <button className="btn sm" disabled={!isAdmin} title={t('pool_clear_hint')}
+          onClick={() => getProvider().clearPool(pool.name).then(onChanged).catch((e: Error) => setErr(e.message))}>
+          {t('pool_clear')}
         </button>
       </div>
     </div>

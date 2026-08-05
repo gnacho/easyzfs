@@ -848,4 +848,17 @@ export class MockProvider implements DataProvider {
     return { enabled: false, start: null, end: null, tz: 'Europe/Madrid' };
   };
   putPushQuietHours = async () => { await delay(); };
+
+  // --- Nuevos: snapshot, dataset, pool (stubs demo) ---
+  cloneSnapshot = async (full: string, target: string, _mountpoint?: string) => {
+    await delay();
+    // En demo: simula éxito sin tocar el estado.
+    return { name: target };
+  };
+  snapshotDiff = async (_from: string, _to: string) => { await delay(); return []; };
+  renameDataset = async (_name: string, _newName: string) => { await delay(); };
+  mountDataset = async (_name: string) => { await delay(); };
+  unmountDataset = async (_name: string) => { await delay(); };
+  promoteDataset = async (_name: string) => { await delay(); };
+  clearPool = async (_pool: string, _dev?: string) => { await delay(); };
 }

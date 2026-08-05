@@ -1,12 +1,13 @@
 // Vista Datasets: tabla de datasets/zvols con acciones por fila.
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useData } from '../ui/useData';
-import { useApp } from '../ui/store';
+import { useApp, errorMessage } from '../ui/store';
 import { fmtBytes } from '../ui/format';
 import { Badge, Spinner } from '../components/ui';
 import { IconLock, IconUnlock } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { subscribeEvents } from '../data/events';
+import { getProvider } from '../data';
 
 export default function Datasets() {
   const { t, isAdmin, caps } = useApp();
@@ -21,6 +22,12 @@ export default function Datasets() {
   }), []);
 
   const running = new Set((ops.data ?? []).filter((o) => o.status === 'running').map((o) => o.target));
+
+  const [err, setErr] = useState('');
+  const dsAct = async (fn: () => Promise<void>) => {
+    setErr('');
+    try { await fn(); } catch (e) { setErr(errorMessage(e, t)); }
+  };
 
   return (
     <div className="view">
@@ -96,6 +103,30 @@ export default function Datasets() {
                   {isAdmin && (
                     <button className="btn sm danger" onClick={(e) => { e.stopPropagation(); openModal('delds', { name: d.name }); }}>
                       {t('delete')}
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button className="btn sm" title={t('ds_mount')}
+                      onClick={(e) => { e.stopPropagation(); dsAct(() => getProvider().mountDataset(d.name)); }}>
+                      {t('ds_mount')}
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button className="btn sm" title={t('ds_unmount')}
+                      onClick={(e) => { e.stopPropagation(); dsAct(() => getProvider().unmountDataset(d.name)); }}>
+                      {t('ds_unmount')}
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button className="btn sm" title={t('ds_rename')}
+                      onClick={(e) => { e.stopPropagation(); openModal('renameds', { name: d.name }); }}>
+                      {t('ds_rename')}
+                    </button>
+                  )}
+                  {isAdmin && (
+                    <button className="btn sm" title={t('ds_promote_hint')}
+                      onClick={(e) => { e.stopPropagation(); dsAct(() => getProvider().promoteDataset(d.name)); }}>
+                      {t('ds_promote')}
                     </button>
                   )}
                 </td>

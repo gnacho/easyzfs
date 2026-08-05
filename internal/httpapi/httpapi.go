@@ -8,8 +8,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"easyzfs/internal/actions"
@@ -209,8 +211,97 @@ func (s *Server) Handler() http.Handler {
 		s.h.ServeSSE(w, r, actor(r))
 	}))
 
-	root.Handle("/api/", s.auth.Middleware(s.demoGuard(a)))
+	root.Handle("/api/", s.auth.Middleware(s.rateGuard(s.csrfGuard(s.demoGuard(a)))))
 	return root
+}
+
+// rateGuard — limita mutaciones a 30 por minuto por IP. Solo lectura (GET/HEAD)
+// sin límite. El bucket es en memoria (sin persistencia, aceptable para LAN).
+type rateGuardBucket struct {
+	mu   sync.Mutex
+	hits map[string][]time.Time
+}
+
+func (b *rateGuardBucket) allow(ip string, now time.Time, max int, window time.Duration) bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	list := b.hits[ip]
+	cutoff := now.Add(-window)
+	j := 0
+	for ; j < len(list) && list[j].Before(cutoff); j++ {
+	}
+	list = list[j:]
+	if len(list) >= max {
+		b.hits[ip] = list
+		return false
+	}
+	list = append(list, now)
+	b.hits[ip] = list
+	return true
+}
+
+var rateGuardGlobal = &rateGuardBucket{hits: map[string][]time.Time{}}
+
+func (s *Server) rateGuard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead {
+			next.ServeHTTP(w, r)
+			return
+		}
+		ip := r.RemoteAddr
+		if idx := strings.LastIndex(ip, ":"); idx != -1 {
+			ip = ip[:idx]
+		}
+		if !rateGuardGlobal.allow(ip, time.Now(), 30, time.Minute) {
+			writeErr(w, http.StatusTooManyRequests, "rate_limited",
+				"demasiadas peticiones; inténtalo de nuevo en unos segundos")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// csrfGuard — si CSRF_CHECK=1, valida Origin/Referer contra Host en mutaciones
+// (POST/PUT/PATCH/DELETE). Por defecto DESACTIVADO (SameSite=Lax es suficiente en
+// LAN); activar solo si se expone a internet con COOKIE_SECURE=1 y TLS.
+func (s *Server) csrfGuard(next http.Handler) http.Handler {
+	check := os.Getenv("CSRF_CHECK")
+	if check != "1" && check != "true" {
+		return next // desactivado por defecto → sin sobrecarga
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead {
+			next.ServeHTTP(w, r)
+			return
+		}
+		origin := r.Header.Get("Origin")
+		if origin == "" {
+			origin = r.Header.Get("Referer")
+		}
+		if origin != "" {
+			host := r.Host
+			if strings.HasPrefix(origin, "https://") {
+				origin = origin[8:]
+			} else if strings.HasPrefix(origin, "http://") {
+				origin = origin[7:]
+			}
+			if i := strings.Index(origin, "/"); i != -1 {
+				origin = origin[:i]
+			}
+			if i := strings.Index(origin, ":"); i != -1 {
+				origin = origin[:i]
+			}
+			if i := strings.Index(host, ":"); i != -1 {
+				host = host[:i]
+			}
+			if origin != host {
+				writeErr(w, http.StatusForbidden, "csrf",
+					"petición rechazada: origen '"+origin+"' no coincide con el host '"+host+"'")
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // demoGuard — en DEMO=1 las mutaciones devuelven 403 demo_mode

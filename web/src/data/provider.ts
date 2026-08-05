@@ -1,7 +1,7 @@
 // Interfaz DataProvider: abstrae el origen de datos (HTTP real o mock demo).
 import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
+  Dataset, DiffEntry, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UserInfo, VersionInfo,
 } from './types';
@@ -16,10 +16,9 @@ export interface DataProvider {
   getAlerts(): Promise<Alert[]>;
   ackAlert(id: number): Promise<void>;
   getOverview(): Promise<Overview>;
-  // Actividad (audit_log) con límite opcional — para el "Ver más" de Ajustes
   getActivity(limit?: number): Promise<ActivityItem[]>;
 
-  // Copia de seguridad de la BD (admin; la descarga es enlace directo con cookie)
+  // Copia de seguridad de la BD
   getBackupStatus(): Promise<BackupStatus>;
   runBackup(): Promise<BackupFile>;
   importBackup(file: File): Promise<void>;
@@ -31,11 +30,8 @@ export interface DataProvider {
   setMyPassword(current: string, next: string): Promise<void>;
   setMyLanguage(language: Lang): Promise<void>;
   updateMyProfile(displayName: string, email: string): Promise<void>;
-  // Avatar: body binario (webp/jpeg recortado en cliente, máx. 512 KB).
   setMyAvatar(blob: Blob): Promise<void>;
   deleteMyAvatar(): Promise<void>;
-  // URL de la foto de perfil de un usuario ('' → sin foto). Sincrónico:
-  // en real es /api/avatars/{name}; en mock, un object URL en memoria.
   avatarUrl(name: string): string;
 
   // Usuarios (admin)
@@ -58,23 +54,24 @@ export interface DataProvider {
   checkpointPool(pool: string, action: 'create' | 'discard', confirm: string): Promise<void>;
   getPoolHistory(pool: string): Promise<PoolHistoryEntry[]>;
   getPerformance(): Promise<Performance>;
+  clearPool(pool: string, dev?: string): Promise<void>;
+  expandPool(pool: string, vdev: string, disk: string, confirm: string): Promise<void>;
 
   // Datasets
   getDatasets(): Promise<Dataset[]>;
   createDataset(r: CreateDatasetReq): Promise<void>;
   updateDataset(name: string, patch: { quota_bytes?: number; compression?: string }): Promise<void>;
   deleteDataset(name: string, confirm: string, recursive: boolean): Promise<void>;
-  // zfs rewrite como operación larga (admin; gate capabilities.rewrite)
   rewriteDataset(name: string, confirm: string): Promise<{ op_id: string }>;
-  // Cifrado nativo por dataset (lote D; admin). La clave viaja en el body
-  // JSON y vive solo en memoria de la petición.
   unlockDataset(name: string, key: string): Promise<void>;
   lockDataset(name: string): Promise<void>;
   changeDatasetKey(name: string, currentKey: string, newKey: string): Promise<void>;
-  // RAID-Z expansion (lote D; admin; gate capabilities.raidz_expansion)
-  expandPool(pool: string, vdev: string, disk: string, confirm: string): Promise<void>;
+  renameDataset(name: string, newName: string): Promise<void>;
+  mountDataset(name: string): Promise<void>;
+  unmountDataset(name: string): Promise<void>;
+  promoteDataset(name: string): Promise<void>;
 
-  // Operaciones largas (runner del backend; registro en memoria)
+  // Operaciones largas
   getLongOps(): Promise<LongOp[]>;
   cancelLongOp(id: string): Promise<void>;
 
@@ -83,6 +80,8 @@ export interface DataProvider {
   createSnapshot(r: CreateSnapshotReq): Promise<void>;
   deleteSnapshot(full: string, confirm: string): Promise<void>;
   rollback(full: string, confirm: string): Promise<void>;
+  cloneSnapshot(full: string, target: string, mountpoint?: string): Promise<{ name: string }>;
+  snapshotDiff(from: string, to: string): Promise<DiffEntry[]>;
 
   // Tareas
   getJobs(): Promise<Job[]>;
@@ -91,7 +90,6 @@ export interface DataProvider {
   deleteJob(id: number, confirm: string): Promise<void>;
   runJob(id: number): Promise<void>;
   getJobHistory(): Promise<JobHistoryItem[]>;
-  // Replicación ZFS send/recv (local y SSH; mutaciones admin)
   getReplicationJobs(): Promise<ReplicationJob[]>;
   createReplicationJob(r: CreateReplicationReq): Promise<void>;
   updateReplicationJob(id: number, r: UpdateReplicationReq): Promise<void>;
@@ -110,12 +108,10 @@ export interface DataProvider {
   smartTest(dev: string, type: 'short' | 'long'): Promise<void>;
   poweroffDisk(dev: string): Promise<void>;
 
-  // Notificaciones push (Web Push; 503 push_not_configured sin claves VAPID)
+  // Notificaciones push
   getPushVapidKey(): Promise<{ publicKey: string }>;
   pushSubscribe(sub: PushSubscriptionJSON, lang: 'es' | 'en'): Promise<void>;
   pushUnsubscribe(endpoint: string): Promise<void>;
-
-  // Preferencias de notificación y horario silencioso (del propio usuario)
   getPushPreferences(): Promise<{ preferences: PushPreference[] }>;
   putPushPreference(tipo: PushAlertTipo, enabled: boolean): Promise<void>;
   getPushQuietHours(): Promise<PushQuietHours>;

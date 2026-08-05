@@ -50,6 +50,7 @@ export function ModalHost() {
     case 'newds': return <NewDatasetModal vol={!!p.vol} onClose={closeModal} />;
     case 'editds': return <EditDatasetModal ds={p.ds as Dataset} onClose={closeModal} />;
     case 'delds': return <DeleteDatasetModal name={p.name as string} onClose={closeModal} />;
+    case 'renameds': return <RenameDatasetModal name={p.name as string} onClose={closeModal} />;
     case 'rewrite': return <RewriteModal ds={p.ds as Dataset} onClose={closeModal} />;
     case 'unlockds': return <UnlockDatasetModal ds={p.ds as Dataset} onClose={closeModal} />;
     case 'lockds': return <LockDatasetModal ds={p.ds as Dataset} onClose={closeModal} />;
@@ -1631,6 +1632,40 @@ function DeleteUserModal({ user, onClose }: { user: string; onClose: () => void 
         <div className="m-actions">
           <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
           <SubmitBtn label={t('delete')} busy={busy} danger disabled={confirm.trim() !== user} />
+        </div>
+      </form>
+    </ModalBox>
+  );
+}
+
+// ---------- Rename dataset ----------
+function RenameDatasetModal({ name, onClose }: { name: string; onClose: () => void }) {
+  const { t, refresh } = useApp();
+  const [newName, setNewName] = useState(name);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newName === name || !newName.trim()) return;
+    setBusy(true); setErr('');
+    try {
+      await getProvider().renameDataset(name, newName.trim());
+      refresh(); onClose();
+    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+  };
+
+  return (
+    <ModalBox onClose={onClose} label={t('ds_rename')}>
+      <form onSubmit={submit}>
+        <h3>{t('ds_rename')}</h3>
+        <p className="desc mono" style={{ marginBottom: 10 }}>{name}</p>
+        <input placeholder={t('ds_rename_ph')} value={newName}
+          onChange={(e) => setNewName(e.target.value)} autoFocus />
+        {err && <p className="form-err" role="alert">{err}</p>}
+        <div className="m-actions">
+          <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
+          <SubmitBtn label={t('save')} busy={busy} />
         </div>
       </form>
     </ModalBox>
