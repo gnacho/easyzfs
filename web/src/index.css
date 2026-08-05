@@ -442,6 +442,7 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
 .alert{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);font-size:13.5px}
 .alert:last-child{border-bottom:none}
 .alert .ico{flex-shrink:0;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700}
+.alert .btn.sm{white-space:nowrap}
 .alert.clickable{cursor:pointer}
 .alert.clickable:hover{background:var(--surface2)}
 .alert .chev{align-self:center;margin-left:auto;color:var(--text2)}
@@ -632,7 +633,7 @@ svg{flex-shrink:0}
 
 /* panel de alertas (popover) */
 .alertpanel{
-  position:absolute;top:46px;right:0;width:min(360px,calc(100vw - 32px));
+  position:absolute;top:46px;right:0;width:min(420px,calc(100vw - 32px));
   background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
   box-shadow:0 8px 28px rgba(10,14,10,.18);z-index:50;overflow:hidden;
 }
