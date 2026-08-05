@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EasyZFS — Tu ZFS, bajo control. Ligero, local y libre.</title>
-  <meta name="description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en un LXC de 256 MB. Sin nube, sin Docker. AGPL-3.0." />
+  <meta name="description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en el mismo host que tus pools. Sin nube, sin Docker. AGPL-3.0." />
   <meta name="theme-color" content="#ffffff" />
   <link rel="canonical" href="https://easyzfs.cloudless.club/" />
   <link rel="alternate" hreflang="es" href="https://easyzfs.cloudless.club/" />
@@ -13,7 +13,7 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="EasyZFS" />
   <meta property="og:title" content="EasyZFS — Tu ZFS, bajo control. Ligero, local y libre." />
-  <meta property="og:description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en un LXC de 256 MB." />
+  <meta property="og:description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en el mismo host que tus pools." />
   <meta property="og:url" content="https://easyzfs.cloudless.club/" />
   <meta property="og:image" content="https://easyzfs.cloudless.club/og.png" />
   <meta property="og:image:width" content="1200" />
@@ -22,7 +22,7 @@
   <meta property="og:locale:alternate" content="en_US" />
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="EasyZFS — Tu ZFS, bajo control. Ligero, local y libre." />
-  <meta name="twitter:description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en un LXC de 256 MB." />
+  <meta name="twitter:description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en el mismo host que tus pools." />
   <meta name="twitter:image" content="https://easyzfs.cloudless.club/og.png" />
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96' fill='none'%3E%3Crect x='20' y='16' width='56' height='64' rx='10' stroke='%230E9A6E' stroke-width='6'/%3E%3Cpath d='M20 40h56' stroke='%230E9A6E' stroke-width='6'/%3E%3Crect x='30' y='24' width='14' height='8' rx='3' fill='%230E9A6E'/%3E%3Crect x='52' y='24' width='14' height='8' rx='3' fill='%230E9A6E'/%3E%3Ccircle cx='34' cy='54' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='48' cy='54' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='62' cy='54' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='34' cy='68' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='48' cy='68' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='62' cy='68' r='4' fill='%230E9A6E'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -47,7 +47,7 @@
         "operatingSystem": "Linux",
         "url": "https://github.com/gnacho/easyzfs",
         "license": "https://www.gnu.org/licenses/agpl-3.0.html",
-        "description": "Control de pools ZFS ligero y autoalojado: un único binario Go que vive en tu NAS. Pools, datasets, snapshots, discos SMART, replicación, encriptación y alertas push. Corre en un LXC de 256 MB, sin Docker.",
+        "description": "Control de pools ZFS ligero y autoalojado: un único binario Go que vive en el host de tus pools. Pools, datasets, snapshots, discos SMART, replicación, encriptación y alertas push. Sin Docker.",
         "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
         "isAccessibleForFree": true
       },
@@ -62,7 +62,7 @@
           {
             "@type": "Question",
             "name": "¿Qué requisitos tiene EasyZFS?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Linux con systemd y ZFS. Un LXC de 256 MB es suficiente. Sin Docker." }
+            "acceptedAnswer": { "@type": "Answer", "text": "Linux con systemd y ZFS. Basta un host con el pool ZFS. Sin Docker." }
           },
           {
             "@type": "Question",
@@ -72,7 +72,7 @@
           {
             "@type": "Question",
             "name": "¿Qué diferencia a EasyZFS de TrueNAS?",
-            "acceptedAnswer": { "@type": "Answer", "text": "EasyZFS es una herramienta de control ZFS, no un NAS completo: no sirve SMB/NFS/iSCSI ni ejecuta apps o VMs. Corre en un LXC de 256 MB con un único binario." }
+            "acceptedAnswer": { "@type": "Answer", "text": "EasyZFS es una herramienta de control ZFS, no un NAS completo: no sirve SMB/NFS/iSCSI ni ejecuta apps o VMs. Corre en el mismo host que tus pools con un único binario." }
           },
           {
             "@type": "Question",
@@ -130,7 +130,7 @@
           <span data-i18n="hero.t1">Tu ZFS, bajo control.</span><br />
           <span class="text-accent" data-i18n="hero.t2">Ligero, local y libre.</span>
         </h1>
-        <p class="hero-sub" data-i18n="hero.sub">EasyZFS es un único binario que vive en tu propio NAS: pools, datasets, snapshots, discos y alertas desde una interfaz web limpia. Corre en un LXC de 256&nbsp;MB. Sin nube, sin Docker, sin suscripción.</p>
+        <p class="hero-sub" data-i18n="hero.sub">EasyZFS es un único binario que vive en el propio host de tus pools ZFS: pools, datasets, snapshots, discos y alertas desde una interfaz web limpia. Sin nube, sin Docker, sin suscripción.</p>
         <div class="hero-actions">
           <a class="btn-primary" href="#install">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -150,7 +150,7 @@
           <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span data-i18n="facts.binary">Un solo binario · ~15 MB</span></span>
           <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--ok))" stroke-width="1.75" stroke-linecap="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><line x1="4" y1="4" x2="20" y2="20"/></svg><span data-i18n="facts.noCloud">Sin nube</span></span>
           <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span data-i18n="facts.free">100% libre · AGPL-3.0</span></span>
-          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--info))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/></svg><span data-i18n="facts.lxc">LXC de 256 MB</span></span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--info))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/></svg><span data-i18n="facts.lxc">En el host de tu pool</span></span>
           <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--warn))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span data-i18n="facts.push">Web Push al móvil</span></span>
         </div>
 
@@ -201,7 +201,7 @@
           <div class="card principle reveal">
             <svg class="big" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--info))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
             <h3 data-i18n="principles.p3t">Ligero por diseño</h3>
-            <p data-i18n="principles.p3p">Un binario estático de ~15 MB que cabe en un LXC de 256 MB. La RAM queda para tu ARC, no para el software que la gestiona.</p>
+            <p data-i18n="principles.p3p">Un binario estático de ~15 MB que corre en el mismo host que tus pools. La RAM queda para tu ARC, no para el software que la gestiona.</p>
           </div>
         </div>
       </div>
@@ -339,7 +339,7 @@
                 <tbody>
                   <tr><th data-i18n="compare.rRam">RAM mínima realista</th><td class="hl">decenas de MB</td><td>stack Python</td><td>+ Cockpit</td><td>8 GB</td><td>~1 GB</td></tr>
                   <tr><th data-i18n="compare.rInst">Instalación</th><td class="hl">one-liner</td><td>one-liner / Docker priv.</td><td>paquetes + módulo</td><td>ISO appliance</td><td>Debian + plugin</td></tr>
-                  <tr><th data-i18n="compare.rRun">Dónde corre</th><td class="hl">cualquier Linux, LXC 256 MB</td><td>Linux (mac/BSD exp.)</td><td>Linux con Cockpit</td><td>su appliance</td><td>Debian dedicada</td></tr>
+                  <tr><th data-i18n="compare.rRun">Dónde corre</th><td class="hl">cualquier Linux, en el host del pool</td><td>Linux (mac/BSD exp.)</td><td>Linux con Cockpit</td><td>su appliance</td><td>Debian dedicada</td></tr>
                   <tr><th data-i18n="compare.rBin">Binario único estático</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
                   <tr><th data-i18n="compare.rLic">Licencia</th><td class="hl">AGPL-3.0</td><td>GPL-3.0</td><td>GPL-3.0</td><td>BSD</td><td>GPL</td></tr>
                 </tbody>
@@ -490,7 +490,7 @@
           <p class="install-note" data-i18n="install.update">Actualiza re-ejecutando la misma línea. Desinstala con <span class="mono">--uninstall</span>.</p>
           <ul class="req-list">
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r1">Linux con systemd y ZFS (x86_64 o arm64)</span></li>
-            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r2">Un LXC de 256 MB basta</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r2">En el mismo host que tus pools</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r3">smartmontools si quieres SMART</span></li>
             <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r4">Web Push requiere HTTPS (NPM/Caddy)</span></li>
           </ul>
