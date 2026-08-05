@@ -204,6 +204,71 @@ func (s *Server) patchDataset(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// promoteDataset — POST /api/datasets/{name}/promote → 204.
+func (s *Server) promoteDataset(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if s.cfg.Mock {
+		s.act.AuditOnly(r.Context(), actor(r), "dataset.promote", name, nil)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if err := s.act.DatasetPromote(r.Context(), actor(r), name); err != nil {
+		actionErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// renameDataset — PATCH /api/datasets/{name}/rename {new_name} → 204.
+func (s *Server) renameDataset(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	var body struct {
+		NewName string `json:"new_name"`
+	}
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if body.NewName == "" {
+		writeErr(w, http.StatusBadRequest, "invalid_input", "new_name requerido")
+		return
+	}
+	if err := s.act.DatasetRename(r.Context(), actor(r), name, body.NewName); err != nil {
+		actionErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// mountDataset — POST /api/datasets/{name}/mount → 204.
+func (s *Server) mountDataset(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if s.cfg.Mock {
+		s.act.AuditOnly(r.Context(), actor(r), "dataset.mount", name, nil)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if err := s.act.DatasetMount(r.Context(), actor(r), name); err != nil {
+		actionErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// unmountDataset — POST /api/datasets/{name}/unmount → 204.
+func (s *Server) unmountDataset(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	if s.cfg.Mock {
+		s.act.AuditOnly(r.Context(), actor(r), "dataset.unmount", name, nil)
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if err := s.act.DatasetUnmount(r.Context(), actor(r), name); err != nil {
+		actionErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // deleteDataset — DELETE /api/datasets/{name} {confirm, recursive} → 202.
 func (s *Server) deleteDataset(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")

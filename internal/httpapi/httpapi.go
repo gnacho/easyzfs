@@ -143,13 +143,18 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("POST /api/pools/{name}/autotrim", s.auth.RequireAdmin(s.setAutotrim))
 	a.HandleFunc("POST /api/pools/{name}/checkpoint", s.auth.RequireAdmin(s.poolCheckpoint))
 	a.HandleFunc("POST /api/pools/{name}/expand", s.auth.RequireAdmin(s.expandPool))
+	a.HandleFunc("POST /api/pools/{name}/clear", s.auth.RequireAdmin(s.clearPool))
 	a.HandleFunc("GET /api/pools/{name}/history", s.poolHistory)
 	a.HandleFunc("GET /api/performance", s.getPerformance)
 	// datasets
 	a.HandleFunc("GET /api/datasets", s.listDatasets)
 	a.HandleFunc("POST /api/datasets", s.auth.RequireAdmin(s.createDataset))
 	a.HandleFunc("PATCH /api/datasets/{name}", s.auth.RequireAdmin(s.patchDataset))
+	a.HandleFunc("PATCH /api/datasets/{name}/rename", s.auth.RequireAdmin(s.renameDataset))
 	a.HandleFunc("DELETE /api/datasets/{name}", s.auth.RequireAdmin(s.deleteDataset))
+	a.HandleFunc("POST /api/datasets/{name}/promote", s.auth.RequireAdmin(s.promoteDataset))
+	a.HandleFunc("POST /api/datasets/{name}/mount", s.auth.RequireAdmin(s.mountDataset))
+	a.HandleFunc("POST /api/datasets/{name}/unmount", s.auth.RequireAdmin(s.unmountDataset))
 	a.HandleFunc("POST /api/datasets/{name}/rewrite", s.auth.RequireAdmin(s.rewriteDataset))
 	a.HandleFunc("POST /api/datasets/{name}/unlock", s.auth.RequireAdmin(s.unlockDataset))
 	a.HandleFunc("POST /api/datasets/{name}/lock", s.auth.RequireAdmin(s.lockDataset))
@@ -159,7 +164,9 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("POST /api/longops/{id}/cancel", s.auth.RequireAdmin(s.cancelLongOp))
 	// snapshots
 	a.HandleFunc("GET /api/snapshots", s.listSnapshots)
+	a.HandleFunc("GET /api/snapshots/diff", s.diffSnapshots)
 	a.HandleFunc("POST /api/snapshots", s.auth.RequireAdmin(s.createSnapshot))
+	a.HandleFunc("POST /api/snapshots/{full}/clone", s.auth.RequireAdmin(s.cloneSnapshot))
 	a.HandleFunc("DELETE /api/snapshots/{full}", s.auth.RequireAdmin(s.deleteSnapshot))
 	a.HandleFunc("POST /api/snapshots/{full}/rollback", s.auth.RequireAdmin(s.rollbackSnapshot))
 	// jobs

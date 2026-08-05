@@ -374,6 +374,28 @@ func (s *Server) expandPool(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// clearPool — POST /api/pools/{name}/clear {dev?} → 204.
+func (s *Server) clearPool(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("name")
+	var body struct {
+		Dev string `json:"dev"`
+	}
+	if !decodeJSON(w, r, &body) {
+		return
+	}
+	if s.cfg.Mock {
+		s.act.AuditOnly(r.Context(), actor(r), "pool.clear", name,
+			map[string]any{"dev": body.Dev})
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	if err := s.act.PoolClear(r.Context(), actor(r), name, body.Dev); err != nil {
+		actionErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // poolHistory — GET /api/pools/{name}/history → lista (caché del colector).
 func (s *Server) poolHistory(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.pools.History(r.PathValue("name")))

@@ -796,6 +796,7 @@ configure_env() {
     existing_vapid_pub="$(sed -n 's/^VAPID_PUBLIC_KEY=//p' "$ENV_FILE" | head -1)"
     existing_vapid_priv="$(sed -n 's/^VAPID_PRIVATE_KEY=//p' "$ENV_FILE" | head -1)"
     existing_vapid_sub="$(sed -n 's/^VAPID_SUBJECT=//p' "$ENV_FILE" | head -1)"
+    existing_wbhook="$(sed -n 's/^WEBHOOK_SECRET=//p' "$ENV_FILE" | head -1)"
   fi
   # Prioridad del puerto: --port > puerto del env existente > defecto (8080)
   if [ "$PORT_FROM_FLAG" = "0" ] && [ -n "$existing_port" ]; then
@@ -894,12 +895,24 @@ configure_env() {
     info "Claves VAPID ya presentes en ${ENV_FILE}: se conservan."
   fi
 
+  # WEBHOOK_SECRET: firma HMAC para webhooks salientes. Generar UNA vez;
+  # idempotente: en upgrades se conserva.
+  local wbhook="$existing_wbhook"
+  if [ -z "$wbhook" ]; then
+    if [ "$DRY_RUN" = "1" ]; then
+      wbhook="dry-run-webhook-secret"
+    else
+      wbhook="$(openssl rand -hex 32)"
+    fi
+  fi
+
   # OJO: $(...) elimina los \n finales; por eso el contenido se compone con
   # saltos de línea literales y se escribe con un único printf '%s\n'.
   local env_content="LISTEN_ADDR=:${OPT_PORT}
 DB_PATH=${DATA_DIR}/app.db
 SESSION_SECRET=${secret}
-ADMIN_PASSWORD=${admin}"
+ADMIN_PASSWORD=${admin}
+WEBHOOK_SECRET=${wbhook}"
   if [ -n "$vapid_priv" ]; then
     env_content+="
 VAPID_PUBLIC_KEY=${vapid_pub}
@@ -915,6 +928,7 @@ DEMO=1"
     info "[DRY-RUN] escribiría ${ENV_FILE} (modo 0600):"
     printf '    %s\n' "LISTEN_ADDR=:${OPT_PORT}" "DB_PATH=${DATA_DIR}/app.db" \
       "SESSION_SECRET=***" "ADMIN_PASSWORD=***" \
+      "WEBHOOK_SECRET=***"
       "VAPID_PUBLIC_KEY=***" "VAPID_PRIVATE_KEY=***" "VAPID_SUBJECT=${vapid_sub}" \
       "$(if [ "$OPT_DEMO" = "1" ]; then echo 'DEMO=1'; fi)"
   else

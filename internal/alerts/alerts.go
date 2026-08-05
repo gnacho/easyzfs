@@ -7,11 +7,18 @@ package alerts
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
+	"math/rand"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"easyzfs/internal/hub"
@@ -19,9 +26,6 @@ import (
 	"easyzfs/internal/push"
 	"easyzfs/internal/settings"
 )
-
-// webhookClient — envío best-effort de alertas al webhook configurado.
-var webhookClient = &http.Client{Timeout: 5 * time.Second}
 
 // Alerter evalúa umbrales y persiste/emite alertas.
 type Alerter struct {
@@ -108,8 +112,8 @@ func (a *Alerter) RaiseKind(ctx context.Context, level, source, target, message,
 }
 
 // notifyWebhook envía la alerta al webhook de settings (si no está vacío) en
-// una goroutine: POST JSON {level, source, target, message, ts}, timeout 5 s,
-// best-effort (solo log si falla).
+// una goroutine con HMAC-SHA256, timeout configurable y 3 reintentos con
+// backoff exponencial + jitter. Best-effort: solo log si falla.
 func (a *Alerter) notifyWebhook(level, source, target, message string, ts time.Time) {
 	st, err := a.st.Load(context.Background())
 	if err != nil || st.Webhook == "" {
@@ -122,16 +126,51 @@ func (a *Alerter) notifyWebhook(level, source, target, message string, ts time.T
 	if err != nil {
 		return
 	}
+	secret := os.Getenv("WEBHOOK_SECRET")
+	timeout := 10
+	if v := os.Getenv("WEBHOOK_TIMEOUT"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			timeout = n
+		}
+	}
 	go func(url string, body []byte) {
-		resp, err := webhookClient.Post(url, "application/json", bytes.NewReader(body))
-		if err != nil {
-			log.Printf("alerts: webhook %s: %v", url, err)
-			return
+		client := &http.Client{Timeout: time.Duration(timeout) * time.Second}
+		var lastErr error
+		for attempt := 1; attempt <= 3; attempt++ {
+			req, err := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewReader(body))
+			if err != nil {
+				log.Printf("alerts: webhook %s (intento %d): request: %v", url, attempt, err)
+				return
+			}
+			req.Header.Set("Content-Type", "application/json")
+			req.Header.Set("User-Agent", "EasyZFS-Webhook/1.0")
+			if secret != "" {
+				mac := hmac.New(sha256.New, []byte(secret))
+				mac.Write(body)
+				req.Header.Set("X-EasyZFS-Signature", "sha256="+hex.EncodeToString(mac.Sum(nil)))
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				lastErr = err
+			} else {
+				respBody, _ := io.ReadAll(resp.Body)
+				resp.Body.Close()
+				if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+					return // éxito
+				}
+				lastErr = fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+				// 4xx (excepto 429) no reintentar: es error del cliente, no temporal.
+				if resp.StatusCode >= 400 && resp.StatusCode != 429 {
+					break
+				}
+			}
+			if attempt < 3 {
+				base := time.Duration(1<<(attempt-1)) * time.Second // 1s, 2s, 4s
+				jitter := time.Duration(rand.Intn(1000)) * time.Millisecond
+				time.Sleep(base + jitter)
+			}
 		}
-		defer resp.Body.Close()
-		if resp.StatusCode >= 400 {
-			log.Printf("alerts: webhook %s: HTTP %d", url, resp.StatusCode)
-		}
+		log.Printf("alerts: webhook %s: %v (3 intentos agotados)", url, lastErr)
 	}(st.Webhook, payload)
 }
 

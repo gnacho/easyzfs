@@ -43,6 +43,13 @@ var ValidTopos = map[string]bool{
 	"stripe": true, "mirror": true, "raidz1": true, "raidz2": true, "raidz3": true,
 }
 
+// DiffEntry — entrada de 'zfs diff -FHt' (un cambio entre dos snapshots).
+type DiffEntry struct {
+	Type    string `json:"type"`     // M, +, -, R
+	Path    string `json:"path"`
+	NewPath string `json:"new_path,omitempty"`
+}
+
 // Service ejecuta operaciones contra el sistema y las audita.
 type Service struct {
 	db *sql.DB
@@ -686,6 +693,40 @@ func (s *Service) SnapshotPrune(ctx context.Context, actor, dataset string, cuto
 	return deleted, nil
 }
 
+// SnapshotDiff — 'zfs diff -FHt <older> <newer>': lista los cambios entre
+// dos snapshots de un mismo dataset. Lectura pura (sin audit ni confirm).
+func (s *Service) SnapshotDiff(ctx context.Context, older, newer string) ([]DiffEntry, error) {
+	oldDS, oldSnap, ok := strings.Cut(older, "@")
+	if !ok || !reDataset.MatchString(oldDS) || !reSnapName.MatchString(oldSnap) {
+		return nil, ErrInvalidName
+	}
+	newDS, newSnap, ok := strings.Cut(newer, "@")
+	if !ok || !reDataset.MatchString(newDS) || !reSnapName.MatchString(newSnap) {
+		return nil, ErrInvalidName
+	}
+	out, err := executil.Run(ctx, 30*time.Second, "zfs", "diff", "-FHt", older, newer)
+	if err != nil {
+		return nil, fmt.Errorf("diff entre snapshots: %w", err)
+	}
+	var entries []DiffEntry
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		if line == "" {
+			continue
+		}
+		f := strings.Split(line, "\t")
+		// zfs diff -FHt → ts\ttype\tpath[\tnew_path]
+		if len(f) < 3 {
+			continue
+		}
+		e := DiffEntry{Type: f[1], Path: f[2]}
+		if e.Type == "R" && len(f) > 3 {
+			e.NewPath = f[3]
+		}
+		entries = append(entries, e)
+	}
+	return entries, nil
+}
+
 // --- SMART ---
 
 // SmartTest — 'smartctl -t short|long /dev/<dev>'; el resultado se observa en el colector.
@@ -700,6 +741,108 @@ func (s *Service) SmartTest(ctx context.Context, actor, dev, testType string) er
 	if _, err := executil.Run(ctx, 15*time.Second, "smartctl",
 		"-t", testType, "/dev/"+dev); err != nil {
 		return fmt.Errorf("smart test: %w", err)
+	}
+	return nil
+}
+
+// --- Clone + promote ---
+
+// SnapshotClone — 'zfs clone [-o mountpoint=..] <snapshot>@<snap> <target>'.
+// No destructivo: el clone hereda los bloques del snapshot (copy-on-write)
+// y comparte espacio hasta que diverge.
+func (s *Service) SnapshotClone(ctx context.Context, actor, snapshotFull, target, mountpoint string) error {
+	ds, snap, ok := strings.Cut(snapshotFull, "@")
+	if !ok || !reDataset.MatchString(ds) || !reSnapName.MatchString(snap) {
+		return ErrInvalidName
+	}
+	if !reDataset.MatchString(target) {
+		return ErrInvalidName
+	}
+	args := []string{"clone"}
+	if mountpoint != "" {
+		args = append(args, "-o", "mountpoint="+mountpoint)
+	}
+	args = append(args, snapshotFull, target)
+	s.audit(ctx, actor, "snapshot.clone", target,
+		map[string]any{"snapshot": snapshotFull, "mountpoint": mountpoint}, false)
+	if _, err := executil.Run(ctx, 30*time.Second, "zfs", args...); err != nil {
+		return fmt.Errorf("clonar snapshot: %w", err)
+	}
+	return nil
+}
+
+// DatasetPromote — 'zfs promote <name>'. Invierte la relación de clonación:
+// el dataset promocionado se convierte en el origen (padre) y el dataset que
+// lo clonó pasa a ser su hijo. No destructivo, pero irreversible.
+func (s *Service) DatasetPromote(ctx context.Context, actor, name string) error {
+	if !reDataset.MatchString(name) {
+		return ErrInvalidName
+	}
+	s.audit(ctx, actor, "dataset.promote", name, nil, false)
+	if _, err := executil.Run(ctx, 30*time.Second, "zfs", "promote", name); err != nil {
+		return fmt.Errorf("promocionar dataset: %w", err)
+	}
+	return nil
+}
+
+// DatasetRename — 'zfs rename <old> <new>'. Renombra un dataset y todos sus
+// hijos. Irreversible pero no destructivo (no borra datos).
+func (s *Service) DatasetRename(ctx context.Context, actor, oldName, newName string) error {
+	if !reDataset.MatchString(oldName) || !reDataset.MatchString(newName) {
+		return ErrInvalidName
+	}
+	s.audit(ctx, actor, "dataset.rename", oldName,
+		map[string]any{"new": newName}, false)
+	if _, err := executil.Run(ctx, 30*time.Second, "zfs", "rename", oldName, newName); err != nil {
+		return fmt.Errorf("renombrar dataset: %w", err)
+	}
+	return nil
+}
+
+// DatasetMount — 'zfs mount <name>'. Monta un dataset desmontado.
+// Idempotente: si ya está montado, zfs no hace nada.
+func (s *Service) DatasetMount(ctx context.Context, actor, name string) error {
+	if !reDataset.MatchString(name) {
+		return ErrInvalidName
+	}
+	s.audit(ctx, actor, "dataset.mount", name, nil, false)
+	if _, err := executil.Run(ctx, 30*time.Second, "zfs", "mount", name); err != nil {
+		return fmt.Errorf("montar dataset: %w", err)
+	}
+	return nil
+}
+
+// DatasetUnmount — 'zfs unmount <name>' (sin -f). Desmonta un dataset.
+// Si está ocupado (ficheros abiertos), zfs falla y se devuelve su error
+// legible (mismo criterio que unload-key: no forzar desmontaje destructivo).
+func (s *Service) DatasetUnmount(ctx context.Context, actor, name string) error {
+	if !reDataset.MatchString(name) {
+		return ErrInvalidName
+	}
+	s.audit(ctx, actor, "dataset.unmount", name, nil, false)
+	if _, err := executil.Run(ctx, 30*time.Second, "zfs", "unmount", name); err != nil {
+		return fmt.Errorf("desmontar dataset: %w", err)
+	}
+	return nil
+}
+
+// PoolClear — 'zpool clear <pool> [dev]'. Limpia errores de un pool o vdev.
+// Idempotente: si no hay errores, zpool no falla.
+func (s *Service) PoolClear(ctx context.Context, actor, pool, dev string) error {
+	if !rePool.MatchString(pool) {
+		return ErrInvalidName
+	}
+	args := []string{"clear", pool}
+	if dev != "" {
+		if !reDev.MatchString(dev) {
+			return ErrInvalidDev
+		}
+		args = append(args, dev)
+	}
+	s.audit(ctx, actor, "pool.clear", pool,
+		map[string]any{"dev": dev}, false)
+	if _, err := executil.Run(ctx, 30*time.Second, "zpool", args...); err != nil {
+		return fmt.Errorf("limpiar errores: %w", err)
 	}
 	return nil
 }
