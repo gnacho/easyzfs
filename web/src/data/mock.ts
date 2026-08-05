@@ -241,6 +241,8 @@ export class MockProvider implements DataProvider {
 
   // ---- Sistema ----
   getVersion = async () => { await delay(); return { ...this.version }; };
+  getUpdateStatus = async () => { await delay(); return { current: this.version.version, latest: this.version.version, available: false }; };
+  applyUpdate = async () => { await delay(); }; // demo: no-op
   getSettings = async () => { await delay(); return { ...this.settings }; };
   putSettings = async (s: Settings) => { await delay(); this.settings = { ...s }; };
   getActivity = async (limit?: number) => {

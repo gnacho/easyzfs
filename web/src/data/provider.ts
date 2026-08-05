@@ -3,7 +3,7 @@ import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DiffEntry, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
-  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UserInfo, VersionInfo,
+  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
 
 export interface DataProvider {
@@ -17,6 +17,10 @@ export interface DataProvider {
   ackAlert(id: number): Promise<void>;
   getOverview(): Promise<Overview>;
   getActivity(limit?: number): Promise<ActivityItem[]>;
+
+  // Actualizaciones (admin; el apply reinicia el servicio vía easyzfs-update.path)
+  getUpdateStatus(): Promise<UpdateStatus>;
+  applyUpdate(): Promise<void>;
 
   // Copia de seguridad de la BD
   getBackupStatus(): Promise<BackupStatus>;

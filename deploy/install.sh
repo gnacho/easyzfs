@@ -306,12 +306,14 @@ detect_distro() {
   fi
 }
 
-# detect_arch — uname -m → ARCH (x86_64 | aarch64 | unknown).
+# detect_arch — uname -m → ARCH (x86_64 | aarch64 | unknown) y GOARCH
+# (amd64 | arm64). GOARCH es el naming nuevo de los assets (v3+, formato
+# {cmd}_{goos}_{goarch}); ARCH el viejo (easyzfs-linux-{arch}).
 detect_arch() {
   case "$(uname -m)" in
-    x86_64|amd64) ARCH="x86_64" ;;
-    aarch64|arm64) ARCH="aarch64" ;;
-    *) ARCH="unknown" ;;
+    x86_64|amd64) ARCH="x86_64"; GOARCH="amd64" ;;
+    aarch64|arm64) ARCH="aarch64"; GOARCH="arm64" ;;
+    *) ARCH="unknown"; GOARCH="unknown" ;;
   esac
 }
 
@@ -611,34 +613,59 @@ install_binary() {
       [ "$ARCH" != "unknown" ] || die "Arquitectura '$(uname -m)' no soportada para descarga (x86_64/aarch64)."
       local url=""
       url="$(resolve_asset_url "$OPT_URL")"
-      info "Descargando: ${url}"
+      # Naming nuevo (v3+): easyzfs_linux_{GOARCH} + checksums.txt único.
+      # Fallback al viejo (releases antiguas): easyzfs-linux-{ARCH} +
+      # checksums-{ARCH}.txt. El asset es un binario plano (sin .tar.gz).
+      local rel_base="${url%/*}"
+      local want_url="" want_sums="" asset_name=""
+      if [ -z "$OPT_URL" ] || [[ "$OPT_URL" == *"{arch}"* ]]; then
+        # Probamos el naming nuevo primero.
+        if curl -fsI --max-time 10 "${rel_base}/easyzfs_linux_${GOARCH}" >/dev/null 2>&1; then
+          want_url="${rel_base}/easyzfs_linux_${GOARCH}"
+          asset_name="easyzfs_linux_${GOARCH}"
+          curl -fsSL --max-time 15 "${rel_base}/checksums.txt" -o /dev/null 2>/dev/null \
+            && want_sums="${rel_base}/checksums.txt"
+        else
+          want_url="${rel_base}/easyzfs-linux-${ARCH}"
+          asset_name="easyzfs-linux-${ARCH}"
+          curl -fsSL --max-time 15 "${rel_base}/checksums-${ARCH}.txt" -o /dev/null 2>/dev/null \
+            && want_sums="${rel_base}/checksums-${ARCH}.txt"
+        fi
+      else
+        # URL explícita de asset: se usa tal cual (sin adivinar).
+        want_url="$url"
+        asset_name="$(basename "$url")"
+        curl -fsSL --max-time 15 "${rel_base}/checksums.txt" -o /dev/null 2>/dev/null \
+          && want_sums="${rel_base}/checksums.txt" \
+          || curl -fsSL --max-time 15 "${rel_base}/checksums-${ARCH}.txt" -o /dev/null 2>/dev/null \
+             && want_sums="${rel_base}/checksums-${ARCH}.txt"
+      fi
+
+      info "Descargando: ${want_url}"
       if [ "$DRY_RUN" = "1" ]; then
-        info "[DRY-RUN] curl -fsSL '${url}' → ${INSTALL_BIN} (extrayendo si es .tar.gz)"
+        info "[DRY-RUN] curl -fsSL '${want_url}' → ${INSTALL_BIN}"
       else
         local tmp="" bin=""
         tmp="$(mktemp -d)"
-        curl -fsSL "$url" -o "${tmp}/asset" || die "La descarga falló: ${url}"
-        # Verificación sha256 contra el checksums de la misma release.
-        # Desde v2.1.3 hay un fichero por arch (checksums-<arch>.txt); las
-        # releases anteriores publicaban un checksums.txt único.
-        local sums_url="${url%/*}/checksums-${ARCH}.txt"
-        if ! curl -fsSL "$sums_url" -o "${tmp}/checksums.txt" 2>/dev/null; then
-          sums_url="${url%/*}/checksums.txt"
-          curl -fsSL "$sums_url" -o "${tmp}/checksums.txt" 2>/dev/null || rm -f "${tmp}/checksums.txt"
+        curl -fsSL "$want_url" -o "${tmp}/asset" || die "La descarga falló: ${want_url}"
+        # Verificación sha256 contra el checksums (único o por arch).
+        if [ -n "$want_sums" ]; then
+          curl -fsSL "$want_sums" -o "${tmp}/checksums.txt" 2>/dev/null || rm -f "${tmp}/checksums.txt"
         fi
         if [ -s "${tmp}/checksums.txt" ]; then
           local want="" got=""
-          want="$(grep "easyzfs-linux-${ARCH}\$" "${tmp}/checksums.txt" | awk '{print $1}' | head -1)"
+          want="$(grep " ${asset_name}\$" "${tmp}/checksums.txt" | awk '{print $1}' | head -1)"
+          [ -n "$want" ] || want="$(grep " ${asset_name}" "${tmp}/checksums.txt" | awk '{print $1}' | head -1)"
           got="$(sha256sum "${tmp}/asset" | awk '{print $1}')"
-          [ -n "$want" ] || die "checksums no lista easyzfs-linux-${ARCH} (¿release sin asset para esta arch?)."
-          [ "$want" = "$got" ] || die "sha256 NO COINCIDE para easyzfs-linux-${ARCH} — descarga corrupta o manipulada."
-          ok "sha256 verificado contra $(basename "$sums_url")."
+          [ -n "$want" ] || die "checksums no lista ${asset_name} (¿release sin asset para esta arch?)."
+          [ "$want" = "$got" ] || die "sha256 NO COINCIDE para ${asset_name} — descarga corrupta o manipulada."
+          ok "sha256 verificado contra $(basename "$want_sums")."
         else
-          warn "La release no publica checksums (${sums_url}): descarga SIN verificar."
+          warn "La release no publica checksums: descarga SIN verificar."
           confirm "¿Continuar sin verificación de integridad?" 1 || die "Instalación cancelada por seguridad."
         fi
         bin="${tmp}/asset"
-        # Si el asset es un .tar.gz, se extrae y se localiza el binario dentro
+        # Si el asset es un .tar.gz (releases antiguas comprimidas), se extrae.
         if file "${tmp}/asset" 2>/dev/null | grep -qi 'gzip compressed'; then
           tar -xzf "${tmp}/asset" -C "$tmp" || die "No se pudo descomprimir el asset."
           bin="$(find "$tmp" -type f -name easyzfs -print -quit)"
@@ -1001,6 +1028,41 @@ EOF
   run "${SUDO[@]}" systemctl enable easyzfs.service
   run "${SUDO[@]}" systemctl restart easyzfs.service
   ok "Servicio habilitado y (re)iniciado."
+
+  # Unit de auto-update (patrón app-auto-update): easyzfs-update.path vigila
+  # $DATA_DIR/update/.restart-me; cuando el updater lo toca, el oneshot instala
+  # el binario nuevo (easyzfs.new) sobre INSTALL_BIN y reinicia el servicio.
+  local upd_path="/etc/systemd/system/easyzfs-update.path"
+  local upd_svc="/etc/systemd/system/easyzfs-update.service"
+  local upd_dir="${DATA_DIR}/update"
+  if [ "$DRY_RUN" = "1" ]; then
+    info "[DRY-RUN] escribiría ${upd_path} y ${upd_svc} (auto-update: ${upd_dir}/.restart-me)"
+  else
+    "${SUDO[@]}" mkdir -p "$upd_dir"
+    "${SUDO[@]}" chown "${user}:${group}" "$upd_dir"
+    write_root_file "$upd_path" 0644 <<EOF
+[Unit]
+Description=Reinicia EasyZFS cuando el updater prepara una versión nueva
+
+[Path]
+PathChanged=${upd_dir}/.restart-me
+
+[Install]
+WantedBy=multi-user.target
+EOF
+    write_root_file "$upd_svc" 0644 <<EOF
+[Unit]
+Description=Aplica la actualización de EasyZFS (instala el binario nuevo y reinicia)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'rm -f ${upd_dir}/.restart-me; install -m 0755 ${upd_dir}/easyzfs.new ${INSTALL_BIN}; systemctl restart easyzfs.service'
+EOF
+    run "${SUDO[@]}" systemctl daemon-reload
+    run "${SUDO[@]}" systemctl enable --now easyzfs-update.path
+    ok "Auto-update: easyzfs-update.path activo (aplica versiones descargadas por /api/update/apply)."
+  fi
 }
 
 # =============================================================================

@@ -6,7 +6,7 @@ import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DiffEntry, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
-  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UserInfo, VersionInfo,
+  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
 
 const BASE = '/api';
@@ -59,6 +59,8 @@ export class HttpProvider implements DataProvider {
   readonly isMock = false;
 
   getVersion = () => get<VersionInfo>('/version');
+  getUpdateStatus = () => get<UpdateStatus>('/update/status');
+  applyUpdate = async () => { await post<UpdateStatus>('/update/apply'); };
   getSettings = () => get<Settings>('/settings');
   putSettings = (s: Settings) => put<void>('/settings', s);
   getAlerts = () => get<Alert[]>('/alerts');

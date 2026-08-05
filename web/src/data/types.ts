@@ -39,6 +39,16 @@ export interface VersionInfo {
   capabilities?: Capabilities; // ausente en respuestas viejas del server
 }
 
+// Estado de actualización (GET /api/update/status). El apply lo ejecuta el
+// servidor (descarga+valida y toca el flag para que easyzfs-update.path
+// reinicie con el binario nuevo).
+export interface UpdateStatus {
+  current: string;
+  latest: string;
+  available: boolean;
+  inProgress?: boolean;
+}
+
 // Capacidades derivadas de la versión de OpenZFS (feature-gating, lote A).
 export interface Capabilities {
   rewrite: boolean;          // zfs rewrite (Linux ≥ 2.3.4)
