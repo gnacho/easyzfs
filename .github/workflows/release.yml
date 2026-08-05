@@ -90,7 +90,9 @@ jobs:
 
       - name: Genera checksums.txt único y lista
         run: |
-          sha256sum bin/easyzfs_linux_* > checksums.txt
+          # Entradas sin prefijo de directorio: la librería (ChecksumValidator)
+          # compara el nombre del asset exacto (findChecksum: parts[1] == filename).
+          (cd bin && sha256sum easyzfs_linux_*) > checksums.txt
           cat checksums.txt
           ls -la bin/
 
