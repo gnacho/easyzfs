@@ -365,20 +365,19 @@ table.cmp tbody tr:hover { background: rgb(var(--surface)); }
 }
 .prompt { color: rgb(var(--accent)); font-weight: 600; }
 .codebox code { font-size: 0.88rem; white-space: nowrap; color: rgb(var(--text-primary)); }
+.code-actions { display: flex; justify-content: flex-end; margin: 0.7rem 0 0.9rem; }
 .copybtn {
-  margin-left: auto;
-  flex: none;
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   font-weight: 600;
-  color: rgb(var(--accent));
-  background: transparent;
-  border: 1px solid rgb(var(--border));
+  color: rgb(var(--accent-fg));
+  background: rgb(var(--accent));
+  border: 1px solid rgb(var(--accent));
   border-radius: var(--radius-sm);
-  padding: 0.35rem 0.8rem;
+  padding: 0.5rem 1.1rem;
   cursor: pointer;
 }
-.copybtn:hover { background: rgb(var(--accent-soft)); }
+.copybtn:hover { filter: brightness(1.06); }
 .install-box { max-width: 52rem; margin: 0 auto; }
 .install-box .codebox { margin-bottom: 0.9rem; }
 .install-note { font-size: 0.88rem; color: rgb(var(--text-secondary)); margin-bottom: 0.4rem; }

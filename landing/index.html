@@ -427,11 +427,13 @@
           <h2 class="font-display" data-i18n="install.title">Instalación fácil y rápida</h2>
           <p class="lead" data-i18n="install.lead">Un binario Go estático con la interfaz embebida, corriendo como servicio systemd con privilegios limitados. Sin Docker.</p>
         </div>
-        <div class="card codecard reveal" style="max-width:52rem;margin:0 auto;">
+        <div class="card codecard reveal">
           <div class="codebox">
             <span class="prompt font-mono">$</span>
             <code id="installCmd">curl -fsSL https://raw.githubusercontent.com/gnacho/easyzfs/main/deploy/install.sh | bash</code>
-            <button class="copybtn" id="copyBtn" data-i18n-aria="misc.copy">Copiar</button>
+          </div>
+          <div class="code-actions">
+            <button class="copybtn" id="copyBtn" data-i18n="misc.copy" data-i18n-aria="misc.copy">Copiar</button>
           </div>
           <p class="install-note">
             <span data-i18n="install.inspector">El instalador es shell plano y legible —</span>
@@ -451,7 +453,7 @@
     <!-- ============ ACERCA DE ============ -->
     <section class="block" id="about">
       <div class="container">
-        <div class="card honest reveal" style="max-width:52rem;margin:0 auto;">
+        <div class="card honest reveal">
           <span class="eyebrow" data-i18n="about.eyebrow">Acerca de EasyZFS</span>
           <p data-i18n="about.p2">EasyZFS es un proyecto personal, construido para mi propio homelab y publicado como software libre (AGPL-3.0). Será gratuito siempre. Evoluciona a mi ritmo y siguiendo mis propias necesidades: con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada. Funciona: corre 24/7 en producción en mi casa, y cada versión se prueba ahí primero.</p>
           <a class="kofi" id="kofiAbout" href="#" target="_blank" rel="noopener">
