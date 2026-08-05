@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EasyZFS — Tu ZFS, bajo control. Ligero, local y libre.</title>
+  <meta name="description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en un LXC de 256 MB. Sin nube, sin Docker. AGPL-3.0." />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="canonical" href="https://easyzfs.cloudless.club/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="EasyZFS" />
+  <meta property="og:title" content="EasyZFS — Tu ZFS, bajo control. Ligero, local y libre." />
+  <meta property="og:description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en un LXC de 256 MB." />
+  <meta property="og:url" content="https://easyzfs.cloudless.club/" />
+  <meta property="og:image" content="https://easyzfs.cloudless.club/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="EasyZFS — Tu ZFS, bajo control. Ligero, local y libre." />
+  <meta name="twitter:description" content="Control de pools ZFS ligero y autoalojado: pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario. Corre en un LXC de 256 MB." />
+  <meta name="twitter:image" content="https://easyzfs.cloudless.club/og.png" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96' fill='none'%3E%3Crect x='20' y='16' width='56' height='64' rx='10' stroke='%230E9A6E' stroke-width='6'/%3E%3Cpath d='M20 40h56' stroke='%230E9A6E' stroke-width='6'/%3E%3Crect x='30' y='24' width='14' height='8' rx='3' fill='%230E9A6E'/%3E%3Crect x='52' y='24' width='14' height='8' rx='3' fill='%230E9A6E'/%3E%3Ccircle cx='34' cy='54' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='48' cy='54' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='62' cy='54' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='34' cy='68' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='48' cy='68' r='4' fill='%230E9A6E'/%3E%3Ccircle cx='62' cy='68' r='4' fill='%230E9A6E'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "name": "EasyZFS",
+        "url": "https://easyzfs.cloudless.club/",
+        "description": "Control de pools ZFS ligero, autoalojado y libre (AGPL-3.0). Pools, datasets, snapshots, discos SMART y alertas al móvil desde un único binario.",
+        "inLanguage": "es"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "name": "EasyZFS",
+        "applicationCategory": "Application",
+        "operatingSystem": "Linux",
+        "url": "https://github.com/gnacho/easyzfs",
+        "license": "https://www.gnu.org/licenses/agpl-3.0.html",
+        "description": "Control de pools ZFS ligero y autoalojado: un único binario Go que vive en tu NAS. Pools, datasets, snapshots, discos SMART, replicación, encriptación y alertas push. Corre en un LXC de 256 MB, sin Docker.",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+        "isAccessibleForFree": true
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#main" data-i18n="misc.skip">Saltar al contenido</a>
+
+  <!-- ============ NAV ============ -->
+  <nav class="nav" aria-label="Principal">
+    <div class="container nav-inner">
+      <a class="nav-logo" href="#" aria-label="EasyZFS">
+        <svg viewBox="0 0 96 96" fill="none" aria-hidden="true" width="26" height="26">
+          <rect x="20" y="16" width="56" height="64" rx="10" stroke="rgb(var(--accent))" stroke-width="6"/>
+          <path d="M20 40h56" stroke="rgb(var(--accent))" stroke-width="6"/>
+          <rect x="30" y="24" width="14" height="8" rx="3" fill="rgb(var(--accent))"/>
+          <rect x="52" y="24" width="14" height="8" rx="3" fill="rgb(var(--accent))"/>
+          <circle cx="34" cy="54" r="4" fill="rgb(var(--accent))"/><circle cx="48" cy="54" r="4" fill="rgb(var(--accent))"/><circle cx="62" cy="54" r="4" fill="rgb(var(--accent))"/>
+          <circle cx="34" cy="68" r="4" fill="rgb(var(--accent))"/><circle cx="48" cy="68" r="4" fill="rgb(var(--accent))"/><circle cx="62" cy="68" r="4" fill="rgb(var(--accent))"/>
+        </svg>
+        EasyZFS
+      </a>
+      <div class="nav-links">
+        <a href="#features" data-i18n="nav.features">Funciones</a>
+        <a href="#compare" data-i18n="nav.compare">Comparativa</a>
+        <a href="#install" data-i18n="nav.install">Instalar</a>
+        <a href="https://github.com/gnacho/easyzfs" target="_blank" rel="noopener" data-i18n="nav.github">GitHub</a>
+      </div>
+      <div class="nav-actions">
+        <select id="langSelect" aria-label="Language" class="lang-select">
+          <option value="es">ES</option>
+          <option value="en">EN</option>
+        </select>
+        <button id="themeBtn" class="icon-btn" aria-label="Cambiar tema" data-i18n-aria="appearance.theme">
+          <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+        </button>
+        <a class="nav-cta" href="#install" data-i18n="hero.cta1">Instalar en tu NAS</a>
+      </div>
+    </div>
+  </nav>
+
+  <main id="main">
+    <!-- ============ HERO ============ -->
+    <header class="hero">
+      <div class="container">
+        <span class="eyebrow" data-i18n="hero.eyebrow">Gestión de pools ZFS · Autoalojada · 100% libre</span>
+        <h1 class="font-display">
+          <span data-i18n="hero.t1">Tu ZFS, bajo control.</span><br />
+          <span class="text-accent" data-i18n="hero.t2">Ligero, local y libre.</span>
+        </h1>
+        <p class="hero-sub" data-i18n="hero.sub">EasyZFS es un único binario que vive en tu propio NAS: pools, datasets, snapshots, discos y alertas desde una interfaz web limpia. Corre en un LXC de 256&nbsp;MB. Sin nube, sin Docker, sin suscripción.</p>
+        <div class="hero-actions">
+          <a class="btn-primary" href="#install">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="hero.cta1">Instalar en tu NAS</span>
+          </a>
+          <a class="btn-ghost" href="https://github.com/gnacho/easyzfs" target="_blank" rel="noopener">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56 0-.27-.01-1.17-.02-2.12-3.2.7-3.87-1.36-3.87-1.36-.52-1.33-1.28-1.68-1.28-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.76 1.19 1.76 1.19 1.03 1.75 2.69 1.25 3.34.95.1-.74.4-1.25.72-1.54-2.55-.29-5.23-1.28-5.23-5.68 0-1.26.45-2.28 1.19-3.09-.12-.29-.52-1.46.11-3.05 0 0 .97-.31 3.17 1.18a11 11 0 0 1 5.78 0c2.2-1.49 3.17-1.18 3.17-1.18.63 1.59.23 2.76.11 3.05.74.81 1.19 1.83 1.19 3.09 0 4.41-2.69 5.38-5.25 5.66.41.35.77 1.05.77 2.12 0 1.53-.01 2.76-.01 3.14 0 .31.21.67.8.56A11.52 11.52 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5z"/></svg>
+            <span data-i18n="hero.cta2">Ver en GitHub</span>
+          </a>
+          <a class="btn-ghost" href="#demo" data-i18n="hero.cta3">Probar la demo</a>
+        </div>
+
+        <div class="hero-facts" aria-hidden="false">
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span data-i18n="facts.binary">Un solo binario · ~15 MB</span></span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--ok))" stroke-width="1.75" stroke-linecap="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><line x1="4" y1="4" x2="20" y2="20"/></svg><span data-i18n="facts.noCloud">Sin nube</span></span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg><span data-i18n="facts.free">100% libre · AGPL-3.0</span></span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--info))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/></svg><span data-i18n="facts.lxc">LXC de 256 MB</span></span>
+          <span class="chip"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--warn))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span data-i18n="facts.push">Web Push al móvil</span></span>
+        </div>
+
+        <div class="demo-strip" id="heroStrip" aria-label="Datos demo">
+          <div class="mini-stat">
+            <span class="k label text-muted uppercase"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg><span data-i18n="strip.pools">Pools</span></span>
+            <span class="v font-mono text-accent" data-count="2">0</span>
+          </div>
+          <div class="mini-stat">
+            <span class="k label text-muted uppercase"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--ok))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg><span data-i18n="strip.disks">Discos</span></span>
+            <span class="v font-mono text-ok" data-count="7">0</span>
+          </div>
+          <div class="mini-stat">
+            <span class="k label text-muted uppercase"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--warn))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg><span data-i18n="strip.temp">Temp. media</span></span>
+            <span class="v font-mono text-warn" data-count="34" data-suffix=" °C">0 °C</span>
+          </div>
+          <div class="mini-stat">
+            <span class="k label text-muted uppercase"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--ok))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span data-i18n="strip.health">Salud</span></span>
+            <span class="v font-mono text-ok" data-i18n="strip.healthVal">Óptima</span>
+          </div>
+          <div class="mini-stat">
+            <span class="k label text-muted uppercase"><svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--info))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9"/><polyline points="22 4 12 14.01 9 11"/></svg><span data-i18n="strip.scrub">Scrub</span></span>
+            <span class="v font-mono text-info" data-count="100" data-suffix=" %">0 %</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ PILARES ============ -->
+    <section class="block" id="principles">
+      <div class="container">
+        <div class="reveal">
+          <span class="eyebrow" data-i18n="nav.principles">Principios</span>
+          <h2 class="font-display" data-i18n="principles.title">Construido sobre tres principios</h2>
+          <p class="lead" data-i18n="principles.lead">No son eslóganes de marketing. Condicionan cada decisión de diseño y cada línea de código.</p>
+        </div>
+        <div class="principles">
+          <div class="card principle reveal">
+            <svg class="big" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--ok))" stroke-width="1.75" stroke-linecap="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>
+            <h3 data-i18n="principles.p1t">Autoalojado, sin nube</h3>
+            <p data-i18n="principles.p1p">El binario corre en una caja dentro de tu red. Nada de tus datos sale de tu NAS, ni siquiera para avisarte.</p>
+          </div>
+          <div class="card principle reveal">
+            <svg class="big" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            <h3 data-i18n="principles.p2t">100% libre y open source</h3>
+            <p data-i18n="principles.p2p">AGPL-3.0, para siempre. Lee el código, audítalo, haz un fork, ejecútalo. No hay versión premium ni la habrá.</p>
+          </div>
+          <div class="card principle reveal">
+            <svg class="big" viewBox="0 0 24 24" fill="none" stroke="rgb(var(--info))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+            <h3 data-i18n="principles.p3t">Ligero por diseño</h3>
+            <p data-i18n="principles.p3p">Un binario estático de ~15 MB que cabe en un LXC de 256 MB. La RAM queda para tu ARC, no para el software que la gestiona.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FUNCIONALIDADES ============ -->
+    <section class="block" id="features">
+      <div class="container">
+        <div class="reveal">
+          <span class="eyebrow" data-i18n="nav.features">Funciones</span>
+          <h2 class="font-display" data-i18n="features.title">Toda la gestión ZFS que necesitas a diario</h2>
+          <p class="lead" data-i18n="features.lead">El día a día de tus pools, en una interfaz. Los comandos siguen siendo los tuyos: EasyZFS los envuelve con una cara amable.</p>
+        </div>
+        <div class="features">
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M7 8V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v3"/></svg>
+            <h3 data-i18n="features.f1t">Pools y vdevs</h3>
+            <p data-i18n="features.f1p">Crea, importa y gestiona pools; edita la estructura de vdevs, lanza scrubs y configura TRIM y autotrim.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--ok))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h10"/></svg>
+            <h3 data-i18n="features.f2t">Datasets y snapshots</h3>
+            <p data-i18n="features.f2p">Propiedades, cuotas, rollback y snapshots con retención programada. Volúmenes (zvol) incluidos.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--warn))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+            <h3 data-i18n="features.f3t">Discos y SMART</h3>
+            <p data-i18n="features.f3p">Salud, temperatura, horas de uso y tests programados por disco físico. El inventario oculta zvols, loops y eMMC de arranque.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--danger))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            <h3 data-i18n="features.f4t">Sustitución de discos</h3>
+            <p data-i18n="features.f4p">Te dice qué disco sustituir, por qué y cuándo no debe tocarse: con resilver en curso, degradado o sin redundancia, no.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.64 5.64l1.41 1.41M16.95 16.95l1.41 1.41M5.64 18.36l1.41-1.41M16.95 7.05l1.41-1.41"/><circle cx="12" cy="12" r="4"/></svg>
+            <h3 data-i18n="features.f5t">Operaciones avanzadas</h3>
+            <p data-i18n="features.f5p">zfs rewrite (el defrag real de ZFS), checkpoint de pool y expansión RAID-Z, con progreso en vivo y UI.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--info))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            <h3 data-i18n="features.f6t">Progreso en vivo</h3>
+            <p data-i18n="features.f6p">Scrub, resilver y tests de SMART con porcentaje real por SSE. Lo que ves es lo que está pasando, sin refrescar.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--warn))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            <h3 data-i18n="features.f7t">Alertas push</h3>
+            <p data-i18n="features.f7p">Web Push al móvil con la app cerrada: umbrales por tipo, severidades y horas de silencio. Sin servicios de terceros.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <h3 data-i18n="features.f8t">Jobs programados</h3>
+            <p data-i18n="features.f8p">Snapshots, scrubs y tests SMART con tu formato de horario y retención por job. Y la vista de tareas del sistema (timers + cron).</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--ok))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="8.12" y1="8.12" x2="15.88" y2="15.88"/><line x1="15.88" y1="8.12" x2="8.12" y2="15.88"/></svg>
+            <h3 data-i18n="features.f9t">Replicación</h3>
+            <p data-i18n="features.f9p">Send/receive incremental reanudable, con bookmarks, a otro equipo de tu red o remoto por SSH.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--info))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            <h3 data-i18n="features.f10t">Encriptación</h3>
+            <p data-i18n="features.f10p">Crea datasets encriptados, desbloquea y rota claves nativas de ZFS desde la interfaz.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--accent))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <h3 data-i18n="features.f11t">Multiusuario y auditoría</h3>
+            <p data-i18n="features.f11p">Roles admin y viewer, contraseñas argon2id, cookies con HMAC y registro de auditoría de cada mutación.</p>
+          </div>
+          <div class="card feature reveal">
+            <svg viewBox="0 0 24 24" fill="none" stroke="rgb(var(--ok))" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            <h3 data-i18n="features.f12t">Demo y PWA</h3>
+            <p data-i18n="features.f12p">Modo demo con datos realistas que no toca tus discos, PWA instalable e i18n en español e inglés.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CAPTURAS ============ -->
+    <section class="block" id="shots">
+      <div class="container">
+        <div class="reveal">
+          <span class="eyebrow" data-i18n="shots.eyebrow">La app</span>
+          <h2 class="font-display" data-i18n="shots.title">No es un mockup: es la app real</h2>
+          <p class="lead" data-i18n="shots.lead">Capturas de EasyZFS en modo demo, con el tema que elijas. Datos de ejemplo: los pools <span class="mono">tank</span> y <span class="mono">ssd</span>.</p>
+        </div>
+        <div class="shots">
+          <figure class="shot reveal">
+            <picture>
+              <img src="assets/screenshot-pools-es-light.webp" data-light="assets/screenshot-pools-es-light.webp" data-dark="assets/screenshot-pools-es-dark.webp" alt="Vista de pools: raidz1 tank degradado con oferta de rebuild y mirror ssd resilverizando" loading="lazy" width="1440" height="900">
+            </picture>
+            <figcaption data-i18n="shots.s1">Pools · topología, salud y oferta de rebuild con un disco libre</figcaption>
+          </figure>
+          <figure class="shot reveal">
+            <picture>
+              <img src="assets/screenshot-disks-es-light.webp" data-light="assets/screenshot-disks-es-light.webp" data-dark="assets/screenshot-disks-es-dark.webp" alt="Tabla de discos físicos con modelo, serie, tamaño, temperatura, salud SMART y pool" loading="lazy" width="1440" height="900">
+            </picture>
+            <figcaption data-i18n="shots.s2">Discos · SMART, temperatura y horas de uso por disco físico</figcaption>
+          </figure>
+          <figure class="shot reveal">
+            <picture>
+              <img src="assets/screenshot-settings-es-light.webp" data-light="assets/screenshot-settings-es-light.webp" data-dark="assets/screenshot-settings-es-dark.webp" alt="Página de ajustes con apariencia, acento, densidad, perfil, idioma y notificaciones push" loading="lazy" width="1440" height="900">
+            </picture>
+            <figcaption data-i18n="shots.s3">Ajustes · tema, acento, usuarios, push y copias de seguridad</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ COMPARATIVA ============ -->
+    <section class="block" id="compare">
+      <div class="container">
+        <div class="reveal">
+          <span class="eyebrow" data-i18n="nav.compare">Comparativa</span>
+          <h2 class="font-display" data-i18n="compare.title">EasyZFS, en contexto</h2>
+          <p class="lead" data-i18n="compare.lead">La pregunta no es «¿qué NAS completo uso?» sino «¿qué uso para controlar mis pools ZFS?». En esa categoría, la foto es esta — con datos contrastados contra las fuentes públicas de cada proyecto en agosto de 2026.</p>
+        </div>
+
+        <div class="legend reveal" aria-label="Leyenda">
+          <span><span class="sym ok">✓</span><span data-i18n="compare.legOk">nativo</span></span>
+          <span><span class="sym half">◐</span><span data-i18n="compare.legHalf">parcial o solo CLI</span></span>
+          <span><span class="sym no">✗</span><span data-i18n="compare.legNo">no disponible</span></span>
+          <span><span class="sym na">—</span><span data-i18n="compare.legNa">no aplica</span></span>
+        </div>
+
+        <div class="cmtables">
+          <div class="cmblk reveal">
+            <h3 data-i18n="compare.b1t">Plataforma y despliegue</h3>
+            <div class="table-wrap">
+              <table class="cmp">
+                <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
+                <tbody>
+                  <tr><th data-i18n="compare.rRam">RAM mínima realista</th><td class="hl">decenas de MB</td><td>stack Python</td><td>+ Cockpit</td><td>8 GB</td><td>~1 GB</td></tr>
+                  <tr><th data-i18n="compare.rInst">Instalación</th><td class="hl">one-liner</td><td>one-liner / Docker priv.</td><td>paquetes + módulo</td><td>ISO appliance</td><td>Debian + plugin</td></tr>
+                  <tr><th data-i18n="compare.rRun">Dónde corre</th><td class="hl">cualquier Linux, LXC 256 MB</td><td>Linux (mac/BSD exp.)</td><td>Linux con Cockpit</td><td>su appliance</td><td>Debian dedicada</td></tr>
+                  <tr><th data-i18n="compare.rBin">Binario único estático</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rLic">Licencia</th><td class="hl">AGPL-3.0</td><td>GPL-3.0</td><td>GPL-3.0</td><td>BSD</td><td>GPL</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cmblk reveal">
+            <h3 data-i18n="compare.b2t">Pools y discos</h3>
+            <div class="table-wrap">
+              <table class="cmp">
+                <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
+                <tbody>
+                  <tr><th data-i18n="compare.rPool">Crear y gestionar pools / vdevs</th><td class="hl">✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+                  <tr><th data-i18n="compare.rEdit">Editar estructura de vdevs</th><td class="hl">✓</td><td>✓</td><td>—</td><td>✓</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rTrim">TRIM manual + autotrim</th><td class="hl">✓</td><td>—</td><td>—</td><td>✓</td><td>◐</td></tr>
+                  <tr><th data-i18n="compare.rInv">Inventario físico de discos</th><td class="hl">✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rRec">Recomendación de sustitución de disco</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rStand">Standby / power-off de disco libre</th><td class="hl">✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cmblk reveal">
+            <h3 data-i18n="compare.b3t">Datasets y snapshots</h3>
+            <div class="table-wrap">
+              <table class="cmp">
+                <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
+                <tbody>
+                  <tr><th data-i18n="compare.rDs">Datasets (propiedades, mount, rename)</th><td class="hl">✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+                  <tr><th data-i18n="compare.rZvol">Volúmenes (zvol)</th><td class="hl">✓</td><td>✓</td><td>—</td><td>✓</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rSnap">Snapshots + rollback</th><td class="hl">✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+                  <tr><th data-i18n="compare.rClone">Clonar snapshots</th><td class="hl">✗</td><td>✓</td><td>—</td><td>✓</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rJobs">Jobs de snapshots con retención</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✓</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rSys">Vista de tareas del sistema (timers/cron)</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✓</td><td>✓</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cmblk reveal">
+            <h3 data-i18n="compare.b4t">Operaciones avanzadas ZFS</h3>
+            <div class="table-wrap">
+              <table class="cmp">
+                <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
+                <tbody>
+                  <tr><th data-i18n="compare.rRewrite">zfs rewrite (defrag real) con UI</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>CLI</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rCheck">Checkpoint de pool con UI</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>CLI</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rExpand">Expansión RAID-Z online con progreso</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✓</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rGate">Feature-gating por versión de OpenZFS</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>—</td><td>✗</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cmblk reveal">
+            <h3 data-i18n="compare.b5t">Salud y monitorización</h3>
+            <div class="table-wrap">
+              <table class="cmp">
+                <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
+                <tbody>
+                  <tr><th data-i18n="compare.rSmart">SMART (salud, atributos, temp, horas)</th><td class="hl">✓</td><td>✗</td><td>◐</td><td>✓</td><td>✓</td></tr>
+                  <tr><th data-i18n="compare.rSmartJob">Tests SMART programados</th><td class="hl">✓</td><td>✗</td><td>—</td><td>✓</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rZed">Eventos zed en vivo (SSE)</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>◐</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rProg">Progreso en vivo de operaciones largas</th><td class="hl">✓</td><td>◐</td><td>◐</td><td>◐</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rHist">Historial de pool + estadísticas ARC</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>◐</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rSeries">Series temporales propias</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✓</td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cmblk reveal">
+            <h3 data-i18n="compare.b6t">Alertas</h3>
+            <div class="table-wrap">
+              <table class="cmp">
+                <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
+                <tbody>
+                  <tr><th data-i18n="compare.rAlert">Alertas por umbrales configurables</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>◐</td><td>◐</td></tr>
+                  <tr><th data-i18n="compare.rPush">Push al móvil con la app cerrada (sin terceros)</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>email</td><td>email</td></tr>
+                  <tr><th data-i18n="compare.rQuiet">Horas de silencio / severidades</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>◐</td><td>✗</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cmblk reveal">
+            <h3 data-i18n="compare.b7t">Seguridad y multiusuario</h3>
+            <div class="table-wrap">
+              <table class="cmp">
+                <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
+                <tbody>
+                  <tr><th data-i18n="compare.rUsers">Multiusuario con roles</th><td class="hl">✓</td><td>login único</td><td>PAM</td><td>✓</td><td>✓</td></tr>
+                  <tr><th data-i18n="compare.rAudit">Auditoría de mutaciones</th><td class="hl">✓</td><td>◐</td><td>—</td><td>✓</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rConfirm">Confirmación en operaciones destructivas</th><td class="hl">✓</td><td>◐</td><td>—</td><td>✓</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rCrypt">Encriptación nativa con UI</th><td class="hl">✓</td><td>✓</td><td>✗</td><td>✓</td><td>✓</td></tr>
+                  <tr><th data-i18n="compare.rSess">Sesiones seguras (argon2id + HMAC)</th><td class="hl">✓</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="cmblk reveal">
+            <h3 data-i18n="compare.b8t">Experiencia</h3>
+            <div class="table-wrap">
+              <table class="cmp">
+                <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
+                <tbody>
+                  <tr><th data-i18n="compare.rDemo">Modo demo sin tocar discos</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rPwa">PWA instalable</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rI18n">i18n ES/EN</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>multi</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rGui">GUI de escritorio</th><td class="hl">✗</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card honest reveal">
+          <h3 class="font-display" data-i18n="compare.honestT">El lado honesto</h3>
+          <p data-i18n="compare.honestP1">EasyZFS no sirve SMB/NFS/iSCSI, no ejecuta apps ni VMs: es control de ZFS, no un NAS completo. Si necesitas un NAS, usa TrueNAS. Y TrueNAS gana en RBAC empresarial, madurez de replicación y comunidad.</p>
+          <p data-i18n="compare.honestP2">Pero si la pregunta es «¿qué uso para controlar mis pools ZFS en cualquier Linux con 50 MB de RAM y un binario?», en esta categoría EasyZFS es la única herramienta. Y hace cosas que ni TrueNAS expone en su interfaz.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ INSTALACIÓN ============ -->
+    <section class="block" id="install">
+      <div class="container">
+        <div class="reveal">
+          <span class="eyebrow" data-i18n="nav.install">Instalar</span>
+          <h2 class="font-display" data-i18n="install.title">Una línea para instalarlo</h2>
+          <p class="lead" data-i18n="install.lead">Un binario Go estático con la interfaz embebida, corriendo como servicio systemd con privilegios limitados. Sin Docker.</p>
+        </div>
+        <div class="install-grid">
+          <div class="card codecard reveal">
+            <h3 data-i18n="install.main">Recomendado</h3>
+            <div class="codebox">
+              <span class="prompt font-mono">$</span>
+              <code id="installCmd">curl -fsSL https://raw.githubusercontent.com/gnacho/easyzfs/main/deploy/install.sh | bash</code>
+              <button class="copybtn" id="copyBtn" data-i18n-aria="misc.copy">Copiar</button>
+            </div>
+            <p class="install-note">
+              <span data-i18n="install.inspector">El instalador es shell plano y legible —</span>
+              <a href="https://github.com/gnacho/easyzfs/blob/main/deploy/install.sh" target="_blank" rel="noopener" data-i18n="install.inspectorLink">inspecciónalo primero</a>.
+            </p>
+            <p class="install-note" data-i18n="install.update">Actualiza re-ejecutando la misma línea. Desinstala con <span class="mono">--uninstall</span>.</p>
+            <h3 style="margin-top:1.75rem;" data-i18n="install.privs">Privilegios: sudoers limitado</h3>
+            <p class="install-note" style="font-size:0.85rem;color:rgb(var(--text-secondary));" data-i18n="install.privsP">El servicio corre sin privilegios y solo eleva un conjunto cerrado de binarios (zpool, zfs, smartctl, lsblk, crontab -l) con argumentos fijados. Nada más.</p>
+          </div>
+          <div class="card codecard reveal">
+            <h3 data-i18n="install.req">Requisitos</h3>
+            <ul class="req-list">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r1">Linux con systemd y ZFS (x86_64 o arm64)</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r2">Un LXC de 256 MB basta</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r3">smartmontools si quieres SMART</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-i18n="install.r4">Web Push requiere HTTPS (NPM/Caddy)</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ACERCA DE ============ -->
+    <section class="block" id="about">
+      <div class="container">
+        <div class="card honest reveal" style="max-width:52rem;margin:0 auto;">
+          <span class="eyebrow" data-i18n="about.eyebrow">Acerca de EasyZFS</span>
+          <h2 class="font-display" data-i18n="about.title">Hecha para mi propio homelab</h2>
+          <p data-i18n="about.p1">Años con NAS comerciales (primero Synology, luego QNAP) acabaron en ecosistemas cautivos sobre hardware que envejecía sin poder mejorarse. Pasé a un mini-PC con Proxmox, unificando NAS y homelab en una máquina. Probé una VM de TrueNAS: todo funcionaba, pero consumía RAM, retrasaba cada reinicio y añadía orquestación. La solución obvia ganó: importar los pools directamente en Proxmox. Aprendí los comandos a mano, pero seguía echando en falta una UI pequeña, amable y mínima para el día a día. No encontré ninguna que me gustara, así que la construí.</p>
+          <p data-i18n="about.p2">EasyZFS es un proyecto personal, construido para mi propio homelab y publicado como software libre (AGPL-3.0). Será gratuito siempre. Evoluciona a mi ritmo y siguiendo mis propias necesidades: con colaboraciones o apoyo quizás podría crecer más rápido, pero no puedo prometer nada. Funciona: corre 24/7 en producción en mi casa, y cada versión se prueba ahí primero.</p>
+          <a class="kofi" id="kofiAbout" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.24 2.437 2.057 3.134 3.957 3.134 2.806.001 5.825-.054 8.658-.065.147-.031 4.467-.842 5.393-4.63.266-1.088.05-1.574-.149-2.466zm-4.572 3.482c-.567 2.306-2.876 2.523-2.876 2.523H4.645c-1.846 0-1.833-1.873-1.833-1.873V6.94c0-1.293 1.164-1.48 1.164-1.48h11.639c1.895 0 2.088 1.509 2.088 1.509s.18 2.121.18 3.153c0 1.155-.193 2.308-.574 2.308zm-4.224-1.051c-.657-.526-1.219-1.298-1.743-2.236-.523.938-1.086 1.71-1.742 2.236-.952.762-2.352.506-2.764-.567-.177-.462-.141-1.068.069-1.711.479-1.475 1.862-3.511 3.406-4.83a1.53 1.53 0 0 1 2.06 0c1.545 1.319 2.928 3.355 3.407 4.83.21.643.246 1.249.069 1.711-.413 1.073-1.813 1.329-2.762.567z"/></svg>
+            <span data-i18n="footer.kofi">Apoya el proyecto en Ko-fi</span>
+          </a>
+          <p style="margin-top:0.9rem;font-size:0.85rem;color:rgb(var(--text-muted));" data-i18n="about.p3">Nota honesta de alcance: probado solo con mis propios pools (raidz1 + mirror de SSD). Si tu configuración es otra, pruébala con cuidado en un entorno de pruebas antes de confiarle datos.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <div class="container">
+      <div class="foot-grid">
+        <div class="foot-col" style="max-width:22rem;">
+          <a class="nav-logo" href="#" style="margin-bottom:0.75rem;">
+            <svg viewBox="0 0 96 96" fill="none" width="22" height="22" aria-hidden="true">
+              <rect x="20" y="16" width="56" height="64" rx="10" stroke="rgb(var(--accent))" stroke-width="6"/>
+              <path d="M20 40h56" stroke="rgb(var(--accent))" stroke-width="6"/>
+              <rect x="30" y="24" width="14" height="8" rx="3" fill="rgb(var(--accent))"/>
+              <rect x="52" y="24" width="14" height="8" rx="3" fill="rgb(var(--accent))"/>
+            </svg>
+            EasyZFS
+          </a>
+          <p class="caption text-muted" data-i18n="footer.tagline">Control de pools ZFS ligero, autoalojado y libre para siempre.</p>
+        </div>
+        <div class="foot-col">
+          <h4 data-i18n="footer.project">Proyecto</h4>
+          <a href="https://github.com/gnacho/easyzfs/releases" target="_blank" rel="noopener" data-i18n="footer.releases">Releases</a>
+          <a href="https://github.com/gnacho/easyzfs/blob/main/README.md" target="_blank" rel="noopener" data-i18n="footer.docs">Documentación</a>
+          <a href="https://github.com/gnacho/easyzfs/blob/main/LICENSE" target="_blank" rel="noopener" data-i18n="footer.license">Licencia</a>
+        </div>
+        <div class="foot-col">
+          <h4 data-i18n="footer.community">Comunidad</h4>
+          <a href="https://github.com/gnacho/easyzfs/issues" target="_blank" rel="noopener" data-i18n="footer.issues">Issues</a>
+          <a href="https://github.com/gnacho/easyzfs/discussions" target="_blank" rel="noopener" data-i18n="footer.discussions">Discusiones</a>
+          <a href="https://github.com/gnacho/easyzfs" target="_blank" rel="noopener" data-i18n="footer.contribute">Contribuir</a>
+        </div>
+        <div class="foot-col">
+          <h4>Ko-fi</h4>
+          <a class="kofi" id="kofiLink" href="#" target="_blank" rel="noopener">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.24 2.437 2.057 3.134 3.957 3.134 2.806.001 5.825-.054 8.658-.065.147-.031 4.467-.842 5.393-4.63.266-1.088.05-1.574-.149-2.466zm-4.572 3.482c-.567 2.306-2.876 2.523-2.876 2.523H4.645c-1.846 0-1.833-1.873-1.833-1.873V6.94c0-1.293 1.164-1.48 1.164-1.48h11.639c1.895 0 2.088 1.509 2.088 1.509s.18 2.121.18 3.153c0 1.155-.193 2.308-.574 2.308zm-4.224-1.051c-.657-.526-1.219-1.298-1.743-2.236-.523.938-1.086 1.71-1.742 2.236-.952.762-2.352.506-2.764-.567-.177-.462-.141-1.068.069-1.711.479-1.475 1.862-3.511 3.406-4.83a1.53 1.53 0 0 1 2.06 0c1.545 1.319 2.928 3.355 3.407 4.83.21.643.246 1.249.069 1.711-.413 1.073-1.813 1.329-2.762.567z"/></svg>
+            <span data-i18n="footer.kofi">Apoya el proyecto en Ko-fi</span>
+          </a>
+        </div>
+      </div>
+      <div class="foot-bottom">
+        <span data-i18n="footer.rights">AGPL-3.0 · Hecho en casa, para almacenamiento de casa.</span>
+        <span class="font-mono">2 pools · 7 discos · 34 °C · 0 errores</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="i18n.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
