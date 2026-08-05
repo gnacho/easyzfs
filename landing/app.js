@@ -1,4 +1,4 @@
-/* EasyZFS landing — interactividad: idioma, tema, contadores, reveal, copiar */
+/* EasyZFS landing — interactividad: idioma, tema, slider, contadores, reveal, copiar */
 (function () {
   'use strict';
 
@@ -6,6 +6,14 @@
   const THEME_KEY = 'easyzfs-theme';
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const root = document.documentElement;
+
+  /* Capturas: orden de las vistas + alt por idioma */
+  const SLIDES = ['pools', 'disks', 'settings'];
+  const SHOT_ALT = {
+    pools: { es: 'Vista de pools: raidz1 tank degradado con oferta de rebuild y mirror ssd resilverizando', en: 'Pools view: degraded raidz1 tank with a rebuild offer and the ssd mirror resilvering' },
+    disks: { es: 'Tabla de discos físicos con modelo, serie, tamaño, temperatura, salud SMART y pool', en: 'Physical disks table with model, serial, size, temperature, SMART health and pool' },
+    settings: { es: 'Página de ajustes con apariencia, acento, densidad, perfil, idioma y notificaciones push', en: 'Settings page with appearance, accent, density, profile, language and push notifications' }
+  };
 
   /* ---------- Idioma ---------- */
   function applyLang(lang) {
@@ -44,10 +52,8 @@
 
   function iconPath(theme) {
     if (theme === 'dark') {
-      // luna
       return '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
     }
-    // sol
     return '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>';
   }
 
@@ -60,19 +66,6 @@
     applyShots();
   }
 
-  function applyShots() {
-    const theme = root.getAttribute('data-theme') || 'light';
-    const lang = root.lang || 'es';
-    const prefix = 'assets/screenshot-';
-    const suffix = (theme === 'dark' ? '-dark' : '-light') + '.webp';
-    document.querySelectorAll('.shot img').forEach(function (img) {
-      const view = img.closest('.shot');
-      const viewName = view ? view.dataset.view : null;
-      if (!viewName) return;
-      img.src = prefix + viewName + '-' + lang + suffix;
-    });
-  }
-
   if (themeBtn) {
     themeBtn.addEventListener('click', function () {
       const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
@@ -80,17 +73,42 @@
     });
   }
 
-  function initialTheme() {
-    try {
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === 'light' || saved === 'dark') return saved;
-    } catch (e) { /* noop */ }
-    return 'light';
+  function themeNow() { return root.getAttribute('data-theme') || 'light'; }
+  function langNow() { return root.lang || 'es'; }
+  function shotUrl(view) { return 'assets/screenshot-' + view + '-' + langNow() + '-' + themeNow() + '.webp'; }
+
+  /* ---------- Slider de capturas ---------- */
+  const shotImg = document.getElementById('shotImg');
+  const shotCaption = document.getElementById('shotCaption');
+  let shotIndex = 0;
+
+  function applyShots() {
+    // miniaturas
+    document.querySelectorAll('.thumb img').forEach(function (img) {
+      img.src = shotUrl(img.dataset.view);
+    });
+    // imagen principal del slider
+    renderShot(shotIndex);
   }
 
-  /* ---------- Capturas: añadir el nombre de vista ---------- */
-  document.querySelectorAll('.shot').forEach(function (shot, i) {
-    shot.dataset.view = ['pools', 'disks', 'settings'][i];
+  function renderShot(i) {
+    shotIndex = (i + SLIDES.length) % SLIDES.length;
+    const view = SLIDES[shotIndex];
+    shotImg.src = shotUrl(view);
+    shotImg.alt = SHOT_ALT[view][langNow()];
+    const dict = I18N[langNow()] || I18N.es;
+    shotCaption.textContent = dict['shots.s' + (shotIndex + 1)] || '';
+    document.querySelectorAll('.thumb').forEach(function (th, idx) {
+      th.classList.toggle('active', idx === shotIndex);
+    });
+  }
+
+  const shotPrev = document.getElementById('shotPrev');
+  const shotNext = document.getElementById('shotNext');
+  if (shotPrev) shotPrev.addEventListener('click', function () { renderShot(shotIndex - 1); });
+  if (shotNext) shotNext.addEventListener('click', function () { renderShot(shotIndex + 1); });
+  document.querySelectorAll('.thumb').forEach(function (th) {
+    th.addEventListener('click', function () { renderShot(parseInt(th.dataset.slide, 10)); });
   });
 
   /* ---------- Contadores ---------- */
@@ -163,4 +181,13 @@
   /* ---------- Arranque ---------- */
   applyTheme(initialTheme());
   applyLang(initialLang());
+  renderShot(0);
+
+  function initialTheme() {
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === 'light' || saved === 'dark') return saved;
+    } catch (e) { /* noop */ }
+    return 'light';
+  }
 })();
