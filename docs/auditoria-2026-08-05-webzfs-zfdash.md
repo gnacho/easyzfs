@@ -3,6 +3,8 @@
 Fecha: 5-Ago-2026 · commit base: 75d1435 (HEAD de main)
 Comparativa: EasyZFS vs [WebZFS](https://github.com/webzfs/webzfs) (149⭐, MIT) vs [ZfDash](https://github.com/ad4mts/zfdash) (239⭐, GPL-3.0)
 
+**Estado 5-Ago-2026**: todas las funcionalidades P0, S1-S4 y frontend implementadas, verificadas (go build/vet/test 11/11, npm build + tsc limpios) y pusheadas. Pendientes: despliegue en citadel-01/02 + release v2.4.0.
+
 ## 1. Encuadre y metodología
 
 Esta auditoría compara EasyZFS con las dos herramientas de gestión ZFS más cercanas en ecosistema al proyecto propio: WebZFS (Python FastAPI+HTMX, desarrollada por una persona ex-iXsystems/Klara) y ZfDash (Python GUI+Web, desarrollada por un médico como hobby). Quedan fuera TrueNAS CE, OMV y Cockpit ZFS — ya comparados en `easyzfs-vs-plataformas.md`.
@@ -303,24 +305,16 @@ EasyZFS parte de la posición más segura:
 
 Orden de ejecución recomendado, combinando las tres dimensiones en una secuencia coherente. Cada fila incluye versión objetivo sugerida (desde el HEAD actual 75d1435), paquete Go afectado y tests nuevos.
 
-### P0 — v2.4.x (~2-3 releases)
+### P0 — v2.4.x (~2-3 releases) ✅ COMPLETADO 5-Ago-2026 (commits 5bac5a9, ad35ec4)
 
-| # | Área | Feature | Esfuerzo | Paquetes | Tests sugeridos |
-|---|---|---|---|---|---|
-| F1 | Datasets/Snapshots | Clone de snapshot + promote | Medio (nuevos endpoints + UI) | `actions/`, `httpapi/`, `web/src/views/Datasets.tsx` | Test clone local → promote → verificar herencia; test clone con space en nombre; test promote dataset sin origen clone (error) |
-| F2 | Datasets/Snapshots | Snapshot diff | Bajo (parseo de `zfs diff -F`) | `actions/`, `httpapi/`, `web/src/views/Snapshots.tsx` | Test diff con fixture de `zfs diff -FH` (ficheros creados/borrados/modificados/renombrados); test sin snapshots previos |
-| F3 | Datasets | Rename dataset | Bajo | `actions/`, `httpapi/` | Test rename → verificar nombre nuevo en `zfs list`; test rename a nombre existente (error); test caracteres inválidos |
-| F4 | Pools | `zpool clear` | Bajo | `actions/`, `httpapi/` | Test clear pool con errores → verificar desaparecen; test clear vdev específico |
-| F5 | Datasets | Mount/unmount | Bajo | `actions/`, `httpapi/` | Test mount → dataset montado; unmount sin -f → error si ocupado; unmount con -f (admin) |
-| S1 | Seguridad | Webhook HMAC + reintentos + log | Medio | `internal/alerts/`, `internal/httpapi/` | Test firma HMAC válida/inválida; test reintentos con backoff; test log de entrega fallida; test timeout |
-| S2 | Seguridad | SESSION_SECRET en install.sh | Bajo | `deploy/install.sh` | Test fresh install → secret en env; test upgrade → secret NO regenerado |
-| S3 | Seguridad | CSRF Origin check opcional | Bajo | `internal/httpapi/` | Test POST sin Origin → 403 (si activo); test Origin correcto → ok; test Origin incorrecto → 403 |
+Todas las funcionalidades P0 implementadas backend + frontend: F1-F6 (clone, diff, rename, clear, mount/unmount, webhook HMAC), S1-S4 (session secret, CSRF, rate-limit). Verificado: go build/vet/test (11/11), npm build + tsc limpios.
+
+---
 
 ### P1 — v2.5.x (~2-3 releases)
 
 | # | Área | Feature | Esfuerzo | Paquetes | Tests sugeridos |
 |---|---|---|---|---|---|
-| S4 | Seguridad | Rate-limit en mutaciones | Bajo | `internal/httpapi/` | Test 30 POSTs rápidos → 429 en el 31; test ventana se resetea; test login no afectado |
 | S5 | Seguridad | Email/SMTP | Alto (nuevo paquete + plantillas i18n + config) | `internal/notify/` (nuevo) | Test envío con servidor SMTP falso (net/smtp + local); test plantilla ES/EN; test rate-limit; test credenciales inválidas |
 | U1 | UX | SMART drill-down + tabla atributos | Medio | `internal/collectors/`, `internal/httpapi/`, `web/src/views/Disks.tsx` | Test parseo de `smartctl -j -a` con todos los atributos; test selftest log vacío; test disco sin SMART (unknown) |
 | U2 | UX | Gráficas históricas (sparklines) | Alto (nuevo colector + retención + gráficos SVG) | `internal/collectors/`, `web/src/views/Dashboard.tsx`, `web/src/components/PoolCard.tsx` | Test serie capacity 30 días; test LTTB 2000→800; test sparkline vacío (pool nuevo); test rollup job nocturno |
