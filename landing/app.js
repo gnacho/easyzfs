@@ -115,6 +115,40 @@
     th.addEventListener('click', function () { renderShot(parseInt(th.dataset.slide, 10)); });
   });
 
+  /* ---------- Lightbox: zoom de la captura a pantalla completa ---------- */
+  const lightbox = document.getElementById('shotLightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  const lightboxCaption = document.getElementById('lightboxCaption');
+  const lightboxClose = document.getElementById('lightboxClose');
+
+  function openLightbox() {
+    if (!lightbox) return;
+    lightboxImg.src = shotImg.src;
+    lightboxImg.alt = shotImg.alt;
+    lightboxCaption.textContent = shotCaption.textContent;
+    lightbox.hidden = false;
+    lightbox.setAttribute('aria-hidden', 'false');
+    if (lightboxClose) lightboxClose.focus();
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    if (!lightbox) return;
+    lightbox.hidden = true;
+    lightbox.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    if (shotImg) shotImg.focus();
+  }
+
+  if (shotImg) shotImg.addEventListener('click', openLightbox);
+  if (lightboxClose) lightboxClose.addEventListener('click', closeLightbox);
+  if (lightbox) {
+    lightbox.addEventListener('click', function (e) { if (e.target === lightbox) closeLightbox(); });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !lightbox.hidden) closeLightbox();
+    });
+  }
+
   /* ---------- Contadores ---------- */
   function animateCount(el) {
     const target = parseFloat(el.getAttribute('data-count')) || 0;
