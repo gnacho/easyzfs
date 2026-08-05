@@ -534,6 +534,7 @@ footer {
   .req-list { grid-template-columns: 1fr; }
   .slider-thumbs { justify-content: flex-start; overflow-x: auto; padding-bottom: 0.5rem; }
   .thumb { width: 110px; flex: none; }
+  .slider-main { max-width: 390px; margin: 0 auto; }
   .hero { padding: 72px 0 56px; }
   .nav-cta { display: none; }
   .legend { gap: 0.75rem; flex-direction: column; }

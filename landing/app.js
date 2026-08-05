@@ -79,7 +79,11 @@
 
   function themeNow() { return root.getAttribute('data-theme') || 'light'; }
   function langNow() { return root.lang || 'es'; }
-  function shotUrl(view) { return 'assets/shot-' + view + '-' + langNow() + '-' + themeNow() + '.webp'; }
+  const mobileMq = window.matchMedia('(max-width: 767px)');
+  function shotUrl(view) {
+    const prefix = mobileMq.matches ? 'shot-m-' : 'shot-';
+    return 'assets/' + prefix + view + '-' + langNow() + '-' + themeNow() + '.webp';
+  }
 
   /* ---------- Slider de capturas ---------- */
   const shotImg = document.getElementById('shotImg');
@@ -114,6 +118,7 @@
   document.querySelectorAll('.thumb').forEach(function (th) {
     th.addEventListener('click', function () { renderShot(parseInt(th.dataset.slide, 10)); });
   });
+  if (mobileMq.addEventListener) mobileMq.addEventListener('change', applyShots);
 
   /* ---------- Lightbox: zoom de la captura a pantalla completa ---------- */
   const lightbox = document.getElementById('shotLightbox');
