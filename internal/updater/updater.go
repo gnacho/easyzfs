@@ -179,6 +179,13 @@ func (u *Updater) Apply(ctx context.Context) error {
 	// UpdateTo aplica sobre el path indicado. Como el proceso no es root, el
 	// destino NO puede ser /usr/local/bin/easyzfs: usamos dataDir/update y que
 	// la unit .path haga el install.
+	//
+	// La librería (update.Apply) hace rename(target, target.old) antes de mover
+	// el nuevo: con un target inexistente el rename falla (ENOENT). Creamos un
+	// placeholder para que el swap funcione en el primer apply.
+	if err := os.WriteFile(u.NewBinary(), nil, 0o755); err != nil {
+		return fmt.Errorf("updater: placeholder: %w", err)
+	}
 	if err := up.UpdateTo(ctx, latest, u.NewBinary()); err != nil {
 		return fmt.Errorf("updater: apply: %w", err)
 	}
