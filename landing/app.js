@@ -120,14 +120,21 @@
   const lightboxImg = document.getElementById('lightboxImg');
   const lightboxCaption = document.getElementById('lightboxCaption');
   const lightboxClose = document.getElementById('lightboxClose');
+  const lightboxPrev = document.getElementById('lightboxPrev');
+  const lightboxNext = document.getElementById('lightboxNext');
 
-  function openLightbox() {
-    if (!lightbox) return;
+  function syncLightbox() {
+    if (!lightbox || lightbox.hidden) return;
     lightboxImg.src = shotImg.src;
     lightboxImg.alt = shotImg.alt;
     lightboxCaption.textContent = shotCaption.textContent;
+  }
+
+  function openLightbox() {
+    if (!lightbox) return;
     lightbox.hidden = false;
     lightbox.setAttribute('aria-hidden', 'false');
+    syncLightbox();
     if (lightboxClose) lightboxClose.focus();
     document.body.style.overflow = 'hidden';
   }
@@ -142,10 +149,15 @@
 
   if (shotImg) shotImg.addEventListener('click', openLightbox);
   if (lightboxClose) lightboxClose.addEventListener('click', closeLightbox);
+  if (lightboxPrev) lightboxPrev.addEventListener('click', function () { renderShot(shotIndex - 1); syncLightbox(); });
+  if (lightboxNext) lightboxNext.addEventListener('click', function () { renderShot(shotIndex + 1); syncLightbox(); });
   if (lightbox) {
     lightbox.addEventListener('click', function (e) { if (e.target === lightbox) closeLightbox(); });
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && !lightbox.hidden) closeLightbox();
+      if (lightbox.hidden) return;
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowLeft') { renderShot(shotIndex - 1); syncLightbox(); }
+      else if (e.key === 'ArrowRight') { renderShot(shotIndex + 1); syncLightbox(); }
     });
   }
 

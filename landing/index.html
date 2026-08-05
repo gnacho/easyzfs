@@ -28,7 +28,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=4" />
+  <link rel="stylesheet" href="styles.css?v=5" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -561,11 +561,17 @@
     <button class="lightbox-close" id="lightboxClose" aria-label="Cerrar" data-i18n-aria="shots.close">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="24" height="24" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
+    <button class="lightbox-arrow prev" id="lightboxPrev" aria-label="Captura anterior" data-i18n-aria="shots.prev">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="28" height="28" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+    </button>
+    <button class="lightbox-arrow next" id="lightboxNext" aria-label="Captura siguiente" data-i18n-aria="shots.next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" width="28" height="28" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+    </button>
     <img id="lightboxImg" src="" alt="">
     <p class="lightbox-caption" id="lightboxCaption"></p>
   </div>
 
-  <script src="i18n.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <script src="i18n.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

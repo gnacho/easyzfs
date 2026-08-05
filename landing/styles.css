@@ -342,6 +342,25 @@ h3 { font-size: 1.1rem; font-weight: 600; line-height: 1.35; }
   z-index: 5;
 }
 .lightbox-close:hover { background: rgb(246 246 243 / 0.25); }
+.lightbox-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 52px;
+  height: 52px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(246 246 243 / 0.35);
+  border-radius: 50%;
+  background: rgb(246 246 243 / 0.12);
+  color: #f6f6f3;
+  cursor: pointer;
+  z-index: 5;
+}
+.lightbox-arrow.prev { left: 1.5rem; }
+.lightbox-arrow.next { right: 1.5rem; }
+.lightbox-arrow:hover { background: rgb(246 246 243 / 0.25); }
 
 /* ============ COMPARATIVA ============ */
 .legend {
