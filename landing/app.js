@@ -166,15 +166,29 @@
   /* ---------- Copiar comando ---------- */
   const copyBtn = document.getElementById('copyBtn');
   const installCmd = document.getElementById('installCmd');
-  if (copyBtn && installCmd && navigator.clipboard) {
+  if (copyBtn && installCmd) {
     copyBtn.addEventListener('click', function () {
       const text = installCmd.textContent.trim();
-      navigator.clipboard.writeText(text).then(function () {
+      const done = function () {
         const dict = I18N[root.lang] || I18N.es;
         const orig = copyBtn.textContent;
         copyBtn.textContent = dict['misc.copied'] || (root.lang === 'es' ? 'Copiado ✓' : 'Copied ✓');
         setTimeout(function () { copyBtn.textContent = orig; }, 1600);
-      });
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done);
+      } else {
+        // contexto no seguro (http): fallback legacy
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { /* noop */ }
+        document.body.removeChild(ta);
+      }
     });
   }
 
