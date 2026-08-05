@@ -461,6 +461,8 @@ footer {
   .features { grid-template-columns: 1fr; }
   .foot-grid { grid-template-columns: 1fr; }
   .req-list { grid-template-columns: 1fr; }
+  .slider-thumbs { justify-content: flex-start; overflow-x: auto; padding-bottom: 0.5rem; }
+  .thumb { width: 110px; flex: none; }
   .hero { padding: 72px 0 56px; }
   .nav-cta { display: none; }
   .legend { gap: 0.75rem; flex-direction: column; }

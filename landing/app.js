@@ -8,10 +8,14 @@
   const root = document.documentElement;
 
   /* Capturas: orden de las vistas + alt por idioma */
-  const SLIDES = ['pools', 'disks', 'settings'];
+  const SLIDES = ['dashboard', 'pools', 'datasets', 'disks', 'tasks', 'snapshots', 'settings'];
   const SHOT_ALT = {
+    dashboard: { es: 'Panel de EasyZFS: resumen de pools, discos, temperatura y alertas', en: 'EasyZFS dashboard: pools, disks, temperature and alerts overview' },
     pools: { es: 'Vista de pools: raidz1 tank degradado con oferta de rebuild y mirror ssd resilverizando', en: 'Pools view: degraded raidz1 tank with a rebuild offer and the ssd mirror resilvering' },
+    datasets: { es: 'Vista de datasets con propiedades, cuotas y volúmenes', en: 'Datasets view with properties, quotas and volumes' },
     disks: { es: 'Tabla de discos físicos con modelo, serie, tamaño, temperatura, salud SMART y pool', en: 'Physical disks table with model, serial, size, temperature, SMART health and pool' },
+    tasks: { es: 'Vista de tareas: jobs programados y timers/cron del sistema', en: 'Tasks view: scheduled jobs and system timers/cron' },
+    snapshots: { es: 'Vista de snapshots con retención y rollback', en: 'Snapshots view with retention and rollback' },
     settings: { es: 'Página de ajustes con apariencia, acento, densidad, perfil, idioma y notificaciones push', en: 'Settings page with appearance, accent, density, profile, language and push notifications' }
   };
 
@@ -75,7 +79,7 @@
 
   function themeNow() { return root.getAttribute('data-theme') || 'light'; }
   function langNow() { return root.lang || 'es'; }
-  function shotUrl(view) { return 'assets/screenshot-' + view + '-' + langNow() + '-' + themeNow() + '.webp'; }
+  function shotUrl(view) { return 'assets/shot-' + view + '-' + langNow() + '-' + themeNow() + '.webp'; }
 
   /* ---------- Slider de capturas ---------- */
   const shotImg = document.getElementById('shotImg');
