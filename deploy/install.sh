@@ -1043,6 +1043,8 @@ EOF
     write_root_file "$upd_path" 0644 <<EOF
 [Unit]
 Description=Reinicia EasyZFS cuando el updater prepara una versión nueva
+
+[Path]
 PathChanged=${upd_dir}/.restart-me
 
 [Install]

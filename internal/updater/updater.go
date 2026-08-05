@@ -26,6 +26,7 @@ import (
 	"time"
 
 	selfupdate "github.com/creativeprojects/go-selfupdate"
+	"github.com/Masterminds/semver/v3"
 )
 
 const (
@@ -102,7 +103,19 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 	}
 
 	latestV := stripV(latest.Version())
-	available := latestV != "" && latestV != u.current && latest.GreaterThan(u.current)
+	// Comparación semver defensiva: si la versión local no es semver válido
+	// (p.ej. 'dev' o un build local), se considera al día solo si coincide la
+	// cadena; en caso contrario hay versión nueva.
+	available := false
+	cur, curErr := semver.NewVersion(u.current)
+	lat, latErr := semver.NewVersion(latestV)
+	if curErr != nil {
+		available = latErr == nil && latestV != "" && latestV != u.current
+	} else if latErr == nil {
+		available = lat.GreaterThan(cur)
+	} else {
+		available = latestV != "" && latestV != u.current
+	}
 
 	u.mu.Lock()
 	u.currentLatest = latestV
@@ -138,7 +151,22 @@ func (u *Updater) Apply(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("updater: detect: %w", err)
 	}
-	if !found || latest.LessOrEqual(u.current) {
+	if !found {
+		return errors.New("updater: no hay versión más reciente")
+	}
+	// ¿Es realmente más reciente? (comparación semver defensiva, sin panic).
+	latestV := stripV(latest.Version())
+	cur, curErr := semver.NewVersion(u.current)
+	lat, latErr := semver.NewVersion(latestV)
+	newer := false
+	if curErr != nil {
+		newer = latErr == nil && latestV != "" && latestV != u.current
+	} else if latErr == nil {
+		newer = lat.GreaterThan(cur)
+	} else {
+		newer = latestV != "" && latestV != u.current
+	}
+	if !newer {
 		return errors.New("updater: no hay versión más reciente")
 	}
 
