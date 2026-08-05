@@ -17,6 +17,10 @@ web:
 	fi
 
 go:
+	@if [ ! -d dist ]; then \
+		if [ -d web/dist ]; then cp -r web/dist dist; \
+		else echo "dist/ no existe: ejecuta 'make web' primero"; exit 1; fi \
+	fi
 	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o easyzfs .
 
 clean:

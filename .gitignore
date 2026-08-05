@@ -10,6 +10,8 @@ easyzfs
 # Front (web/ se genera con el stack PWA; dist/ se construye por make)
 web/node_modules/
 web/dist/
+web/*.tsbuildinfo
+dist/
 
 # Go
 /vendor/
