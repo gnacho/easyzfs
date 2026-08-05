@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://easyzfs.cloudless.club/sitemap.xml
+Sitemap: http://easyzfs.cloudless.club/sitemap.xml
