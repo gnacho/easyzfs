@@ -11,7 +11,7 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, fmtDuration, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconDownload, IconCheck, IconSun, IconMoon, IconMonitor, IconUpload, IconCamera, IconTrash, IconLock, IconBell, IconChev } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconDownload, IconCheck, IconSun, IconMoon, IconMonitor, IconUpload, IconCamera, IconTrash, IconLock, IconBell, IconChev, IconData, IconUser } from '../components/icons';
 import { useModal, ModalBox } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { usePush } from '../data/push';
@@ -689,6 +689,7 @@ export default function Settings() {
   const [reduceMotion, setReduceMotionState] = useState(getReduceMotion());
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone());
+  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -816,26 +817,105 @@ export default function Settings() {
       {/* ---- Fila 2: Mi perfil (horizontal, ancho completo: avatar + campos + notificaciones) ---- */}
       <ProfileCard />
 
-      {/* ---- Zona de administración (tinte sutil; solo admin) ---- */}
-      {isAdmin && <h2 className="zonehead">{t('s_admin_zone')}<ReleaseIcon version={version?.version} /></h2>}
+      {/* ---- Zona de administración (solo admin): AdminBar canónica ---- */}
       {isAdmin && (
       <>
-      {/* Fila admin 1: Modo demo | Copia de seguridad | Notificaciones */}
-      <div className="st-row st-admin3">
+      {/* AdminBar horizontal: Actualizaciones → Respaldos → Usuarios → Modo demo (derecha) */}
+      <div className="admin-bar">
+        <div className="ab-row">
+          <div className="ab-title">
+            <IconShield size={18} />
+            <span>{t('s_admin_zone')}</span>
+            <ReleaseIcon version={version?.version} />
+          </div>
+          <span className="ab-sep" />
 
-      {/* ---- Modo demo ---- */}
-      <div className="card pad admin-card">
-        <h3 className="cardtitle">{t('s_demo')}</h3>
-        <p className="muted">{t('s_demo_d')}</p>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 10 }}>
-          <span style={{ flex: 1, fontSize: 13.5, fontWeight: 600 }}>{t('s_demo_enable')}</span>
-          <Switch checked={settings.demo_enabled} ariaLabel={t('s_demo_enable')}
-            onChange={(v) => { void saveSettings({ demo_enabled: v }); }} />
+          {/* 1. Comprobar actualizaciones (widget inline) */}
+          <UpdateCheckRow version={version?.version} />
+
+          {/* 2. Respaldos (desplegable) */}
+          <button
+            type="button"
+            aria-expanded={adminPanel === 'backup'}
+            onClick={() => setAdminPanel(adminPanel === 'backup' ? null : 'backup')}
+            className={`ab-btn${adminPanel === 'backup' ? ' on' : ''}`}
+          >
+            <IconData size={15} />
+            <span className="hidden-sm">{t('bk_title')}</span>
+            <IconChev className="chev" />
+          </button>
+
+          {/* 3. Usuarios (desplegable) */}
+          <button
+            type="button"
+            aria-expanded={adminPanel === 'users'}
+            onClick={() => setAdminPanel(adminPanel === 'users' ? null : 'users')}
+            className={`ab-btn${adminPanel === 'users' ? ' on' : ''}`}
+          >
+            <IconUser size={15} />
+            <span className="hidden-sm">{t('s_users')}</span>
+            <IconChev className="chev" />
+          </button>
+
+          {/* 4. Modo demo a la derecha */}
+          <div className="ab-right">
+            <span>{t('s_demo_enable')}</span>
+            <Switch checked={settings.demo_enabled} ariaLabel={t('s_demo_enable')}
+              onChange={(v) => { void saveSettings({ demo_enabled: v }); }} />
+          </div>
         </div>
+
+        {/* Paneles desplegables */}
+        {adminPanel === 'backup' && (
+          <div className="ab-panel">
+            <BackupCard settings={settings} onSave={saveSettings} />
+          </div>
+        )}
+        {adminPanel === 'users' && (
+          <div className="ab-panel">
+            <div className="card pad admin-card">
+              <h3 className="cardtitle">{t('s_users')}
+                <span className="actions" style={{ float: 'right' }}>
+                  <button className="btn sm primary" onClick={() => openModal('newuser')}>+ {t('s_newuser')}</button>
+                </span>
+              </h3>
+              <div>
+                {(users ?? []).map((u) => (
+                  <div className="rowitem" key={u.user}>
+                    <div className="grow">
+                      <div className="t1" style={{ fontSize: 14 }}>
+                        {u.display_name || u.user}
+                        {u.user === user?.user && <span style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>{t('you')}</span>}
+                        <span className={`rolebadge ${u.role}`}>{u.role === 'admin' ? t('mu_r_admin') : t('mu_r_user')}</span>
+                      </div>
+                      <div className="t2">
+                        {u.user} · {t('s_last_login')}: {timeAgo(u.last_login, t)} · {u.sessions}{' '}
+                        {u.sessions === 1 ? t('s_session_one') : t('s_sessions')}
+                      </div>
+                    </div>
+                    <Select value={u.language ?? 'auto'} ariaLabel={t('s_lang')}
+                      options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: '🇪🇸 Español' }, { v: 'en', label: '🇬🇧 English' }]}
+                      onChange={(v) => {
+                        const lang = v as 'auto' | 'es' | 'en';
+                        setUsers((cur) => cur?.map((x) => (x.user === u.user ? { ...x, language: lang } : x)) ?? cur);
+                        getProvider().setUserLanguage(u.user, lang).catch(() => {});
+                      }} />
+                    <button className="btn sm" onClick={() => openModal('passwd', { user: u.user })}>{t('s_passwd')}</button>
+                    {u.user !== user?.user && (
+                      <button className="btn sm danger" onClick={() => openModal('deluser', { user: u.user })}>{t('s_delete_user')}</button>
+                    )}
+                  </div>
+                ))}
+                {users && users.length === 0 && <div className="empty">{t('empty')}</div>}
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>{t('s_roles_d')}</p>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ---- Copia de seguridad de la BD ---- */}
-      <BackupCard settings={settings} onSave={saveSettings} />
+      {/* Fila de dominio: Notificaciones webhook | Actividad */}
+      <div className="st-row st-users">
 
       {/* ---- Notificaciones webhook ---- */}
       <div className="card pad admin-card">
@@ -856,49 +936,6 @@ export default function Settings() {
         <div className="m-actions">
           <button className="btn primary" onClick={() => saveSettings({})}>{t('save')}</button>
         </div>
-      </div>
-      </div>
-
-      {/* Fila admin 2: Usuarios | Actividad — misma altura */}
-      <div className="st-row st-users">
-
-      {/* ---- Usuarios ---- */}
-      <div className="card pad admin-card">
-        <h3 className="cardtitle">{t('s_users')}
-          <span className="actions" style={{ float: 'right' }}>
-            <button className="btn sm primary" onClick={() => openModal('newuser')}>+ {t('s_newuser')}</button>
-          </span>
-        </h3>
-        <div>
-          {(users ?? []).map((u) => (
-            <div className="rowitem" key={u.user}>
-              <div className="grow">
-                <div className="t1" style={{ fontSize: 14 }}>
-                  {u.display_name || u.user}
-                  {u.user === user?.user && <span style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>{t('you')}</span>}
-                  <span className={`rolebadge ${u.role}`}>{u.role === 'admin' ? t('mu_r_admin') : t('mu_r_user')}</span>
-                </div>
-                <div className="t2">
-                  {u.user} · {t('s_last_login')}: {timeAgo(u.last_login, t)} · {u.sessions}{' '}
-                  {u.sessions === 1 ? t('s_session_one') : t('s_sessions')}
-                </div>
-              </div>
-              <Select value={u.language ?? 'auto'} ariaLabel={t('s_lang')}
-                options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: '🇪🇸 Español' }, { v: 'en', label: '🇬🇧 English' }]}
-                onChange={(v) => {
-                  const lang = v as 'auto' | 'es' | 'en';
-                  setUsers((cur) => cur?.map((x) => (x.user === u.user ? { ...x, language: lang } : x)) ?? cur);
-                  getProvider().setUserLanguage(u.user, lang).catch(() => {});
-                }} />
-              <button className="btn sm" onClick={() => openModal('passwd', { user: u.user })}>{t('s_passwd')}</button>
-              {u.user !== user?.user && (
-                <button className="btn sm danger" onClick={() => openModal('deluser', { user: u.user })}>{t('s_delete_user')}</button>
-              )}
-            </div>
-          ))}
-          {users && users.length === 0 && <div className="empty">{t('empty')}</div>}
-        </div>
-        <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>{t('s_roles_d')}</p>
       </div>
 
       {/* ---- Actividad (audit log, "ver más") ---- */}

@@ -140,6 +140,31 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
   border-radius:calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
 }
 
+/* AdminBar horizontal canónica (skill webapp-shell): borde izquierdo de
+   acento, fondo tintado sutil, secciones en fila y paneles desplegables. */
+.admin-bar{
+  margin-top:16px;padding:16px;border:1px solid var(--border);
+  border-left:4px solid var(--accent);border-radius:var(--radius);
+  background:var(--accent-soft);
+}
+.admin-bar > .ab-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px}
+.admin-bar .ab-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:-.01em}
+.admin-bar .ab-title svg{color:var(--accent)}
+.admin-bar .ab-sep{width:1px;height:24px;background:var(--border)}
+.admin-bar .ab-btn{
+  display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;
+  border:1px solid var(--border);border-radius:10px;background:var(--surface);
+  font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;transition:.15s;
+}
+.admin-bar .ab-btn:hover{background:var(--hover);color:var(--text1)}
+.admin-bar .ab-btn.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.admin-bar .ab-btn .chev{transition:transform .15s}
+.admin-bar .ab-btn.on .chev{transform:rotate(180deg)}
+.admin-bar .ab-right{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600}
+.admin-bar .ab-panel{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+.hidden-sm{display:inline}
+@media (max-width:640px){.hidden-sm{display:none}}
+
 /* Ajustes (layout 3-Ago-2026, spec del usuario): filas de tarjetas.
    Fila 1: Datos y umbrales 50% + Apariencia 50% (misma altura, grid).
    Fila 2: Mi sesión + Alertas push (misma altura).
