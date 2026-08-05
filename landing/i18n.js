@@ -3,7 +3,7 @@ const I18N = {
   es: {
     "misc.skip": "Saltar al contenido",
     "misc.copy": "Copiar",
-    "misc.copied": "Copiado ✓",
+    "misc.copied": "Copiado al portapapeles",
     "appearance.theme": "Cambiar tema",
     "nav.features": "Funciones",
     "nav.compare": "Comparativa",
@@ -177,7 +177,7 @@ const I18N = {
   en: {
     "misc.skip": "Skip to content",
     "misc.copy": "Copy",
-    "misc.copied": "Copied ✓",
+    "misc.copied": "Copied to clipboard",
     "appearance.theme": "Toggle theme",
     "nav.features": "Features",
     "nav.compare": "Compare",

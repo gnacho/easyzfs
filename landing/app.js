@@ -183,11 +183,16 @@
         ta.value = text;
         ta.setAttribute('readonly', '');
         ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '0';
         ta.style.opacity = '0';
         document.body.appendChild(ta);
+        ta.focus();
         ta.select();
-        try { document.execCommand('copy'); done(); } catch (e) { /* noop */ }
+        ta.setSelectionRange(0, ta.value.length);
+        try { document.execCommand('copy'); } catch (e) { /* noop */ }
         document.body.removeChild(ta);
+        done();
       }
     });
   }
