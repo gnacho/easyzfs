@@ -5,6 +5,8 @@ Comparativa: EasyZFS vs [WebZFS](https://github.com/webzfs/webzfs) (149⭐, MIT)
 
 **Estado 5-Ago-2026**: todas las funcionalidades P0, S1-S4 y frontend implementadas, verificadas (go build/vet/test 11/11, npm build + tsc limpios) y pusheadas. Pendientes: despliegue en citadel-01/02 + release v2.4.0.
 
+**Estado 6-Ago-2026**: P1 de v2.5 reacotado a U1 (SMART drill-down) + U3 (tabla de propiedades). S5 (email), U2 (sparklines) y U4 (tooltips) movidos a P2. Specs en `docs/specs-p1-v2.5.md`.
+
 ## 1. Encuadre y metodología
 
 Esta auditoría compara EasyZFS con las dos herramientas de gestión ZFS más cercanas en ecosistema al proyecto propio: WebZFS (Python FastAPI+HTMX, desarrollada por una persona ex-iXsystems/Klara) y ZfDash (Python GUI+Web, desarrollada por un médico como hobby). Quedan fuera TrueNAS CE, OMV y Cockpit ZFS — ya comparados en `easyzfs-vs-plataformas.md`.
@@ -311,20 +313,24 @@ Todas las funcionalidades P0 implementadas backend + frontend: F1-F6 (clone, dif
 
 ---
 
-### P1 — v2.5.x (~2-3 releases)
+### P1 — v2.5.x (REVISADO 6-Ago-2026: solo U1 + U3)
 
 | # | Área | Feature | Esfuerzo | Paquetes | Tests sugeridos |
 |---|---|---|---|---|---|
-| S5 | Seguridad | Email/SMTP | Alto (nuevo paquete + plantillas i18n + config) | `internal/notify/` (nuevo) | Test envío con servidor SMTP falso (net/smtp + local); test plantilla ES/EN; test rate-limit; test credenciales inválidas |
 | U1 | UX | SMART drill-down + tabla atributos | Medio | `internal/collectors/`, `internal/httpapi/`, `web/src/views/Disks.tsx` | Test parseo de `smartctl -j -a` con todos los atributos; test selftest log vacío; test disco sin SMART (unknown) |
-| U2 | UX | Gráficas históricas (sparklines) | Alto (nuevo colector + retención + gráficos SVG) | `internal/collectors/`, `web/src/views/Dashboard.tsx`, `web/src/components/PoolCard.tsx` | Test serie capacity 30 días; test LTTB 2000→800; test sparkline vacío (pool nuevo); test rollup job nocturno |
 | U3 | UX | Tabla de propiedades + edición | Medio-alto | `actions/`, `httpapi/`, `web/src/views/Datasets.tsx` | Test get all → whitelist; test set valor válido; test set valor inválido (rechazo); test inherit; test propiedad readonly |
-| U4 | UX | Ayudas contextuales tooltips | Bajo (frontend puro) | `web/src/components/ui.tsx` | Verificar tooltips en EN/ES; test accesibilidad (focus no atrapado); test responsive |
 
-### P2 — v2.6+ (largo plazo)
+Specs de detalle: `docs/specs-p1-v2.5.md`.
+
+### P2 — v2.6+ (largo plazo; reordenado 6-Ago-2026)
+
+Items arrastrados de P1 (decisión 6-Ago-2026: acotar el alcance de v2.5 a las dos features de medio esfuerzo, el resto no se apila en la misma fase):
 
 | # | Área | Feature |
 |---|---|---|
+| S5 | Seguridad | Email/SMTP (nuevo paquete + plantillas i18n + config) |
+| U2 | UX | Gráficas históricas (sparklines + retención) |
+| U4 | UX | Ayudas contextuales tooltips |
 | F6 | Plataforma | Multi-host / fleet (agentes ligeros SSH) |
 | U5 | UX | Onboarding "Primeros pasos" |
 | U6 | UX | SW update automático (skipWaiting + clientsClaim) + bundle split |
