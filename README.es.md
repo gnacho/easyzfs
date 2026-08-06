@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.6.0
+
+- **Stack actualizado**: deps Go al día (`modernc.org/sqlite` v1.56.0, `golang.org/x/crypto` v0.54.0) y toolchain del frontend (Vite 8, TypeScript 7, Tailwind 4). Sin cambios de API ni de comportamiento.
+
 ### v2.5.0
 
 - **Detalle SMART**: clic en la fila de un disco abre su detalle SMART completo (tabla de atributos: id, valor, peor, umbral, raw, estado; historial de self-tests; log de errores), para ATA y NVMe. Los datos salen de la caché del colector, nunca `smartctl` bajo demanda.

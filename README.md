@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.6.0
+
+- **Stack updated**: Go deps to date (`modernc.org/sqlite` v1.56.0, `golang.org/x/crypto` v0.54.0) and frontend toolchain (Vite 8, TypeScript 7, Tailwind 4). No API or behavior changes.
+
 ### v2.5.0
 
 - **SMART drill-down**: click a disk row to open its full SMART detail (complete attribute table: id, value, worst, threshold, raw, status; self-test history; error log), for ATA and NVMe. Data comes from the collector cache, never `smartctl` on request.
