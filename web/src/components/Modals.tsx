@@ -9,7 +9,7 @@ import { ModalBox, useModal } from './Modal';
 import { Badge, Seg, InfoBubble, Spinner } from './ui';
 import { SYS_SCHED_DEFAULT, buildSysSchedule, parseSysSchedule } from '../ui/syssched';
 import type { SysSchedState } from '../ui/syssched';
-import type { Dataset, DatasetProp, Disk, Job, Pool, PropGroup, ReplicationJob, SystemTimer, Topo } from '../data/types';
+import type { Dataset, DatasetProp, Disk, DiskSmartLogResp, DiskSmartResp, Job, Pool, PropGroup, ReplicationJob, SystemTimer, Topo } from '../data/types';
 
 // ---------- utilidades comunes ----------
 function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []) {
@@ -50,6 +50,7 @@ export function ModalHost() {
     case 'newds': return <NewDatasetModal vol={!!p.vol} onClose={closeModal} />;
     case 'editds': return <EditDatasetModal ds={p.ds as Dataset} onClose={closeModal} />;
     case 'propsds': return <DatasetPropsModal ds={p.ds as Dataset} onClose={closeModal} />;
+    case 'diskdetail': return <DiskDetailModal disk={p.disk as Disk} onClose={closeModal} />;
     case 'delds': return <DeleteDatasetModal name={p.name as string} onClose={closeModal} />;
     case 'renameds': return <RenameDatasetModal name={p.name as string} onClose={closeModal} />;
     case 'rewrite': return <RewriteModal ds={p.ds as Dataset} onClose={closeModal} />;
@@ -610,6 +611,136 @@ function DatasetPropsModal({ ds, onClose }: { ds: Dataset; onClose: () => void }
           </div>
         </>
       )}
+      <div className="m-actions">
+        <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
+      </div>
+    </ModalBox>
+  );
+}
+
+// ---------- detalle SMART del disco (U1): atributos + selftests + errores ----------
+function DiskDetailModal({ disk, onClose }: { disk: Disk; onClose: () => void }) {
+  const { t } = useApp();
+  const [tab, setTab] = useState<'attrs' | 'tests' | 'errors'>('attrs');
+  const [smart, setSmart] = useState<DiskSmartResp | null>(null);
+  const [log, setLog] = useState<DiskSmartLogResp | null>(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [s, l] = await Promise.all([
+          getProvider().getDiskSmart(disk.dev),
+          getProvider().getDiskSmartLog(disk.dev),
+        ]);
+        if (alive) { setSmart(s); setLog(l); }
+      } catch (e) { if (alive) setErr(errorMessage(e, t)); }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disk.dev]);
+
+  const srcLabel = (s: string) => (s === 'Past' ? t('dsm_attr_past') : t('dsm_attr_ok'));
+
+  return (
+    <ModalBox onClose={onClose} wide label={t('dsm_title')}>
+      <h3>{t('dsm_title')}</h3>
+      <p className="desc mono">{disk.dev} · {disk.model}</p>
+      <div role="tablist" aria-label={t('dsm_title')} style={{ display: 'inline-flex', gap: 6, marginBottom: 10 }}>
+        <button className={`btn sm ${tab === 'attrs' ? 'primary' : ''}`} role="tab" aria-selected={tab === 'attrs'}
+          onClick={() => setTab('attrs')}>{t('dsm_tab_attrs')}</button>
+        <button className={`btn sm ${tab === 'tests' ? 'primary' : ''}`} role="tab" aria-selected={tab === 'tests'}
+          onClick={() => setTab('tests')}>{t('dsm_tab_tests')}</button>
+        <button className={`btn sm ${tab === 'errors' ? 'primary' : ''}`} role="tab" aria-selected={tab === 'errors'}
+          onClick={() => setTab('errors')}>{t('dsm_tab_errors')}</button>
+      </div>
+      {err && <p className="form-err" role="alert">{err}</p>}
+      {!smart && !err && <div style={{ padding: '24px 0', textAlign: 'center' }}><Spinner label={t('dsm_loading')} /></div>}
+
+      {tab === 'attrs' && smart && (
+        <div className="tblwrap" style={{ maxHeight: '45vh', overflowY: 'auto' }}>
+          <table className="data">
+            <thead><tr>
+              <th className="num">{t('dsm_attr_id')}</th><th>{t('dsm_attr_name')}</th>
+              <th className="num">{t('dsm_attr_value')}</th><th className="num hide-md">{t('dsm_attr_worst')}</th>
+              <th className="num hide-md">{t('dsm_attr_thresh')}</th><th className="mono">{t('dsm_attr_raw')}</th>
+              <th>{t('dsm_attr_state')}</th>
+            </tr></thead>
+            <tbody>
+              {(smart.attributes ?? []).map((a) => (
+                <tr key={a.id + '-' + a.name}>
+                  <td className="num mono">{a.id || '—'}</td>
+                  <td style={{ fontWeight: 600 }}>{a.name}</td>
+                  <td className="num">{a.value}</td>
+                  <td className="num hide-md">{a.worst}</td>
+                  <td className="num hide-md">{a.thresh}</td>
+                  <td className="mono" style={{ color: 'var(--text2)' }}>{a.raw}</td>
+                  <td>
+                    {a.when_failed === 'Past' || a.when_failed === 'In the past'
+                      ? <Badge tone="warn" dot>{t('dsm_attr_past')}</Badge>
+                      : <Badge tone="ok" dot={false}>{t('dsm_attr_ok')}</Badge>}
+                  </td>
+                </tr>
+              ))}
+              {smart.attributes?.length === 0 && (
+                <tr><td colSpan={7} style={{ textAlign: 'center' }}>{t('dsm_no_attrs')}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'tests' && log && (
+        <div className="tblwrap" style={{ maxHeight: '45vh', overflowY: 'auto' }}>
+          <table className="data">
+            <thead><tr>
+              <th>{t('dsm_test_type')}</th><th>{t('dsm_test_status')}</th>
+              <th className="num hide-md">{t('dsm_test_hours')}</th><th className="num">{t('dsm_test_pct')}</th>
+            </tr></thead>
+            <tbody>
+              {(log.selftests ?? []).map((s, i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 600 }}>{s.type}</td>
+                  <td>{s.status}</td>
+                  <td className="num hide-md">{s.lifetime_hours}</td>
+                  <td className="num">{s.percent}%</td>
+                </tr>
+              ))}
+              {log.selftests?.length === 0 && (
+                <tr><td colSpan={4} style={{ textAlign: 'center' }}>{t('dsm_no_tests')}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'errors' && log && (
+        <div>
+          <p className="desc" style={{ marginBottom: 8 }}>
+            {log.error_log.count > 0 ? t('dsm_err_count', { n: log.error_log.count }) : t('dsm_no_errors')}
+          </p>
+          {(log.error_log.entries ?? []).length > 0 && (
+            <div className="tblwrap" style={{ maxHeight: '45vh', overflowY: 'auto' }}>
+              <table className="data">
+                <thead><tr>
+                  <th className="num hide-md">{t('dsm_err_hours')}</th><th>{t('dsm_err_type')}</th><th>{t('dsm_err_detail')}</th>
+                </tr></thead>
+                <tbody>
+                  {(log.error_log.entries ?? []).map((e, i) => (
+                    <tr key={i}>
+                      <td className="num hide-md">{e.lifetime_hours ?? '—'}</td>
+                      <td className="mono">{e.error_type ?? '—'}</td>
+                      <td className="mono" style={{ color: 'var(--text2)', wordBreak: 'break-all' }}>{e.detail ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="m-actions">
         <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
       </div>

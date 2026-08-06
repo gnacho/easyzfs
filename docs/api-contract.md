@@ -60,6 +60,13 @@ Números: bytes en enteros (el front formatea a TiB/GiB con coma es-ES). Fechas:
   - `encryption` (lote D) — valor efectivo de la propiedad (`"off"` sin cifrado; `"aes-256-gcm"`… cifrado, propio o heredado). `keystatus` — `"available"` (clave cargada, desbloqueado) | `"unavailable"` (bloqueado) | `"-"` (sin cifrado).
 - `POST /api/datasets` `{pool, name, type:"fs"|"volume", compression:"lz4"|"zstd"|"off", quota_bytes, volsize_bytes?, encryption?, passphrase?}` → 201. Con `encryption:true` crea con cifrado nativo AES-256-GCM (`-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt`); la passphrase (mín. 8) viaja SOLO en el body y se pasa a zfs por stdin — jamás en URL, argv, logs ni audit_log.
 - `PATCH /api/datasets/{name}` `{quota_bytes?, compression?}` → 204
+- **Propiedades (U3, fase P1)**: tabla completa + edición con whitelist estricta.
+  - `GET /api/datasets/{name}/properties` → `{name, properties:[{name, value, source}]}` (admin y viewer).
+    - `source` ∈ `local`/`default`/`inherited`/`received`/`temporary`/`-`. Lista TODAS (nativas + user props); el front agrupa por editabilidad.
+    - Lectura bajo demanda con caché TTL 30 s por dataset (excepción puntual a la caché de collectors, documentada en `docs/specs-p1-v2.5.md`). 404 `not_found`.
+  - `PATCH /api/datasets/{name}/properties` (admin) `{property, value}` → 204.
+    - Whitelist estricta en `internal/actions/props.go` (compression, recordsize, atime, relatime, sync, checksum, copies, xattr, acltype, aclinherit, primarycache, secondarycache, logbias, canmount, mountpoint, exec, setuid, devices, readonly, snapdir, quota, reservation, volsize, volblocksize). 400 `invalid_property` / 400 `invalid_value` (nunca llega a zfs). Propiedades no aplicables al tipo (mountpoint en volume…) → 400.
+  - `POST /api/datasets/{name}/properties/{prop}/inherit` (admin) → 204. Solo propiedades de la whitelist con `source == "local"`; 400 `invalid_property`, 409 `not_local`. Audit `dataset.setprop`/`dataset.inherit`.
 - `DELETE /api/datasets/{name}` `{confirm, recursive}` → 202
 - **Cifrado nativo** (lote D; admin; audit sin claves NUNCA):
   - `POST /api/datasets/{name}/unlock` `{key}` → 204 (`zfs load-key`, clave por stdin; monta). 400 `invalid_input` (sin clave o dataset sin cifrar), 404 `not_found`.
@@ -87,6 +94,10 @@ Números: bytes en enteros (el front formatea a TiB/GiB con coma es-ES). Fechas:
   - `temp_c: null` = sin lectura (eMMC, USB sin SAT, smartctl no disponible); `null` no es lo mismo que `0`. El front muestra "—".
   - `smart:"unknown"` + `smart_detail:"no disponible"` cuando el disco no habla smartctl: no es un error.
 - `POST /api/disks/{dev}/smart-test` `{type:"short"|"long"}` → 202
+- **SMART drill-down (U1, fase P1)** — datos de la caché del colector (hasta 10 min de antigüedad; NUNCA smartctl bajo demanda).
+  - `GET /api/disks/{dev}/smart` → `{dev, model, serial, smart, smart_detail, hours, attributes:[{id, name, value, worst, thresh, raw, when_failed}]}` (admin y viewer). 404 `not_found`. Discos `unknown` (sin smartctl: eMMC, USB sin SAT) → 200 con `attributes:[]`.
+  - `GET /api/disks/{dev}/smart-log` → `{dev, selftests:[{type, status, lifetime_hours, percent}], error_log:{count, entries:[{error_type, detail}]}}`. Listas vacías si el disco no expone logs.
+  - El detalle se parsea en la pasada de 10 min del colector del mismo `smartctl -j -a`; protocolo ATA/NVMe detectado automáticamente.
 
 ## Notificaciones push (Web Push)
 Los endpoints de suscripción devuelven 503 `push_not_configured` si el servidor no tiene claves VAPID. El texto de las notificaciones se compone server-side (ES/EN) según el `lang` guardado en la suscripción.

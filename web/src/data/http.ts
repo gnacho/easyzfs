@@ -4,7 +4,7 @@ import { ApiError } from './types';
 import { notifyAuthExpired } from './events';
 import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
+  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
@@ -162,6 +162,8 @@ export class HttpProvider implements DataProvider {
     patch<void>(`/datasets/${enc(name)}/properties`, { property, value });
   inheritDatasetProp = (name: string, property: string) =>
     post<void>(`/datasets/${enc(name)}/properties/${enc(property)}/inherit`);
+  getDiskSmart = (dev: string) => get<DiskSmartResp>(`/disks/${enc(dev)}/smart`);
+  getDiskSmartLog = (dev: string) => get<DiskSmartLogResp>(`/disks/${enc(dev)}/smart-log`);
   expandPool = (pool: string, vdev: string, disk: string, confirm: string) =>
     post<void>(`/pools/${enc(pool)}/expand`, { vdev, disk, confirm });
 

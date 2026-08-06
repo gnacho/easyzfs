@@ -6,7 +6,7 @@ import { ApiError } from './types';
 import { computeRecommendations } from './recs';
 import type {
   Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SessionUser, Settings, Snapshot,
+  Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SessionUser, Settings, Snapshot, SmartSelftest,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UserInfo, VersionInfo,
   CreateReplicationReq, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, UpdateReplicationReq,
 } from './types';
@@ -603,6 +603,42 @@ export class MockProvider implements DataProvider {
     const p = props.find((x) => x.name === property);
     if (p) p.source = 'default';
     emitEvent({ type: 'overview' });
+  };
+
+  // ---- U1: SMART drill-down (atributos/selftests/error log ficticios) ----
+  getDiskSmart = async (dev: string): Promise<DiskSmartResp> => {
+    await delay();
+    const d = this.disks.find((x) => x.dev === dev);
+    if (!d) throw new ApiError(404, 'not_found', 'Disco no encontrado');
+    const proto = dev.startsWith('nvme') ? 'nvme' : 'ata';
+    if (d.smart === 'unknown') return { dev, model: d.model, serial: d.serial, smart: 'unknown', smart_detail: 'no disponible', hours: d.hours, attributes: [] };
+    const attrs = proto === 'nvme' ? [
+      { id: 1, name: 'temperature', value: Math.round(d.temp_c ?? 0), worst: 0, thresh: 0, raw: String(Math.round(d.temp_c ?? 0)), when_failed: '-' },
+      { id: 2, name: 'available_spare', value: 100, worst: 100, thresh: 10, raw: '100%', when_failed: '-' },
+      { id: 3, name: 'percentage_used', value: 12, worst: 12, thresh: 0, raw: '12%', when_failed: '-' },
+    ] : [
+      { id: 1, name: 'Raw_Read_Error_Rate', value: 100, worst: 16, thresh: 6, raw: '0', when_failed: '-' },
+      { id: 5, name: 'Reallocated_Sector_Ct', value: 100, worst: 100, thresh: 36, raw: String(d.realloc_sectors ?? 0), when_failed: d.realloc_sectors ? 'Past' : '-' },
+      { id: 9, name: 'Power_On_Hours', value: 95, worst: 95, thresh: 0, raw: String(d.hours), when_failed: '-' },
+      { id: 197, name: 'Current_Pending_Sector', value: 99, worst: 99, thresh: 0, raw: String(d.pending_sectors ?? 0), when_failed: '-' },
+      { id: 198, name: 'Offline_Uncorrectable', value: 99, worst: 99, thresh: 0, raw: String(d.offline_uncorr ?? 0), when_failed: '-' },
+      { id: 199, name: 'UDMA_CRC_Error_Count', value: 200, worst: 200, thresh: 0, raw: String(d.crc_errors ?? 0), when_failed: '-' },
+    ];
+    return { dev, model: d.model, serial: d.serial, smart: d.smart, smart_detail: d.smart_detail, hours: d.hours, attributes: attrs };
+  };
+  getDiskSmartLog = async (dev: string): Promise<DiskSmartLogResp> => {
+    await delay();
+    const d = this.disks.find((x) => x.dev === dev);
+    if (!d) throw new ApiError(404, 'not_found', 'Disco no encontrado');
+    if (d.smart === 'unknown') return { dev, selftests: [], error_log: { count: 0, entries: [] } };
+    const selftests: SmartSelftest[] = [
+      { type: 'Short self-test', status: 'Completed without error', lifetime_hours: d.hours, percent: 100 },
+      { type: 'Extended self-test', status: 'Completed without error', lifetime_hours: d.hours - 24, percent: 100 },
+    ];
+    const entries = d.realloc_sectors || d.crc_errors
+      ? [{ error_type: 'NCQ', detail: '1 sectors, LBA 0x0' }]
+      : [];
+    return { dev, selftests, error_log: { count: entries.length, entries } };
   };
   deleteDataset = async (name: string, confirm: string, _r: boolean) => {
     await delay(300);
