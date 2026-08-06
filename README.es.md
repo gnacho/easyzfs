@@ -361,6 +361,16 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.7.0
+
+- **Release de auditoría de seguridad**: cabeceras de seguridad HTTP en todas
+  las respuestas (`X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  CSP con `default-src 'self'`, HSTS, Referrer-Policy, Permissions-Policy).
+  La CSP sigue permitiendo el check de actualizaciones pasivo contra
+  `api.github.com`.
+- Roadmap: nueva fase P3 (auditoría de seguridad y robustez) en
+  `docs/auditoria-2026-08-05-webzfs-zfdash.md`.
+
 ### v2.6.0
 
 - **Stack actualizado**: deps Go al día (`modernc.org/sqlite` v1.56.0, `golang.org/x/crypto` v0.54.0) y toolchain del frontend (Vite 8, TypeScript 7, Tailwind 4). Sin cambios de API ni de comportamiento.

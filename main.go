@@ -34,6 +34,7 @@ import (
 	"easyzfs/internal/push"
 	"easyzfs/internal/replication"
 	"easyzfs/internal/scheduler"
+	"easyzfs/internal/security"
 	"easyzfs/internal/settings"
 	"easyzfs/internal/updater"
 	"easyzfs/internal/users"
@@ -144,8 +145,9 @@ func main() {
 	mux.Handle("/", spaHandler(http.FS(webFS)))
 
 	httpSrv := &http.Server{
-		Addr:              cfg.ListenAddr,
-		Handler:           mux,
+		Addr: cfg.ListenAddr,
+		// Cabeceras de seguridad HTTP en TODAS las respuestas (auditoría P3).
+		Handler:           security.Middleware(mux),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Sin WriteTimeout global: mataría las conexiones SSE.
 	}
