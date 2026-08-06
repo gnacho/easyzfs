@@ -133,3 +133,52 @@ func (s *Server) smartTest(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusAccepted)
 }
+
+// diskSmart — GET /api/disks/{dev}/smart (U1): detalle SMART completo del
+// disco (atributos + info) desde la caché del colector. 404 si no existe;
+// discos "unknown" (sin smartctl) → 200 con attributes vacíos.
+func (s *Server) diskSmart(w http.ResponseWriter, r *http.Request) {
+	dev := r.PathValue("dev")
+	for _, d := range s.disks.Disks() {
+		if d.Dev != dev {
+			continue
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"dev": d.Dev, "model": d.Model, "serial": d.Serial,
+			"smart": d.Smart, "smart_detail": d.SmartDetail, "hours": d.Hours,
+			"attributes": smartAttrsOrEmpty(d.SmartFull),
+		})
+		return
+	}
+	writeErr(w, http.StatusNotFound, "not_found", "disco no encontrado")
+}
+
+// diskSmartLog — GET /api/disks/{dev}/smart-log (U1): historial de selftests
+// y log de errores desde la caché del colector.
+func (s *Server) diskSmartLog(w http.ResponseWriter, r *http.Request) {
+	dev := r.PathValue("dev")
+	for _, d := range s.disks.Disks() {
+		if d.Dev != dev {
+			continue
+		}
+		det := d.SmartFull
+		selftests, errLog := []model.SmartSelftest{}, model.SmartErrorLog{}
+		if det != nil {
+			selftests, errLog = det.Selftests, det.ErrorLog
+		}
+		writeJSON(w, http.StatusOK, map[string]any{
+			"dev": dev, "selftests": selftests, "error_log": errLog,
+		})
+		return
+	}
+	writeErr(w, http.StatusNotFound, "not_found", "disco no encontrado")
+}
+
+// smartAttrsOrEmpty — atributos del detalle, o lista vacía si no hay detalle
+// (disco sin SMART: eMMC, USB sin SAT).
+func smartAttrsOrEmpty(det *model.DiskSmartDetail) []model.SmartAttr {
+	if det == nil {
+		return []model.SmartAttr{}
+	}
+	return det.Attributes
+}

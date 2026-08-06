@@ -192,6 +192,19 @@ export interface Dataset {
   keystatus: string;   // "available" | "unavailable" | "-"
 }
 
+// Una propiedad de dataset (GET /api/datasets/{name}/properties).
+export interface DatasetProp {
+  name: string;
+  value: string;
+  source: string; // local | default | inherited | received | temporary | "-"
+}
+export interface DatasetPropsResp {
+  name: string;
+  properties: DatasetProp[];
+}
+// Agrupación para la UI: editables (whitelist backend), read-only, user props.
+export type PropGroup = 'editable' | 'readonly' | 'user';
+
 export interface Snapshot {
   name: string;
   full: string;
@@ -295,6 +308,53 @@ export interface Disk {
   pool: string;
   in_use?: boolean; // particiones montadas o swap activo (no elegible como libre)
   hours: number;
+  smart_full?: DiskSmartDetail; // U1: detalle completo (drill-down)
+}
+
+// U1 — detalle SMART completo (GET /api/disks/{dev}/smart y /smart-log).
+export interface SmartAttr {
+  id: number;
+  name: string;
+  value: number;
+  worst: number;
+  thresh: number;
+  raw: string;
+  when_failed: string; // "-" = dentro de umbral; "Past" = superado
+}
+export interface SmartSelftest {
+  type: string;
+  status: string;
+  lifetime_hours: number;
+  percent: number;
+}
+export interface SmartErrorEntry {
+  lifetime_hours?: number;
+  error_type?: string;
+  detail?: string;
+}
+export interface SmartErrorLog {
+  count: number;
+  entries?: SmartErrorEntry[];
+}
+export interface DiskSmartDetail {
+  protocol: 'ata' | 'nvme' | '';
+  attributes: SmartAttr[];
+  selftests: SmartSelftest[];
+  error_log: SmartErrorLog;
+}
+export interface DiskSmartResp {
+  dev: string;
+  model: string;
+  serial: string;
+  smart: Disk['smart'];
+  smart_detail: string;
+  hours: number;
+  attributes: SmartAttr[];
+}
+export interface DiskSmartLogResp {
+  dev: string;
+  selftests: SmartSelftest[];
+  error_log: SmartErrorLog;
 }
 
 // Respuesta de GET /api/system-timers: lista de tareas del sistema + si

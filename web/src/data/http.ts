@@ -4,7 +4,7 @@ import { ApiError } from './types';
 import { notifyAuthExpired } from './events';
 import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DiffEntry, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
+  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
@@ -157,6 +157,13 @@ export class HttpProvider implements DataProvider {
     post<void>(`/datasets/${enc(name)}/lock`, {});
   changeDatasetKey = (name: string, currentKey: string, newKey: string) =>
     post<void>(`/datasets/${enc(name)}/change-key`, { current_key: currentKey, new_key: newKey });
+  getDatasetProps = (name: string) => get<DatasetPropsResp>(`/datasets/${enc(name)}/properties`);
+  setDatasetProp = (name: string, property: string, value: string) =>
+    patch<void>(`/datasets/${enc(name)}/properties`, { property, value });
+  inheritDatasetProp = (name: string, property: string) =>
+    post<void>(`/datasets/${enc(name)}/properties/${enc(property)}/inherit`);
+  getDiskSmart = (dev: string) => get<DiskSmartResp>(`/disks/${enc(dev)}/smart`);
+  getDiskSmartLog = (dev: string) => get<DiskSmartLogResp>(`/disks/${enc(dev)}/smart-log`);
   expandPool = (pool: string, vdev: string, disk: string, confirm: string) =>
     post<void>(`/pools/${enc(pool)}/expand`, { vdev, disk, confirm });
 

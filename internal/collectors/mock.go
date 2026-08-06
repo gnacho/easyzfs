@@ -6,6 +6,7 @@ package collectors
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -269,6 +270,27 @@ func (m *Mock) AddDataset(name, typ, compression string, encrypted bool) {
 	m.h.Publish("overview", map[string]any{"reason": "dataset.create"})
 }
 
+// SetDatasetProp — set de propiedad simulado (MOCK=1). Solo afecta a la
+// propiedad si ya es "local"; el resto se ignora (no hay tabla de props en
+// el mock; el front usa el GET para pintar, que devuelve valores ficticios).
+func (m *Mock) SetDatasetProp(name, property, value string) {
+	m.mu.Lock()
+	for i := range m.datasets {
+		if m.datasets[i].Name == name {
+			if property == "compression" {
+				m.datasets[i].Compression = value
+			}
+		}
+	}
+	m.mu.Unlock()
+	m.h.Publish("overview", map[string]any{"reason": "dataset.prop"})
+}
+
+// InheritDatasetProp — inherit simulado (MOCK=1): no-op (sin tabla de props).
+func (m *Mock) InheritDatasetProp(name, property string) {
+	m.h.Publish("overview", map[string]any{"reason": "dataset.prop"})
+}
+
 // Expand — RAID-Z expansion simulada (MOCK=1): incorpora el disco al pool y
 // arranca un scan 'expand' que avanza en cada tick (~2%/tick, ~2,5 min).
 func (m *Mock) Expand(pool, vdev, disk string) {
@@ -418,20 +440,61 @@ func (m *Mock) build() {
 		mkSnap("ssd/vm", "pre-upgrade", 7*24*time.Hour, 20*uint64(gib), "manual"),
 	}
 	m.disks = []model.Disk{
-		{Dev: "sda", Model: "CT500MX500SSD1", Serial: "2034E5A1B2C3", SizeBytes: 500 * uint64(gib), TempC: f64ptr(33), Smart: "ok", SmartDetail: "PASSED", Pool: "", Hours: 18200},
+		{Dev: "sda", Model: "CT500MX500SSD1", Serial: "2034E5A1B2C3", SizeBytes: 500 * uint64(gib), TempC: f64ptr(33), Smart: "ok", SmartDetail: "PASSED", Pool: "", Hours: 18200, SmartFull: mockSmartDetailATA(0)},
 		// Disco libre del mismo tamaño que los miembros de tank: candidato a
 		// RAID-Z expansion (lote D) o a sustituir el vdev FAULTED.
-		{Dev: "sde", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA04", SizeBytes: 4 * uint64(tib), TempC: f64ptr(31), Smart: "ok", SmartDetail: "PASSED", Pool: "", Hours: 1200},
-		{Dev: "sdb", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA01", SizeBytes: 4 * uint64(tib), TempC: f64ptr(34), Smart: "ok", SmartDetail: "PASSED", Pool: "tank", Hours: 41230},
-		{Dev: "sdc", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA02", SizeBytes: 4 * uint64(tib), TempC: f64ptr(35), Smart: "ok", SmartDetail: "PASSED", Pool: "tank", Hours: 41231},
-		{Dev: "sdd", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA03", SizeBytes: 4 * uint64(tib), TempC: f64ptr(36), Smart: "warn", SmartDetail: "PASSED (realloc=2 pending=0)", ReallocSectors: 2, Pool: "tank", Hours: 42010},
-		{Dev: "nvme0n1", Model: "Samsung SSD 980 1TB", Serial: "S649NL0R111111", SizeBytes: 1 * uint64(tib), TempC: f64ptr(41), Smart: "ok", SmartDetail: "PASSED", Pool: "ssd", Hours: 9800},
-		{Dev: "nvme1n1", Model: "Samsung SSD 980 1TB", Serial: "S649NL0R222222", SizeBytes: 1 * uint64(tib), TempC: f64ptr(42), Smart: "ok", SmartDetail: "PASSED", Pool: "ssd", Hours: 9812},
+		{Dev: "sde", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA04", SizeBytes: 4 * uint64(tib), TempC: f64ptr(31), Smart: "ok", SmartDetail: "PASSED", Pool: "", Hours: 1200, SmartFull: mockSmartDetailATA(0)},
+		{Dev: "sdb", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA01", SizeBytes: 4 * uint64(tib), TempC: f64ptr(34), Smart: "ok", SmartDetail: "PASSED", Pool: "tank", Hours: 41230, SmartFull: mockSmartDetailATA(0)},
+		{Dev: "sdc", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA02", SizeBytes: 4 * uint64(tib), TempC: f64ptr(35), Smart: "ok", SmartDetail: "PASSED", Pool: "tank", Hours: 41231, SmartFull: mockSmartDetailATA(0)},
+		{Dev: "sdd", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA03", SizeBytes: 4 * uint64(tib), TempC: f64ptr(36), Smart: "warn", SmartDetail: "PASSED (realloc=2 pending=0)", ReallocSectors: 2, Pool: "tank", Hours: 42010, SmartFull: mockSmartDetailATA(2)},
+		{Dev: "nvme0n1", Model: "Samsung SSD 980 1TB", Serial: "S649NL0R111111", SizeBytes: 1 * uint64(tib), TempC: f64ptr(41), Smart: "ok", SmartDetail: "PASSED", Pool: "ssd", Hours: 9800, SmartFull: mockSmartDetailNVMe()},
+		{Dev: "nvme1n1", Model: "Samsung SSD 980 1TB", Serial: "S649NL0R222222", SizeBytes: 1 * uint64(tib), TempC: f64ptr(42), Smart: "ok", SmartDetail: "PASSED", Pool: "ssd", Hours: 9812, SmartFull: mockSmartDetailNVMe()},
 		// Caso real: eMMC de placa (smartctl no la soporta → "unknown", sin
 		// lectura de temperatura → TempC nil, JSON null). En el sistema también
 		// había zd0 y mmcblk0boot0/boot1, pero el filtro de discos físicos los
 		// excluye (ver smart.go).
 		{Dev: "mmcblk0", Model: "S008G1 eMMC", Serial: "0x2c8f1a3b", SizeBytes: 8 * uint64(gib), TempC: nil, Smart: "unknown", SmartDetail: "no disponible", Pool: "", Hours: 0},
+	}
+}
+
+// mockSmartDetailATA — detalle SMART ficticio para discos ATA del mock
+// (U1). realloc > 0 marca un atributo con when_failed="Past" (disco sdd).
+func mockSmartDetailATA(realloc int64) *model.DiskSmartDetail {
+	when := "-"
+	if realloc > 0 {
+		when = "Past"
+	}
+	return &model.DiskSmartDetail{
+		Protocol: "ata",
+		Attributes: []model.SmartAttr{
+			{ID: 1, Name: "Raw_Read_Error_Rate", Value: 100, Worst: 16, Thresh: 6, Raw: "0", WhenFailed: "-"},
+			{ID: 5, Name: "Reallocated_Sector_Ct", Value: 100, Worst: 100, Thresh: 36, Raw: fmt.Sprintf("%d", realloc), WhenFailed: when},
+			{ID: 9, Name: "Power_On_Hours", Value: 95, Worst: 95, Thresh: 0, Raw: "41230", WhenFailed: "-"},
+			{ID: 197, Name: "Current_Pending_Sector", Value: 99, Worst: 99, Thresh: 0, Raw: "0", WhenFailed: "-"},
+			{ID: 198, Name: "Offline_Uncorrectable", Value: 99, Worst: 99, Thresh: 0, Raw: "0", WhenFailed: "-"},
+			{ID: 199, Name: "UDMA_CRC_Error_Count", Value: 200, Worst: 200, Thresh: 0, Raw: "0", WhenFailed: "-"},
+		},
+		Selftests: []model.SmartSelftest{
+			{Type: "Short self-test", Status: "Completed without error", LifetimeHours: 41230, Percent: 100},
+			{Type: "Extended self-test", Status: "Completed without error", LifetimeHours: 41000, Percent: 100},
+		},
+		ErrorLog: model.SmartErrorLog{Count: 0},
+	}
+}
+
+// mockSmartDetailNVMe — detalle SMART ficticio para discos NVMe del mock.
+func mockSmartDetailNVMe() *model.DiskSmartDetail {
+	return &model.DiskSmartDetail{
+		Protocol: "nvme",
+		Attributes: []model.SmartAttr{
+			{ID: 1, Name: "temperature", Value: 41, Worst: 0, Thresh: 0, Raw: "41", WhenFailed: "-"},
+			{ID: 2, Name: "available_spare", Value: 100, Worst: 100, Thresh: 10, Raw: "100%", WhenFailed: "-"},
+			{ID: 3, Name: "percentage_used", Value: 12, Worst: 12, Thresh: 0, Raw: "12%", WhenFailed: "-"},
+		},
+		Selftests: []model.SmartSelftest{
+			{Type: "Short self-test", Status: "Completed without error", LifetimeHours: 9800, Percent: 100},
+		},
+		ErrorLog: model.SmartErrorLog{Count: 0},
 	}
 }
 

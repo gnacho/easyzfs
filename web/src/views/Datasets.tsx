@@ -49,7 +49,7 @@ export default function Datasets() {
               const unlocked = d.keystatus === 'available';
               return (
               <tr className="clickable" key={d.name}
-                onClick={() => isAdmin && openModal('editds', { ds: d })}>
+                onClick={() => openModal('propsds', { ds: d })}>
                 <td className="mono" style={{ fontWeight: 600 }}>
                   {encrypted && (
                     <span style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 6,

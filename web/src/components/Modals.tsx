@@ -1,15 +1,15 @@
 // Todos los modales de la app. Cada uno gestiona su estado y llama al provider;
 // al terminar con éxito: cierra y refresca los datos de las vistas.
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, fmtDateTime, fmtDuration, parseSize } from '../ui/format';
 import { statusLabel } from '../ui/labels';
 import { ModalBox, useModal } from './Modal';
-import { Seg, InfoBubble } from './ui';
+import { Badge, Seg, InfoBubble, Spinner } from './ui';
 import { SYS_SCHED_DEFAULT, buildSysSchedule, parseSysSchedule } from '../ui/syssched';
 import type { SysSchedState } from '../ui/syssched';
-import type { Dataset, Disk, Job, Pool, ReplicationJob, SystemTimer, Topo } from '../data/types';
+import type { Dataset, DatasetProp, Disk, DiskSmartLogResp, DiskSmartResp, Job, Pool, PropGroup, ReplicationJob, SystemTimer, Topo } from '../data/types';
 
 // ---------- utilidades comunes ----------
 function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []) {
@@ -49,6 +49,8 @@ export function ModalHost() {
     case 'newpool': return <NewPoolModal onClose={closeModal} />;
     case 'newds': return <NewDatasetModal vol={!!p.vol} onClose={closeModal} />;
     case 'editds': return <EditDatasetModal ds={p.ds as Dataset} onClose={closeModal} />;
+    case 'propsds': return <DatasetPropsModal ds={p.ds as Dataset} onClose={closeModal} />;
+    case 'diskdetail': return <DiskDetailModal disk={p.disk as Disk} onClose={closeModal} />;
     case 'delds': return <DeleteDatasetModal name={p.name as string} onClose={closeModal} />;
     case 'renameds': return <RenameDatasetModal name={p.name as string} onClose={closeModal} />;
     case 'rewrite': return <RewriteModal ds={p.ds as Dataset} onClose={closeModal} />;
@@ -428,6 +430,320 @@ function EditDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void })
           <SubmitBtn label={t('save')} busy={busy} />
         </div>
       </form>
+    </ModalBox>
+  );
+}
+
+// ---------- propiedades del dataset (U3): tabla completa + editar/inherit ----------
+function DatasetPropsModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
+  const { t, refresh } = useApp();
+  const [props, setProps] = useState<DatasetProp[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  const [editing, setEditing] = useState<string | null>(null); // nombre de la propiedad en edición
+  const [draft, setDraft] = useState('');
+  // Contraseña de edición por propiedad: enum/bool → select; resto → input libre
+  const [mode, setMode] = useState<'enum' | 'bool' | 'free' | null>(null);
+
+  const load = useCallback(async () => {
+    setErr('');
+    try {
+      setProps((await getProvider().getDatasetProps(ds.name)).properties);
+    } catch (e) { setErr(errorMessage(e, t)); }
+  }, [ds.name, t]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const group = (name: string): PropGroup => {
+    if (name.startsWith('user:') || name.startsWith('org.openzfs:')) return 'user';
+    // Whitelist aproximada del front para pintar el grupo; el backend valida
+    // de verdad en PATCH (propiedades fuera devuelven invalid_property).
+    const known: Record<string, true> = {
+      compression: true, recordsize: true, atime: true, relatime: true, sync: true,
+      checksum: true, copies: true, xattr: true, acltype: true, aclinherit: true,
+      primarycache: true, secondarycache: true, logbias: true, canmount: true,
+      mountpoint: true, exec: true, setuid: true, devices: true, readonly: true,
+      snapdir: true, quota: true, reservation: true, volsize: true, volblocksize: true,
+    };
+    return known[name] ? 'editable' : 'readonly';
+  };
+
+  const srcLabel = (s: string) => {
+    switch (s) {
+      case 'local': return t('prp_src_local');
+      case 'default': return t('prp_src_default');
+      case 'inherited': return t('prp_src_inherited');
+      case 'received': return t('prp_src_received');
+      case 'temporary': return t('prp_src_temporary');
+      default: return s;
+    }
+  };
+
+  const startEdit = (p: DatasetProp) => {
+    setEditing(p.name);
+    setDraft(p.value);
+    if (p.name === 'atime' || p.name === 'relatime' || p.name === 'exec' ||
+        p.name === 'setuid' || p.name === 'devices' || p.name === 'readonly') {
+      setMode('bool');
+    } else if (p.name === 'compression' || p.name === 'sync' || p.name === 'checksum' ||
+        p.name === 'copies' || p.name === 'xattr' || p.name === 'acltype' ||
+        p.name === 'aclinherit' || p.name === 'primarycache' || p.name === 'secondarycache' ||
+        p.name === 'logbias' || p.name === 'canmount' || p.name === 'snapdir') {
+      setMode('enum');
+    } else {
+      setMode('free');
+    }
+  };
+
+  const save = async (p: DatasetProp) => {
+    setBusy(true); setErr('');
+    try {
+      await getProvider().setDatasetProp(ds.name, p.name, draft.trim());
+      await load();
+      setEditing(null);
+      refresh();
+    } catch (e) { setErr(errorMessage(e, t)); setBusy(false); }
+  };
+
+  const inherit = async (p: DatasetProp) => {
+    setBusy(true); setErr('');
+    try {
+      await getProvider().inheritDatasetProp(ds.name, p.name);
+      await load();
+      refresh();
+    } catch (e) { setErr(errorMessage(e, t)); setBusy(false); }
+  };
+
+  const enumValues = (name: string): string[] => {
+    switch (name) {
+      case 'compression': return ['lz4', 'zstd', 'zlib', 'gzip', 'gzip-1', 'gzip-2', 'gzip-3', 'gzip-4', 'gzip-5', 'gzip-6', 'gzip-7', 'gzip-8', 'gzip-9', 'lzjb', 'off'];
+      case 'sync': return ['standard', 'always', 'disabled'];
+      case 'checksum': return ['on', 'off', 'fletcher2', 'fletcher4', 'sha256'];
+      case 'copies': return ['1', '2', '3'];
+      case 'xattr': return ['on', 'off', 'sa'];
+      case 'acltype': return ['off', 'posix', 'nfsv4'];
+      case 'aclinherit': return ['discard', 'noallow', 'restricted', 'passthrough', 'passthrough-x'];
+      case 'primarycache': case 'secondarycache': return ['all', 'none', 'metadata'];
+      case 'logbias': return ['latency', 'throughput'];
+      case 'canmount': return ['on', 'off', 'noauto'];
+      case 'snapdir': return ['hidden', 'visible'];
+      default: return [];
+    }
+  };
+
+  if (!props) {
+    return (
+      <ModalBox onClose={onClose} wide label={t('prp_title')}>
+        <h3>{t('prp_title')}</h3>
+        <p className="desc mono">{ds.name}</p>
+        <div style={{ padding: '24px 0', textAlign: 'center' }}><Spinner label={t('prp_loaded')} /></div>
+      </ModalBox>
+    );
+  }
+
+  const rows = (g: PropGroup) => props.filter((p) => group(p.name) === g);
+
+  const renderRow = (p: DatasetProp, g: PropGroup) => {
+    const isEdit = editing === p.name;
+    const editable = g === 'editable';
+    return (
+      <tr key={p.name}>
+        <td className="mono" style={{ fontWeight: 600 }}>{p.name}</td>
+        <td className="mono" style={{ color: 'var(--text2)', wordBreak: 'break-all' }}>{p.value}</td>
+        <td><Badge tone={p.source === 'local' ? 'info' : 'ok'} dot={false}>{srcLabel(p.source)}</Badge></td>
+        <td className="actions">
+          {isEdit ? (
+            <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+              {mode === 'bool' ? (
+                <select value={draft} onChange={(e) => setDraft(e.target.value)}>
+                  <option value="on">on</option><option value="off">off</option>
+                </select>
+              ) : mode === 'enum' ? (
+                <select value={draft} onChange={(e) => setDraft(e.target.value)}>
+                  {enumValues(p.name).map((v) => <option key={v} value={v}>{v}</option>)}
+                </select>
+              ) : (
+                <input value={draft} onChange={(e) => setDraft(e.target.value)} style={{ width: 140 }} />
+              )}
+              <button className="btn sm" disabled={busy} onClick={() => save(p)}>{t('prp_save')}</button>
+              <button className="btn sm" onClick={() => setEditing(null)}>{t('prp_cancel')}</button>
+            </span>
+          ) : editable ? (
+            <span style={{ display: 'inline-flex', gap: 6 }}>
+              <button className="btn sm" title={t('prp_edit_hint')} onClick={() => startEdit(p)}>{t('prp_edit')}</button>
+              {p.source === 'local' && (
+                <button className="btn sm" title={t('prp_inherit_hint')} disabled={busy} onClick={() => inherit(p)}>{t('prp_inherit')}</button>
+              )}
+            </span>
+          ) : null}
+        </td>
+      </tr>
+    );
+  };
+
+  return (
+    <ModalBox onClose={onClose} wide label={t('prp_title')}>
+      <h3>{t('prp_title')}</h3>
+      <p className="desc mono">{ds.name}</p>
+      <p className="desc" style={{ fontSize: 12, marginBottom: 10 }}>{t('prp_hint')}</p>
+      {err && <p className="form-err" role="alert">{err}</p>}
+      {props.length === 0 && <div className="empty">{t('prp_empty')}</div>}
+      {rows('editable').length > 0 && (
+        <h4 style={{ margin: '12px 0 6px', fontSize: 13 }}>{t('prp_group_editable')}</h4>
+      )}
+      <div className="tblwrap" style={{ maxHeight: '45vh', overflowY: 'auto' }}>
+        <table className="data">
+          <thead><tr><th>{t('prp_prop')}</th><th>{t('prp_value')}</th><th>{t('prp_source')}</th><th /></tr></thead>
+          <tbody>
+            {rows('editable').map((p) => renderRow(p, 'editable'))}
+            {rows('readonly').map((p) => renderRow(p, 'readonly'))}
+          </tbody>
+        </table>
+      </div>
+      {rows('user').length > 0 && (
+        <>
+          <h4 style={{ margin: '14px 0 6px', fontSize: 13 }}>{t('prp_group_user')}</h4>
+          <div className="tblwrap" style={{ maxHeight: '30vh', overflowY: 'auto' }}>
+            <table className="data">
+              <thead><tr><th>{t('prp_prop')}</th><th>{t('prp_value')}</th><th>{t('prp_source')}</th></tr></thead>
+              <tbody>{rows('user').map((p) => renderRow(p, 'user'))}</tbody>
+            </table>
+          </div>
+        </>
+      )}
+      <div className="m-actions">
+        <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
+      </div>
+    </ModalBox>
+  );
+}
+
+// ---------- detalle SMART del disco (U1): atributos + selftests + errores ----------
+function DiskDetailModal({ disk, onClose }: { disk: Disk; onClose: () => void }) {
+  const { t } = useApp();
+  const [tab, setTab] = useState<'attrs' | 'tests' | 'errors'>('attrs');
+  const [smart, setSmart] = useState<DiskSmartResp | null>(null);
+  const [log, setLog] = useState<DiskSmartLogResp | null>(null);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const [s, l] = await Promise.all([
+          getProvider().getDiskSmart(disk.dev),
+          getProvider().getDiskSmartLog(disk.dev),
+        ]);
+        if (alive) { setSmart(s); setLog(l); }
+      } catch (e) { if (alive) setErr(errorMessage(e, t)); }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disk.dev]);
+
+  const srcLabel = (s: string) => (s === 'Past' ? t('dsm_attr_past') : t('dsm_attr_ok'));
+
+  return (
+    <ModalBox onClose={onClose} wide label={t('dsm_title')}>
+      <h3>{t('dsm_title')}</h3>
+      <p className="desc mono">{disk.dev} · {disk.model}</p>
+      <div role="tablist" aria-label={t('dsm_title')} style={{ display: 'inline-flex', gap: 6, marginBottom: 10 }}>
+        <button className={`btn sm ${tab === 'attrs' ? 'primary' : ''}`} role="tab" aria-selected={tab === 'attrs'}
+          onClick={() => setTab('attrs')}>{t('dsm_tab_attrs')}</button>
+        <button className={`btn sm ${tab === 'tests' ? 'primary' : ''}`} role="tab" aria-selected={tab === 'tests'}
+          onClick={() => setTab('tests')}>{t('dsm_tab_tests')}</button>
+        <button className={`btn sm ${tab === 'errors' ? 'primary' : ''}`} role="tab" aria-selected={tab === 'errors'}
+          onClick={() => setTab('errors')}>{t('dsm_tab_errors')}</button>
+      </div>
+      {err && <p className="form-err" role="alert">{err}</p>}
+      {!smart && !err && <div style={{ padding: '24px 0', textAlign: 'center' }}><Spinner label={t('dsm_loading')} /></div>}
+
+      {tab === 'attrs' && smart && (
+        <div className="tblwrap" style={{ maxHeight: '45vh', overflowY: 'auto' }}>
+          <table className="data">
+            <thead><tr>
+              <th className="num">{t('dsm_attr_id')}</th><th>{t('dsm_attr_name')}</th>
+              <th className="num">{t('dsm_attr_value')}</th><th className="num hide-md">{t('dsm_attr_worst')}</th>
+              <th className="num hide-md">{t('dsm_attr_thresh')}</th><th className="mono">{t('dsm_attr_raw')}</th>
+              <th>{t('dsm_attr_state')}</th>
+            </tr></thead>
+            <tbody>
+              {(smart.attributes ?? []).map((a) => (
+                <tr key={a.id + '-' + a.name}>
+                  <td className="num mono">{a.id || '—'}</td>
+                  <td style={{ fontWeight: 600 }}>{a.name}</td>
+                  <td className="num">{a.value}</td>
+                  <td className="num hide-md">{a.worst}</td>
+                  <td className="num hide-md">{a.thresh}</td>
+                  <td className="mono" style={{ color: 'var(--text2)' }}>{a.raw}</td>
+                  <td>
+                    {a.when_failed === 'Past' || a.when_failed === 'In the past'
+                      ? <Badge tone="warn" dot>{t('dsm_attr_past')}</Badge>
+                      : <Badge tone="ok" dot={false}>{t('dsm_attr_ok')}</Badge>}
+                  </td>
+                </tr>
+              ))}
+              {smart.attributes?.length === 0 && (
+                <tr><td colSpan={7} style={{ textAlign: 'center' }}>{t('dsm_no_attrs')}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'tests' && log && (
+        <div className="tblwrap" style={{ maxHeight: '45vh', overflowY: 'auto' }}>
+          <table className="data">
+            <thead><tr>
+              <th>{t('dsm_test_type')}</th><th>{t('dsm_test_status')}</th>
+              <th className="num hide-md">{t('dsm_test_hours')}</th><th className="num">{t('dsm_test_pct')}</th>
+            </tr></thead>
+            <tbody>
+              {(log.selftests ?? []).map((s, i) => (
+                <tr key={i}>
+                  <td style={{ fontWeight: 600 }}>{s.type}</td>
+                  <td>{s.status}</td>
+                  <td className="num hide-md">{s.lifetime_hours}</td>
+                  <td className="num">{s.percent}%</td>
+                </tr>
+              ))}
+              {log.selftests?.length === 0 && (
+                <tr><td colSpan={4} style={{ textAlign: 'center' }}>{t('dsm_no_tests')}</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'errors' && log && (
+        <div>
+          <p className="desc" style={{ marginBottom: 8 }}>
+            {log.error_log.count > 0 ? t('dsm_err_count', { n: log.error_log.count }) : t('dsm_no_errors')}
+          </p>
+          {(log.error_log.entries ?? []).length > 0 && (
+            <div className="tblwrap" style={{ maxHeight: '45vh', overflowY: 'auto' }}>
+              <table className="data">
+                <thead><tr>
+                  <th className="num hide-md">{t('dsm_err_hours')}</th><th>{t('dsm_err_type')}</th><th>{t('dsm_err_detail')}</th>
+                </tr></thead>
+                <tbody>
+                  {(log.error_log.entries ?? []).map((e, i) => (
+                    <tr key={i}>
+                      <td className="num hide-md">{e.lifetime_hours ?? '—'}</td>
+                      <td className="mono">{e.error_type ?? '—'}</td>
+                      <td className="mono" style={{ color: 'var(--text2)', wordBreak: 'break-all' }}>{e.detail ?? '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="m-actions">
+        <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
+      </div>
     </ModalBox>
   );
 }
