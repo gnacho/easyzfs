@@ -7,17 +7,19 @@ require (
 	modernc.org/sqlite v1.34.5 // driver SQLite puro Go (CGO_ENABLED=0, binario estático)
 )
 
-require github.com/SherClockHolmes/webpush-go v1.4.0
+require (
+	github.com/Masterminds/semver/v3 v3.5.0
+	github.com/SherClockHolmes/webpush-go v1.4.0
+	github.com/creativeprojects/go-selfupdate v1.6.0
+)
 
 require (
 	code.gitea.io/sdk/gitea v0.23.2 // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
-	github.com/Masterminds/semver/v3 v3.5.0 // indirect
-	github.com/creativeprojects/go-selfupdate v1.6.0 // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
-	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/google/go-github/v86 v86.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
