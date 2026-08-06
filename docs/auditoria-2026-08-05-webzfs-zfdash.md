@@ -347,6 +347,37 @@ Items arrastrados de P1 (decisión 6-Ago-2026: acotar el alcance de v2.5 a las d
 - **No apps/Docker/VMs**: fuera de alcance.
 - **Jobs en systemd timers en vez del scheduler propio**: decisión de diseño revisada y mantenida (el scheduler propio es fuente de verdad única con historial/SSE, sin ampliar superficie root).
 
+### P3 — Auditoría de seguridad y robustez (release bug-hunting, 6-Ago-2026)
+
+Pasada sistemática de caza de bugs y endurecimiento de seguridad sobre el
+código actual (backend Go + web + instalador), materializada en una release
+de mantenimiento. Cada hallazgo se abre como issue y se cierra con su PR.
+
+**Alcance (áreas a revisar):**
+1. **Auth y sesiones**: cookies (Secure/SameSite/HttpOnly), TTL, rotación,
+   `SESSION_SECRET` nunca en BD, recovery de admin solo-localhost.
+2. **CSRF y Origin check**: verificar que `CSRF_CHECK` cubre las mutaciones
+   y que no hay rutas sensibles solo con sesión (no admin).
+3. **Cabeceras de seguridad HTTP** en todas las respuestas.
+4. **Inyección y shell**: todos los comandos `zpool`/`zfs`/`smartctl` pasan
+   por `executil` con whitelist; sin interpolación de cadenas de usuario en
+   shell.
+5. **Path traversal**: estáticos, descargas, `serveStatic` y la raíz de datos.
+6. **Secretos**: tokens/contraseñas cifrados en reposo (AES-GCM), no en logs
+   ni en respuestas; `.env` 0600.
+7. **Rate-limit y abuso**: mutaciones limitadas, login con bloqueo por IP,
+   body caps en endpoints JSON.
+8. **Bugs latentes**: errores tragados, cierres de conexiones, races en
+   colectores, caminos de error poco probados.
+
+**Criterios de aceptación:**
+- Ninguna mutación sensible alcanzable con rol `viewer`.
+- Respuestas con cabeceras de seguridad básicas.
+- 0 CVEs HIGH/CRITICAL reales en deps (audit Go + npm verde o justificado).
+- Tests nuevos por fix (test que falla primero).
+
+**Deploy**: release + instalador en citadel-01/citadel-02 + demo en vivo.
+
 ## 8. Verificación del análisis
 
 Los claims de EasyZFS en este documento se verificaron contra el código:
