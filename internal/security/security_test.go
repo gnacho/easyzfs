@@ -34,6 +34,10 @@ func TestMiddlewareCabecerasSeguridad(t *testing.T) {
 	if !strings.Contains(csp, "https://api.github.com") {
 		t.Errorf("CSP sin connect-src api.github.com: %q", csp)
 	}
+	// El front embebe las fuentes (Space Grotesk/JetBrains Mono) como data:.
+	if !strings.Contains(csp, "font-src 'self' data:") {
+		t.Errorf("CSP sin font-src data: (rompe las fuentes embebidas): %q", csp)
+	}
 	// X-Content-Type-Options nosniff evita sniffing de tipos.
 	if got := rec.Header().Get("X-Content-Type-Options"); got != "nosniff" {
 		t.Errorf("X-Content-Type-Options = %q, quiero nosniff", got)
