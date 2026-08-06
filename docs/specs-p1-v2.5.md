@@ -2,6 +2,8 @@
 
 Fecha: 6-Ago-2026 · Base: `main` (HEAD `8dc6508`). Roadmap: `docs/auditoria-2026-08-05-webzfs-zfdash.md` §7 (P1 reacotado).
 
+**Estado: COMPLETADA y desplegada** (release v2.5.0, 6-Ago-2026): U1 y U3 implementadas en el PR #7 (merge `65620b4`), verificadas con go build/vet/test 12/12 + npm build + E2E demo. Este documento queda como especificación de referencia.
+
 **Alcance de v2.5**: exactamente 2 features, las de medio esfuerzo de la auditoría:
 
 | # | Feature | Backend | Frontend |

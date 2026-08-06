@@ -7,6 +7,8 @@ Comparativa: EasyZFS vs [WebZFS](https://github.com/webzfs/webzfs) (149⭐, MIT)
 
 **Estado 6-Ago-2026**: P1 de v2.5 reacotado a U1 (SMART drill-down) + U3 (tabla de propiedades). S5 (email), U2 (sparklines) y U4 (tooltips) movidos a P2. Specs en `docs/specs-p1-v2.5.md`.
 
+**Estado 6-Ago-2026 (cierre)**: P1 **COMPLETADA y desplegada** en la release **v2.5.0** (issue #6, PR #7, merge `65620b4`). La release **v2.6.0** (PR #9, merge `3a73ceb`) actualizó el stack (sqlite v1.56.0, Vite 8, TS 7, Tailwind 4) sin cambios de comportamiento. Siguiente fase: P2 (ver §7).
+
 ## 1. Encuadre y metodología
 
 Esta auditoría compara EasyZFS con las dos herramientas de gestión ZFS más cercanas en ecosistema al proyecto propio: WebZFS (Python FastAPI+HTMX, desarrollada por una persona ex-iXsystems/Klara) y ZfDash (Python GUI+Web, desarrollada por un médico como hobby). Quedan fuera TrueNAS CE, OMV y Cockpit ZFS — ya comparados en `easyzfs-vs-plataformas.md`.
@@ -313,16 +315,16 @@ Todas las funcionalidades P0 implementadas backend + frontend: F1-F6 (clone, dif
 
 ---
 
-### P1 — v2.5.x (REVISADO 6-Ago-2026: solo U1 + U3)
+### P1 — v2.5.x ✅ COMPLETADA 6-Ago-2026 (release v2.5.0)
 
 | # | Área | Feature | Esfuerzo | Paquetes | Tests sugeridos |
 |---|---|---|---|---|---|
 | U1 | UX | SMART drill-down + tabla atributos | Medio | `internal/collectors/`, `internal/httpapi/`, `web/src/views/Disks.tsx` | Test parseo de `smartctl -j -a` con todos los atributos; test selftest log vacío; test disco sin SMART (unknown) |
 | U3 | UX | Tabla de propiedades + edición | Medio-alto | `actions/`, `httpapi/`, `web/src/views/Datasets.tsx` | Test get all → whitelist; test set valor válido; test set valor inválido (rechazo); test inherit; test propiedad readonly |
 
-Specs de detalle: `docs/specs-p1-v2.5.md`.
+Ambas implementadas (backend + front + mock + i18n + tests Go 12/12 + build limpio + E2E demo), issue #6 → PR #7 → merge `65620b4`. Specs y verificación: `docs/specs-p1-v2.5.md`.
 
-### P2 — v2.6+ (largo plazo; reordenado 6-Ago-2026)
+### P2 — v2.7+ (largo plazo; reordenado 6-Ago-2026)
 
 Items arrastrados de P1 (decisión 6-Ago-2026: acotar el alcance de v2.5 a las dos features de medio esfuerzo, el resto no se apila en la misma fase):
 
