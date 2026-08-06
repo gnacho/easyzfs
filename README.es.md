@@ -359,6 +359,14 @@ Dependencias Go (mantenidas a 2 a propósito):
 - ["Defrag" en ZFS (`zfs rewrite`) y comparativa de roadmap](docs/easyzfs-comparativa-roadmap.md).
 - [Contrato API](docs/api-contract.md).
 
+## Registro de cambios
+
+### v2.5.0
+
+- **Detalle SMART**: clic en la fila de un disco abre su detalle SMART completo (tabla de atributos: id, valor, peor, umbral, raw, estado; historial de self-tests; log de errores), para ATA y NVMe. Los datos salen de la caché del colector, nunca `smartctl` bajo demanda.
+- **Propiedades de dataset**: tabla completa de propiedades por dataset (`zfs get all`) con acciones editar y heredar. Whitelist estricta de propiedades y valores editables en el backend (`recordsize`, `atime`, `sync`, `quota`, `mountpoint`, etc.), solo las seguras y útiles: `dedup`/`encryption` quedan fuera.
+- Endpoints nuevos: `GET /api/disks/{dev}/smart`, `GET /api/disks/{dev}/smart-log`, `GET /api/datasets/{name}/properties`, `PATCH /api/datasets/{name}/properties`, `POST /api/datasets/{name}/properties/{prop}/inherit`. Ver [Contrato API](docs/api-contract.md).
+
 ## Licencia
 
 [AGPL-3.0](LICENSE)
