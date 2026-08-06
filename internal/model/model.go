@@ -104,6 +104,13 @@ type Dataset struct {
 	KeyStatus string `json:"keystatus"`
 }
 
+// DatasetProp — una propiedad de un dataset (GET /api/datasets/{name}/properties).
+type DatasetProp struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Source string `json:"source"` // local | default | inherited | received | temporary | "-"
+}
+
 // Snapshot — contrato GET /api/snapshots (dentro de SnapGroup).
 type Snapshot struct {
 	Name      string    `json:"name"`

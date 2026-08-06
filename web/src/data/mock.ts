@@ -6,7 +6,7 @@ import { ApiError } from './types';
 import { computeRecommendations } from './recs';
 import type {
   Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SessionUser, Settings, Snapshot,
+  Dataset, DatasetProp, DatasetPropsResp, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SessionUser, Settings, Snapshot,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UserInfo, VersionInfo,
   CreateReplicationReq, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, UpdateReplicationReq,
 } from './types';
@@ -562,6 +562,47 @@ export class MockProvider implements DataProvider {
     await delay();
     const d = this.datasets.find((x) => x.name === name);
     if (d) Object.assign(d, p);
+  };
+  // props del mock: un mapa mutable por dataset (set actualiza el valor local).
+  private datasetProps: Record<string, DatasetProp[]> = {};
+  private propVal = (ds: string, name: string, value: string, source = 'local') =>
+    ({ name, value, source }) as DatasetProp;
+  getDatasetProps = async (name: string): Promise<DatasetPropsResp> => {
+    await delay();
+    let props = this.datasetProps[name];
+    if (!props) {
+      props = [
+        this.propVal(name, 'compression', 'lz4'),
+        this.propVal(name, 'recordsize', '128K'),
+        this.propVal(name, 'atime', 'on', 'default'),
+        this.propVal(name, 'relatime', 'on', 'default'),
+        this.propVal(name, 'sync', 'standard', 'default'),
+        this.propVal(name, 'quota', 'none'),
+        this.propVal(name, 'mountpoint', '/mnt/' + name.split('/').pop()),
+        this.propVal(name, 'exec', 'on', 'default'),
+        this.propVal(name, 'readonly', 'off', 'default'),
+        this.propVal(name, 'encryption', 'off', 'default'),
+        this.propVal(name, 'used', '1.5T', '-'),
+        this.propVal(name, 'avail', '3.2T', '-'),
+        this.propVal(name, 'user:backup', 'true'),
+      ];
+      this.datasetProps[name] = props;
+    }
+    return { name, properties: props.map((p) => ({ ...p })) };
+  };
+  setDatasetProp = async (name: string, property: string, value: string) => {
+    await delay();
+    const props = this.datasetProps[name] ?? (await this.getDatasetProps(name)).properties;
+    const p = props.find((x) => x.name === property);
+    if (p) p.value = value;
+    emitEvent({ type: 'overview' });
+  };
+  inheritDatasetProp = async (name: string, property: string) => {
+    await delay();
+    const props = this.datasetProps[name] ?? (await this.getDatasetProps(name)).properties;
+    const p = props.find((x) => x.name === property);
+    if (p) p.source = 'default';
+    emitEvent({ type: 'overview' });
   };
   deleteDataset = async (name: string, confirm: string, _r: boolean) => {
     await delay(300);

@@ -1,7 +1,7 @@
 // Interfaz DataProvider: abstrae el origen de datos (HTTP real o mock demo).
 import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DiffEntry, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
+  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
@@ -74,6 +74,9 @@ export interface DataProvider {
   mountDataset(name: string): Promise<void>;
   unmountDataset(name: string): Promise<void>;
   promoteDataset(name: string): Promise<void>;
+  getDatasetProps(name: string): Promise<DatasetPropsResp>;
+  setDatasetProp(name: string, property: string, value: string): Promise<void>;
+  inheritDatasetProp(name: string, property: string): Promise<void>;
 
   // Operaciones largas
   getLongOps(): Promise<LongOp[]>;

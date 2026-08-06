@@ -192,6 +192,19 @@ export interface Dataset {
   keystatus: string;   // "available" | "unavailable" | "-"
 }
 
+// Una propiedad de dataset (GET /api/datasets/{name}/properties).
+export interface DatasetProp {
+  name: string;
+  value: string;
+  source: string; // local | default | inherited | received | temporary | "-"
+}
+export interface DatasetPropsResp {
+  name: string;
+  properties: DatasetProp[];
+}
+// Agrupación para la UI: editables (whitelist backend), read-only, user props.
+export type PropGroup = 'editable' | 'readonly' | 'user';
+
 export interface Snapshot {
   name: string;
   full: string;

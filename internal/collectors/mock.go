@@ -269,6 +269,27 @@ func (m *Mock) AddDataset(name, typ, compression string, encrypted bool) {
 	m.h.Publish("overview", map[string]any{"reason": "dataset.create"})
 }
 
+// SetDatasetProp — set de propiedad simulado (MOCK=1). Solo afecta a la
+// propiedad si ya es "local"; el resto se ignora (no hay tabla de props en
+// el mock; el front usa el GET para pintar, que devuelve valores ficticios).
+func (m *Mock) SetDatasetProp(name, property, value string) {
+	m.mu.Lock()
+	for i := range m.datasets {
+		if m.datasets[i].Name == name {
+			if property == "compression" {
+				m.datasets[i].Compression = value
+			}
+		}
+	}
+	m.mu.Unlock()
+	m.h.Publish("overview", map[string]any{"reason": "dataset.prop"})
+}
+
+// InheritDatasetProp — inherit simulado (MOCK=1): no-op (sin tabla de props).
+func (m *Mock) InheritDatasetProp(name, property string) {
+	m.h.Publish("overview", map[string]any{"reason": "dataset.prop"})
+}
+
 // Expand — RAID-Z expansion simulada (MOCK=1): incorpora el disco al pool y
 // arranca un scan 'expand' que avanza en cada tick (~2%/tick, ~2,5 min).
 func (m *Mock) Expand(pool, vdev, disk string) {
