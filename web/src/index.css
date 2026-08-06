@@ -1,7 +1,6 @@
-/* Estilos globales: Tailwind + sistema visual del mockup validado (variables CSS por tema) */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Estilos globales: Tailwind 4 (solo preflight) + sistema visual del mockup
+   validado (variables CSS por tema). Todo el styling es CSS a mano. */
+@import "tailwindcss";
 
 :root{
   color-scheme:light;
