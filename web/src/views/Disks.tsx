@@ -7,6 +7,7 @@ import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, fmtInt } from '../ui/format';
 import { Badge, InfoBubble, Spinner } from '../components/ui';
 import type { Disk } from '../data/types';
+import { useModal } from '../components/Modal';
 
 const TIPO_SMART: Record<string, 'ok' | 'warn' | 'err' | 'info'> = {
   ok: 'ok', warn: 'warn', crit: 'err', unknown: 'info',
@@ -35,6 +36,7 @@ function smartParts(d: Disk, t: (k: string, v?: Record<string, string | number>)
 
 export default function Disks() {
   const { t, isAdmin } = useApp();
+  const { openModal } = useModal();
   const { data, loading, setData } = useData((p) => p.getDisks());
   const recs = useData((p) => p.getRecommendations());
   const [msg, setMsg] = useState('');
@@ -97,7 +99,9 @@ export default function Disks() {
           </thead>
           <tbody>
             {(data ?? []).map((d) => (
-              <tr key={d.dev}>
+              <tr key={d.dev} className="clickable"
+                title={t('dsm_title')}
+                onClick={() => openModal('diskdetail', { disk: d })}>
                 <td className="mono" style={{ fontWeight: 650 }}>{d.dev}</td>
                 <td className="modelcell">
                   <div style={{ fontSize: 13 }}>{d.model}</div>
@@ -136,13 +140,13 @@ export default function Disks() {
                 </td>
                 <td className="actions">
                   <span className="testbtns">
-                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_short_hint')} onClick={() => test(d.dev, 'short')}>{t('dk_test_short')}</button>{' '}
-                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_long_hint')} onClick={() => test(d.dev, 'long')}>{t('dk_test_long')}</button>
+                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_short_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'short'); }}>{t('dk_test_short')}</button>{' '}
+                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_long_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'long'); }}>{t('dk_test_long')}</button>
                   </span>{' '}
                   {(d.pool === '—' || d.pool === '') && !d.in_use && (
                     <button className={`btn sm ${arm === d.dev ? 'danger' : ''}`} disabled={!isAdmin}
                       title={!isAdmin ? t('no_permission') : t('dk_poweroff_hint')}
-                      onClick={() => poweroff(d.dev)}>
+                      onClick={(e) => { e.stopPropagation(); poweroff(d.dev); }}>
                       {arm === d.dev ? t('dk_poweroff_arm') : t('dk_poweroff')}
                     </button>
                   )}

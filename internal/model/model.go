@@ -104,6 +104,13 @@ type Dataset struct {
 	KeyStatus string `json:"keystatus"`
 }
 
+// DatasetProp — una propiedad de un dataset (GET /api/datasets/{name}/properties).
+type DatasetProp struct {
+	Name   string `json:"name"`
+	Value  string `json:"value"`
+	Source string `json:"source"` // local | default | inherited | received | temporary | "-"
+}
+
 // Snapshot — contrato GET /api/snapshots (dentro de SnapGroup).
 type Snapshot struct {
 	Name      string    `json:"name"`
@@ -145,6 +152,51 @@ type Disk struct {
 	Pool           string `json:"pool"`
 	InUse          bool   `json:"in_use,omitempty"` // particiones montadas o swap activo (no elegible como "libre")
 	Hours          uint64 `json:"hours"`
+	// SmartFull — detalle SMART completo (U1, fase P1): tabla de atributos,
+	// selftests y error log parseados del mismo `smartctl -j -a` de la pasada
+	// de 10 min. nil si el disco no habla smartctl o aún no se ha parseado.
+	SmartFull *DiskSmartDetail `json:"smart_full,omitempty"`
+}
+
+// SmartAttr — una fila de la tabla de atributos SMART.
+type SmartAttr struct {
+	ID         int      `json:"id"`
+	Name       string   `json:"name"`
+	Value      int64    `json:"value"`
+	Worst      int64    `json:"worst"`
+	Thresh     int64    `json:"thresh"`
+	Raw        string   `json:"raw"`
+	Flags      []string `json:"flags,omitempty"`
+	WhenFailed string   `json:"when_failed"` // "-" = dentro de umbral; "Past"/"In the past" = superado
+}
+
+// SmartSelftest — una entrada del historial de self-tests SMART.
+type SmartSelftest struct {
+	Type          string `json:"type"`
+	Status        string `json:"status"`
+	LifetimeHours int64  `json:"lifetime_hours"`
+	Percent       int    `json:"percent"`
+}
+
+// SmartErrorEntry — una entrada del log de errores SMART (últimas 5).
+type SmartErrorEntry struct {
+	LifetimeHours int64  `json:"lifetime_hours,omitempty"`
+	ErrorType     string `json:"error_type,omitempty"`
+	Detail        string `json:"detail,omitempty"`
+}
+
+// SmartErrorLog — resumen del log de errores.
+type SmartErrorLog struct {
+	Count   int                `json:"count"`
+	Entries []SmartErrorEntry  `json:"entries,omitempty"`
+}
+
+// DiskSmartDetail — detalle SMART completo de un disco (GET /smart y /smart-log).
+type DiskSmartDetail struct {
+	Protocol   string          `json:"protocol"` // "ata" | "nvme" | ""
+	Attributes []SmartAttr     `json:"attributes"`
+	Selftests  []SmartSelftest `json:"selftests"`
+	ErrorLog   SmartErrorLog   `json:"error_log"`
 }
 
 // Kinds de Recommendation (constantes para que front y tests no usen strings).

@@ -162,12 +162,48 @@ type smartJSON struct {
 	} `json:"nvme_smart_health_information_log"`
 	AtaAttrs *struct {
 		Table []struct {
-			Name string `json:"name"`
-			Raw  struct {
-				Value int64 `json:"value"`
+			Name   string `json:"name"`
+			Raw    struct {
+				Value int64  `json:"value"`
+				Str   string `json:"string"`
 			} `json:"raw"`
-		} `json:"table"`
+		ID         int      `json:"id"`
+		Value      int64    `json:"value"`
+		Worst      int64    `json:"worst"`
+		Thresh     int64    `json:"thresh"`
+		WhenFailed string   `json:"when_failed"`
+	} `json:"table"`
 	} `json:"ata_smart_attributes"`
+	// Selftest log (ATA) y error log (ATA) — U1: drill-down SMART.
+	AtaSelftestLog *struct {
+		Standard *struct {
+			Table []struct {
+				Type   struct{ String string `json:"string"` } `json:"type"`
+				Status struct{ String string `json:"string"` } `json:"status"`
+				LifetimeHours int64 `json:"lifetime_hours"`
+				Percent int    `json:"percent"`
+			} `json:"table"`
+		} `json:"standard"`
+	} `json:"ata_smart_selftest_log"`
+	AtaErrorLog *struct {
+		Summary *struct {
+			Count int `json:"count"`
+			Table []struct {
+				ErrorType struct{ String string `json:"string"` } `json:"error_type"`
+				Lba      struct{ Str string `json:"string"` } `json:"lba"`
+			} `json:"table"`
+		} `json:"summary"`
+	} `json:"ata_error_log"`
+	// NVMe self-test (U1). Nota de incertidumbre: nombre de sección a
+	// confirmar con un smartctl -j -a real sobre NVMe; ausente → lista vacía.
+	NVMeSelfTest *struct {
+		SelfTest []struct {
+			Type   struct{ String string `json:"string"` } `json:"type"`
+			Status struct{ String string `json:"string"` } `json:"status"`
+			PowerOnHours int64 `json:"power_on_hours"`
+			CompletionPercent int `json:"completion_percent"`
+		} `json:"self_test"`
+	} `json:"nvme_self_test_log_1"`
 }
 
 // collectOnce — inventario lsblk y SMART por disco (un fallo de un disco no
@@ -360,7 +396,61 @@ func parseSmartJSON(out []byte, d *model.Disk) error {
 			d.SmartDetail = fmt.Sprintf("%s (nvme warning=%d)", d.SmartDetail, sj.NVMeSmartHealthLog.CriticalWarning)
 		}
 	}
+	// Detalle completo (U1): atributos, selftests y error log del mismo JSON.
+	// Solo se construye si hay algo que mostrar (ATA o NVMe).
+	d.SmartFull = buildSmartDetail(sj)
 	return nil
+}
+
+// buildSmartDetail — construye el detalle completo (atributos + selftests +
+// error log) a partir del JSON de smartctl. Función pura (testeable).
+func buildSmartDetail(sj smartJSON) *model.DiskSmartDetail {
+	det := &model.DiskSmartDetail{}
+	if sj.AtaAttrs != nil {
+		det.Protocol = "ata"
+		for _, a := range sj.AtaAttrs.Table {
+			det.Attributes = append(det.Attributes, model.SmartAttr{
+				ID: a.ID, Name: a.Name, Value: a.Value, Worst: a.Worst,
+				Thresh: a.Thresh, Raw: a.Raw.Str, WhenFailed: a.WhenFailed,
+			})
+		}
+		if sj.AtaSelftestLog != nil && sj.AtaSelftestLog.Standard != nil {
+			for _, s := range sj.AtaSelftestLog.Standard.Table {
+				det.Selftests = append(det.Selftests, model.SmartSelftest{
+					Type: s.Type.String, Status: s.Status.String,
+					LifetimeHours: s.LifetimeHours, Percent: s.Percent,
+				})
+			}
+		}
+		if sj.AtaErrorLog != nil && sj.AtaErrorLog.Summary != nil {
+			det.ErrorLog.Count = sj.AtaErrorLog.Summary.Count
+			for _, e := range sj.AtaErrorLog.Summary.Table {
+				ent := model.SmartErrorEntry{ErrorType: e.ErrorType.String, Detail: e.Lba.Str}
+				det.ErrorLog.Entries = append(det.ErrorLog.Entries, ent)
+			}
+		}
+	} else if sj.NVMeSmartHealthLog != nil || sj.NVMeSelfTest != nil {
+		det.Protocol = "nvme"
+		if sj.NVMeSmartHealthLog != nil {
+			det.Attributes = append(det.Attributes,
+				model.SmartAttr{Name: "temperature", Value: int64(sj.NVMeSmartHealthLog.Temperature), Raw: fmt.Sprintf("%.0f", sj.NVMeSmartHealthLog.Temperature), WhenFailed: "-"},
+				model.SmartAttr{Name: "available_spare", Value: int64(sj.NVMeSmartHealthLog.AvailableSparePct), Raw: fmt.Sprintf("%.0f%%", sj.NVMeSmartHealthLog.AvailableSparePct), WhenFailed: "-"},
+				model.SmartAttr{Name: "critical_warning", Value: int64(sj.NVMeSmartHealthLog.CriticalWarning), Raw: fmt.Sprintf("%d", sj.NVMeSmartHealthLog.CriticalWarning), WhenFailed: "-"},
+			)
+		}
+		if sj.NVMeSelfTest != nil {
+			for _, s := range sj.NVMeSelfTest.SelfTest {
+				det.Selftests = append(det.Selftests, model.SmartSelftest{
+					Type: s.Type.String, Status: s.Status.String,
+					LifetimeHours: s.PowerOnHours, Percent: s.CompletionPercent,
+				})
+			}
+		}
+	}
+	if len(det.Attributes) == 0 && len(det.Selftests) == 0 && det.ErrorLog.Count == 0 {
+		return nil // sin detalle que ofrecer (p. ej. disco sin SMART)
+	}
+	return det
 }
 
 // crcHistoryWarn — acumulado de por vida a partir del cual el CRC se menciona
