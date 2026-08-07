@@ -353,6 +353,14 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.8.0
+
+- **Replication TOCTOU fix**: an atomic job slot (`TryAcquire`/`Release`) prevents double execution of replication jobs. Before, a concurrent tick or manual `RunNow` during the snapshot window could launch a second `zfs send | zfs recv` pipeline against the same destination.
+- **Cancel kills the whole pipeline**: replication cancel now kills the entire process group (`Setpgid` + `Kill(-pgid)`), not just the `bash` leader. Children of the pipeline (`zfs send`, `ssh`) are no longer left behind consuming I/O.
+- **Option injection blocked**: pool, dataset, snapshot, device and SSH host regexes now anchor to `^[a-zA-Z0-9]`. Names starting with `-` or `.` are rejected — they were interpreted as flags of `zpool`/`zfs`/`ssh`. Not exploitable as shell injection, but the whitelist was incorrect.
+- **Two new concurrency tests** in the replication package run under `go test -race`.
+- External audit by Claude (Anthropic), 7-Aug-2026.
+
 ### v2.7.0
 
 - **Security audit release**: HTTP security headers on every response
