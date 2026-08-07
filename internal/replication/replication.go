@@ -158,18 +158,39 @@ func (st *Store) List(ctx context.Context) ([]Job, error) {
 	return out, rows.Err()
 }
 
-// Get devuelve un job por id.
+// Get devuelve un job por id (query directa: O(1), no List+filter).
 func (st *Store) Get(ctx context.Context, id int64) (*Job, error) {
-	jobs, err := st.List(ctx)
+	row := st.db.QueryRowContext(ctx,
+		`SELECT id, source, dest_type, dest_dataset, host, user, port,
+		        raw, force_full, schedule, enabled, last_bookmark, last_run, last_ok,
+		        last_error, created_at
+		 FROM replication_jobs WHERE id=?`, id)
+	var j Job
+	var raw, ff, en int
+	var lastRun, lastOK sql.NullString
+	var created string
+	err := row.Scan(&j.ID, &j.Source, &j.DestType, &j.DestDataset, &j.Host, &j.User,
+		&j.Port, &raw, &ff, &j.Schedule, &en, &j.LastBookmark, &lastRun, &lastOK,
+		&j.LastError, &created)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
 	if err != nil {
 		return nil, err
 	}
-	for i := range jobs {
-		if jobs[i].ID == id {
-			return &jobs[i], nil
-		}
+	j.Raw = raw != 0
+	j.ForceFull = ff != 0
+	j.Enabled = en != 0
+	if lastRun.Valid && lastRun.String != "" {
+		t := parseTS(lastRun.String)
+		j.LastRun = &t
 	}
-	return nil, ErrNotFound
+	if lastOK.Valid && lastOK.String != "" {
+		ok := lastOK.String == "1"
+		j.LastOK = &ok
+	}
+	j.CreatedAt = parseTS(created)
+	return &j, nil
 }
 
 // Create inserta un job y devuelve su id.
