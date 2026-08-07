@@ -30,6 +30,8 @@ func TestValidateDataset(t *testing.T) {
 		"", "pool/x; rm -rf /", "pool/x`id`", "pool/x y", "pool/$(id)",
 		"pool/x|cat", "pool/x&reboot", "pool/x>f", "pool/x<f", "pool/x\"q",
 		"pool/x'q", "pool/x\\n", "pool/x#bm", "pool/x@snap", "pool/x:80",
+		// Nombres que empiezan por - o . = option injection (hallazgo 2.3)
+		"-p", ".dot", "-pool/x", ".pool/x",
 	}
 	for _, s := range bad {
 		if err := ValidateDataset(s); err == nil {
@@ -55,6 +57,12 @@ func TestValidateSSHCreds(t *testing.T) {
 	}
 	if err := ValidateSSHHost("nas.lan-1.example.com"); err != nil {
 		t.Errorf("host válido rechazado: %v", err)
+	}
+	// Hosts que empiezan por - o . = option injection.
+	for _, h := range []string{"-oForwardAgent=yes", ".lan"} {
+		if err := ValidateSSHHost(h); err == nil {
+			t.Errorf("host %q con leading dash/dot debería rechazarse", h)
+		}
 	}
 	for _, p := range []int{0, -1, 65536, 99999} {
 		if err := ValidateSSHPort(p); err == nil {

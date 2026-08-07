@@ -32,10 +32,10 @@ var (
 
 // Whitelists de nombres (lección 6 + ejecución segura del skill).
 var (
-	rePool     = regexp.MustCompile(`^[a-zA-Z0-9_.-]{1,64}$`)
-	reDataset  = regexp.MustCompile(`^[a-zA-Z0-9_.-]+(/[a-zA-Z0-9_.-]+)*$`)
-	reSnapName = regexp.MustCompile(`^[a-zA-Z0-9_.:-]{1,128}$`)
-	reDev      = regexp.MustCompile(`^[a-zA-Z0-9_.:-]{1,64}$`) // sdb, nvme0n1, ata-XXX…
+	rePool     = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]{0,63}$`)
+	reDataset  = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*(/[a-zA-Z0-9][a-zA-Z0-9_.-]*)*$`)
+	reSnapName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$`)
+	reDev      = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,63}$`) // sdb, nvme0n1, ata-XXX…
 )
 
 // ValidTopos — topologías admitidas al crear/añadir vdevs.
