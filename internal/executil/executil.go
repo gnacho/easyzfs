@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -164,7 +165,9 @@ func NewCommand(ctx context.Context, name string, args ...string) *exec.Cmd {
 		args = append([]string{"-n", name}, args...)
 		name = "sudo"
 	}
-	return exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	return cmd
 }
 
 // trimErr recorta stderr para mensajes de error legibles (máx. 200 chars).

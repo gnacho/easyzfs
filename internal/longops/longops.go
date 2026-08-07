@@ -25,6 +25,7 @@ import (
 	"log"
 	"os/exec"
 	"sync"
+	"syscall"
 	"time"
 
 	"easyzfs/internal/executil"
@@ -228,6 +229,11 @@ func (m *Manager) Cancel(id string) error {
 	if cancel == nil {
 		return ErrNotRunning
 	}
+	// Matar el grupo de procesos completo (auditoría 7-Ago-2026):
+	// cancel() solo mata el líder (bash/sudo); con Setpgid=true en
+	// executil.NewCommand, Kill(-pgid) alcanza a todos los hijos del
+	// pipeline (zfs send, ssh, etc.). Ignoramos ESRCH (ya murió solo).
+	_ = syscall.Kill(-op.PID, syscall.SIGKILL)
 	cancel()
 	return nil
 }
