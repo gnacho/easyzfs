@@ -121,15 +121,25 @@ function Shell() {
   const [hasPending, setHasPending] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
   const updateAvailable = useUpdateAvailable(ready && !!user && !demo);
-  // Ribbon "nueva release en GitHub" (check pasivo 1/día, descartable por versión)
+  // Ribbon "nueva release en GitHub" (check pasivo 1/semana, descartable por
+  // versión, solo admin: actualizar es un acto de administración). El botón
+  // "Actualizar" aplica vía el servidor (/api/update/apply); "Ver novedades"
+  // enlaza a la release.
   const [version, setVersion] = useState('');
   const [relDismissed, setRelDismissed] = useState(getReleaseDismissed());
-  const rel = useReleaseCheck(version || undefined, ready && !!user && !demo);
+  const [applyingRel, setApplyingRel] = useState(false);
+  const rel = useReleaseCheck(version || undefined, ready && !!user && !demo && isAdmin);
   useEffect(() => {
     if (!ready || !user || demo) return;
     getProvider().getVersion().then((v) => setVersion(v.version)).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, demo]);
+
+  const applyRel = async () => {
+    setApplyingRel(true);
+    try { await getProvider().applyUpdate(); } catch { /* error silencioso: recarga en el reinicio */ }
+    finally { setApplyingRel(false); }
+  };
 
   const toggleCollapsed = () => {
     setCollapsed((c) => {
@@ -242,8 +252,10 @@ function Shell() {
             <div className="relbar" role="status">
               <span>{t('upd_rel_banner', { v: rel.version })}</span>
               <a href={rel.url} target="_blank" rel="noreferrer">{t('ab_upd_new')}</a>
-              <a className="btn sm primary" href={rel.url} target="_blank" rel="noreferrer"
-                style={{ marginLeft: 'auto' }}>{t('upd_rel_upd')}</a>
+              <button className="btn sm primary" style={{ marginLeft: 'auto' }} disabled={applyingRel}
+                onClick={() => { void applyRel(); }}>
+                {applyingRel ? t('ab_updapp') : t('upd_rel_upd')}
+              </button>
               <button className="btn sm"
                 onClick={() => { dismissRelease(rel.version); setRelDismissed(rel.version); }}>
                 {t('upd_rel_dismiss')}
