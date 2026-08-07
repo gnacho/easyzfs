@@ -10,6 +10,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"easyzfs/internal/executil"
@@ -37,11 +38,15 @@ type Runner struct {
 	hist    HistoryRecorder
 	dataDir string // dir de datos del daemon (para ssh/)
 	mock    bool   // MOCK=1: sin zfs/ssh reales (ops simuladas)
+
+	inFlight   map[int64]struct{}
+	inFlightMu sync.Mutex
+	testGate   chan struct{} // solo tests de concurrencia: execute bloquea aquí si != nil
 }
 
 // NewRunner crea el runner de replicación.
 func NewRunner(st *Store, ops *longops.Manager, h *hub.Hub, hist HistoryRecorder, dataDir string, mock bool) *Runner {
-	return &Runner{store: st, ops: ops, h: h, hist: hist, dataDir: dataDir, mock: mock}
+	return &Runner{store: st, ops: ops, h: h, hist: hist, dataDir: dataDir, mock: mock, inFlight: map[int64]struct{}{}}
 }
 
 // Store expone el store (handlers HTTP).
@@ -58,7 +63,29 @@ func Target(j *Job) string {
 // ErrAlreadyRunning — ya hay una ejecución en curso de ese job (HTTP 409).
 var ErrAlreadyRunning = errors.New("ya hay una replicación en curso para este job")
 
+// TryAcquire reserva el slot del job de forma atómica. Si el slot ya está tomado
+// devuelve false; si está libre lo toma y devuelve true. Release() lo libera.
+// Cierra la ventana TOCTOU entre Running() y ops.Start() (auditoría 7-Ago-2026).
+func (r *Runner) TryAcquire(id int64) bool {
+	r.inFlightMu.Lock()
+	defer r.inFlightMu.Unlock()
+	if _, ok := r.inFlight[id]; ok {
+		return false
+	}
+	r.inFlight[id] = struct{}{}
+	return true
+}
+
+// Release libera el slot del job (se llama en defer desde execute).
+func (r *Runner) Release(id int64) {
+	r.inFlightMu.Lock()
+	delete(r.inFlight, id)
+	r.inFlightMu.Unlock()
+}
+
 // Running — ¿hay una op de replicación en curso para este job?
+// (lectura informativa del registro de longops; la prevención de doble
+// ejecución la hace TryAcquire, que es atómica).
 func (r *Runner) Running(j *Job) bool {
 	t := Target(j)
 	for _, op := range r.ops.List() {
@@ -75,7 +102,7 @@ func (r *Runner) RunNow(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	if r.Running(j) {
+	if !r.TryAcquire(j.ID) {
 		return ErrAlreadyRunning
 	}
 	go r.execute(context.Background(), *j)
@@ -124,7 +151,7 @@ func (r *Runner) check(ctx context.Context) {
 		if next.After(now) {
 			continue
 		}
-		if r.Running(&j) {
+		if !r.TryAcquire(j.ID) {
 			continue
 		}
 		go r.execute(context.Background(), j)
@@ -134,6 +161,10 @@ func (r *Runner) check(ctx context.Context) {
 // execute — una ejecución completa: snapshot → pipeline send|recv (longop) →
 // bookmark + prune (éxito) o retry completo / error claro (fallo incremental).
 func (r *Runner) execute(ctx context.Context, j Job) {
+	defer r.Release(j.ID)
+	if r.testGate != nil {
+		<-r.testGate
+	}
 	ok := false
 	detail := ""
 	bookmark := j.LastBookmark

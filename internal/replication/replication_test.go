@@ -4,6 +4,7 @@ package replication
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -337,5 +338,85 @@ func TestStoreCRUD(t *testing.T) {
 	}
 	if _, err := st.Get(ctx, id); err != ErrNotFound {
 		t.Errorf("tras delete debería ser ErrNotFound: %v", err)
+	}
+}
+
+func TestRunnerTryAcquireRelease(t *testing.T) {
+	r := NewRunner(nil, longops.New(hub.NewHub()), hub.NewHub(), nil, t.TempDir(), false)
+	id := int64(42)
+	if !r.TryAcquire(id) {
+		t.Fatal("primera adquisición debería tener éxito")
+	}
+	if r.TryAcquire(id) {
+		t.Fatal("segunda adquisición del mismo id debería fallar")
+	}
+	r.Release(id)
+	if !r.TryAcquire(id) {
+		t.Fatal("tras Release, TryAcquire debería tener éxito otra vez")
+	}
+	r.Release(id)
+	// Id diferente: sin interferencia
+	if !r.TryAcquire(99) {
+		t.Fatal("TryAcquire con id distinto debería tener éxito")
+	}
+	r.Release(99)
+}
+
+func TestRunNowPreventsDoubleExecution(t *testing.T) {
+	fakeBin(t)
+	d, err := db.Open(filepath.Join(t.TempDir(), "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer d.Close()
+	if err := db.Migrate(context.Background(), d); err != nil {
+		t.Fatal(err)
+	}
+	st := NewStore(d)
+	id, err := st.Create(context.Background(), localJob())
+	if err != nil {
+		t.Fatal(err)
+	}
+	ops := longops.New(hub.NewHub())
+	r := NewRunner(st, ops, hub.NewHub(), nil, t.TempDir(), true)
+	r.testGate = make(chan struct{})
+
+	// Primera llamada: adquiere el slot, lanza execute, se bloquea en el gate.
+	done1 := make(chan error, 1)
+	go func() {
+		done1 <- r.RunNow(context.Background(), id)
+	}()
+	time.Sleep(100 * time.Millisecond) // margen para que la goroutine adquiera el slot
+
+	// Segunda llamada: el slot ya está tomado → ErrAlreadyRunning.
+	err2 := r.RunNow(context.Background(), id)
+	if !errors.Is(err2, ErrAlreadyRunning) {
+		t.Fatalf("segunda RunNow debería devolver ErrAlreadyRunning, got %v", err2)
+	}
+
+	// Liberar el gate: la primera ejecución continúa.
+	close(r.testGate)
+	if err := <-done1; err != nil {
+		t.Fatalf("primera RunNow falló: %v", err)
+	}
+
+	// Esperar a que execute termine (mockRun tarda ~3s: sleep 2 + sleep 1) y
+	// libere el slot. Poll TryAcquire hasta que esté libre con timeout.
+	deadline := time.Now().Add(10 * time.Second)
+	for {
+		if time.Now().After(deadline) {
+			t.Fatal("timeout esperando a que el slot se libere tras la ejecución")
+		}
+		if r.TryAcquire(id) {
+			r.Release(id)
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	r.testGate = nil
+
+	// Tras completarse, el slot está libre otra vez.
+	if err := r.RunNow(context.Background(), id); err != nil {
+		t.Fatalf("RunNow tras completarse la primera ejecución: %v", err)
 	}
 }
