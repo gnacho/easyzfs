@@ -48,9 +48,9 @@ type Job struct {
 // Whitelists estrictas: lo que toca el shell del pipeline send|recv.
 // Cualquier cosa fuera del patrón se rechaza ANTES de construir el comando.
 var (
-	reDataset = regexp.MustCompile(`^[a-zA-Z0-9_.\-/]+$`)
+	reDataset = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.\-/]*$`)
 	reSSHUser = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	reSSHHost = regexp.MustCompile(`^[a-zA-Z0-9.\-]+$`)
+	reSSHHost = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9.\-]*$`)
 )
 
 // ValidateDataset — nombre de dataset/pool (sin espacios ni metacaracteres).
