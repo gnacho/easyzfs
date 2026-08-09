@@ -14,6 +14,7 @@ import (
 
 	"easyzfs/internal/hub"
 	"easyzfs/internal/model"
+	"easyzfs/internal/notifier"
 	"easyzfs/internal/push"
 	"easyzfs/internal/settings"
 	"easyzfs/internal/webhook"
@@ -26,6 +27,7 @@ type Alerter struct {
 	st   *settings.Store
 	push *push.Sender // puede ser nil (push no configurado)
 	wh   *webhook.Notifier // puede ser nil (webhook desactivado)
+	mail *notifier.Mailer  // puede ser nil (email desactivado)
 }
 
 // New crea el Alerter.
@@ -39,6 +41,9 @@ func (a *Alerter) SetPush(s *push.Sender) { a.push = s }
 // SetWebhook conecta el notificador de webhook saliente (opcional; nil = sin
 // webhook). El notifier ya arranca su worker al crearse; aquí solo se enlaza.
 func (a *Alerter) SetWebhook(w *webhook.Notifier) { a.wh = w }
+
+// SetEmail conecta el canal de email (opcional; nil = sin email).
+func (a *Alerter) SetEmail(m *notifier.Mailer) { a.mail = m }
 
 // Raise inserta una alerta sin metadatos estructurados (kind "").
 func (a *Alerter) Raise(ctx context.Context, level, source, target, message string) {
@@ -106,11 +111,72 @@ func (a *Alerter) RaiseKind(ctx context.Context, level, source, target, message,
 			ID: id, Ts: now, Level: level, Source: source, Target: target, Message: message,
 		})
 	}
+	// Email: a los usuarios con email + tipo habilitado. Best-effort async.
+	if a.mail != nil && kind != "" {
+		go a.notifyEmail(level, source, target, kind, params, now)
+	}
 	// Push (app cerrada): fire-and-forget; el sender decide a quién y nunca falla.
 	if a.push != nil && kind != "" {
 		go a.push.Notify(context.Background(),
 			push.Alert{Level: level, Source: source, Target: target, Kind: kind, Params: params})
 	}
+}
+
+// notifyEmail envía la alerta por email a cada usuario con email configurado
+// y el tipo habilitado. Compone el texto con el catálogo i18n del push
+// (push.Compose) en el idioma del usuario; destinatario en bruto nunca se
+// loguea. Modo best-effort: log y sigue.
+func (a *Alerter) notifyEmail(level, source, target, kind string, params map[string]any, ts time.Time) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	rows, err := a.db.QueryContext(ctx,
+		"SELECT user, email, language FROM users WHERE email != ''")
+	if err != nil {
+		log.Printf("alerts: email: listar destinatarios: %v", err)
+		return
+	}
+	defer rows.Close()
+	type dest struct {
+		user, email, lang string
+	}
+	var dests []dest
+	for rows.Next() {
+		var d dest
+		if err := rows.Scan(&d.user, &d.email, &d.lang); err != nil {
+			log.Printf("alerts: email: scan: %v", err)
+			return
+		}
+		dests = append(dests, d)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("alerts: email: %v", err)
+		return
+	}
+	for _, d := range dests {
+		if !a.emailTypeEnabled(ctx, d.user, kind) {
+			continue
+		}
+		title, body := push.Compose(d.lang, kind, params)
+		if err := a.mail.Send(ctx, []string{d.email}, d.lang, notifier.Alert{
+			Level: level, Source: source, Target: target, Timestamp: ts,
+		}, title, body); err != nil {
+			log.Printf("alerts: email a usuario %s: %v", d.user, err)
+		}
+	}
+}
+
+// emailTypeEnabled — ¿el usuario tiene habilitado este tipo de alerta por
+// email? Reutiliza notification_preferences (misma tabla que el push); sin
+// fila = habilitado (default true).
+func (a *Alerter) emailTypeEnabled(ctx context.Context, userID, tipo string) bool {
+	var enabled int
+	err := a.db.QueryRowContext(ctx,
+		"SELECT enabled FROM notification_preferences WHERE user_id=? AND tipo=?",
+		userID, tipo).Scan(&enabled)
+	if err != nil {
+		return true // sql.ErrNoRows u otro error: default habilitado
+	}
+	return enabled != 0
 }
 
 // EvaluatePools aplica umbrales de capacidad y scrub con errores.
