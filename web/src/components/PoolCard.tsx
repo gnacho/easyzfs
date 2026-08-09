@@ -1,12 +1,38 @@
 // Tarjeta de pool compartida entre Panel y Pools (réplica del mockup)
 import { getProvider } from '../data';
-import type { Disk, Pool } from '../data/types';
+import type { Disk, Pool, Topo } from '../data/types';
 import { errorMessage, useApp } from '../ui/store';
+import { t } from '../ui/i18n';
 import { fmtBytes, fmtBytesPair, fmtPct, fmtRatio, timeAgo } from '../ui/format';
 import { statusLabel } from '../ui/labels';
 import { Badge, InfoBubble, Meter, Switch } from './ui';
 import { useModal } from './Modal';
 import { useEffect, useState } from 'react';
+
+// topoTipKey — clave i18n que explica la topología (ayuda contextual U4).
+const topoTipKey = (topo: Topo) => {
+  switch (topo) {
+    case 'mirror': return 'topo_mirror';
+    case 'raidz1': return 'topo_raidz1';
+    case 'raidz2': return 'topo_raidz2';
+    default: return 'topo_stripe';
+  }
+};
+
+// topoBase — topología base de la cadena descriptiva de pool.topo
+// ("raidz2 (4×1,86 TB NVMe)" → "raidz2").
+const topoBase = (s: string): Topo | null => {
+  const m = s.match(/^(mirror|raidz1|raidz2|stripe)/);
+  return m ? (m[1] as Topo) : null;
+};
+
+// TopoHelp — burbuja que explica la topología del pool según la base de la
+// cadena; si no se reconoce, no muestra nada.
+function TopoHelp({ topo }: { topo: string }) {
+  const base = topoBase(topo);
+  if (!base) return null;
+  return <InfoBubble title={topo}>{t(topoTipKey(base))}</InfoBubble>;
+}
 
 // shortDev — nombre corto de vdev: ruta base si la hay; UUID acortado si no.
 const shortDev = (v: { dev: string; path?: string }) =>
@@ -89,6 +115,7 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
             {pool.checkpoint && <Badge tone="info">{t('ck_badge')}</Badge>}
           </div>
           <div className="t2">{pool.topo}</div>
+          <TopoHelp topo={pool.topo} />
           <Meter pct={pct} />
         </div>
         <div style={{ textAlign: 'right' }}>
