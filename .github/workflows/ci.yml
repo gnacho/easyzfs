@@ -14,6 +14,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
+      # go:embed dist lo exige presente; dist/ no se trackea (ver .gitignore).
+      # Los tests de backend no tocan la SPA, un placeholder basta para compilar.
+      - name: Prepara dist/ para go:embed
+        run: mkdir -p dist && echo "<!doctype html><html><body></body></html>" > dist/index.html
       - run: go vet ./...
       - run: go test -race ./...
 
@@ -24,7 +28,7 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.24'
-      - uses: dominikh/staticcheck-action@v1.3
+      - uses: dominikh/staticcheck-action@v1.3.1
 
   frontend:
     runs-on: ubuntu-latest
