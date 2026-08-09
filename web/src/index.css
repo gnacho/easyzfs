@@ -327,6 +327,10 @@ header.top .sub{font-size:13px;color:var(--text2);margin-top:2px}
 .poolhead .grow{flex:1;min-width:150px}
 .poolmeta{display:flex;gap:18px;flex-wrap:wrap;padding:0 16px 14px;font-size:12.5px;color:var(--text2)}
 .poolmeta b{color:var(--text);font-weight:600}
+.sparks{display:flex;gap:12px;align-items:flex-end;margin-top:10px;color:var(--text2)}
+.spark{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text2)}
+.spark em{font-style:normal;font-size:11px;color:var(--text3)}
+.spark svg{display:block}
 .vdevs{border-top:1px solid var(--border);padding:10px 16px 14px}
 .vdev{display:flex;align-items:center;gap:9px;font-size:13px;padding:5px 0;color:var(--text2)}
 .vdev .dname{font-family:var(--font-mono);color:var(--text);font-size:12.5px}

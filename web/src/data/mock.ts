@@ -6,7 +6,7 @@ import { ApiError } from './types';
 import { computeRecommendations } from './recs';
 import type {
   Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SessionUser, Settings, Snapshot, SmartSelftest,
+  Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SeriesPoint, SeriesResp, SessionUser, Settings, Snapshot, SmartSelftest,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UserInfo, VersionInfo,
   CreateReplicationReq, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, UpdateReplicationReq,
 } from './types';
@@ -480,6 +480,23 @@ export class MockProvider implements DataProvider {
         write_bps: Math.round((12 + i * 84) * 1024 ** 2),
       })),
     };
+  };
+
+  // Series históricas sintéticas (U2): onda con ruido, determinista por source.
+  getSeries = async (source: string, days: number, points = 120): Promise<SeriesResp> => {
+    await delay(120);
+    const now = Date.now() / 1000;
+    const step = (days * 86400) / points;
+    const base = source.startsWith('disk.') ? 42 : 60; // temp vs used_pct
+    const amp = source.startsWith('disk.') ? 4 : 15;
+    const out: SeriesPoint[] = [];
+    for (let i = 0; i < points; i++) {
+      const ts = now - (points - i) * step;
+      const wave = Math.sin(i / 9) * amp + Math.sin(i / 3) * amp * 0.2;
+      const val = Math.max(5, Math.min(100, base + wave + ((i * 7) % 5)));
+      out.push({ ts: Math.round(ts), value: Math.round(val * 10) / 10 });
+    }
+    return { source, points: out };
   };
 
   // ---- Datasets ----

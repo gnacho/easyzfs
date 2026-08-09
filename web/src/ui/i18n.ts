@@ -91,6 +91,8 @@ const es = {
   pool_autotrim_hint: 'TRIM continuo en SSD: libera bloques al borrarse. Alternativa: TRIM programado (tarea trim). En HDD no aplica.',
   pool_history: 'Historial',
   pool_history_hint: 'Comandos ZFS ejecutados sobre este pool (zpool history)',
+  pool_history_series: 'Ocupación del pool los últimos días',
+  pool_history_days: 'Ocupación últimos {days} días',
   hist_title: 'Historial del pool',
   hist_desc: 'Actividad ZFS reciente del pool {pool} (zpool history -i), más reciente primero.',
   hist_date: 'Fecha', hist_cmd: 'Comando', hist_dur: 'Duración',
@@ -353,7 +355,7 @@ const es = {
 
   // Discos
   dk_disk: 'Disco', dk_model: 'Modelo / Serie', dk_size: 'Tamaño',
-  dk_temp: 'Temp.', dk_smart: 'Salud SMART', dk_pool: 'Pool',
+  dk_temp: 'Temp.', dk_temp_hist: 'Temperatura de {dev} (24 h)', dk_smart: 'Salud SMART', dk_pool: 'Pool',
   dk_test_short: 'Test corto', dk_test_long: 'Test largo',
   dk_test_started: 'Test SMART iniciado',
   dk_poweroff: 'Apagar', dk_poweroff_arm: '¿Confirmar?',
@@ -593,6 +595,8 @@ const en: Record<I18nKey, string> = {
   pool_autotrim_hint: 'Continuous TRIM on SSDs: frees blocks as they are deleted. Alternative: scheduled TRIM (trim task). Not applicable to HDDs.',
   pool_history: 'History',
   pool_history_hint: 'ZFS commands run on this pool (zpool history)',
+  pool_history_series: 'Pool capacity over the last days',
+  pool_history_days: 'Capacity over the last {days} days',
   hist_title: 'Pool history',
   hist_desc: 'Recent ZFS activity on pool {pool} (zpool history -i), newest first.',
   hist_date: 'Date', hist_cmd: 'Command', hist_dur: 'Duration',
@@ -847,7 +851,7 @@ const en: Record<I18nKey, string> = {
   wdl_mon: 'Mon', wdl_tue: 'Tue', wdl_wed: 'Wed', wdl_thu: 'Thu', wdl_fri: 'Fri', wdl_sat: 'Sat', wdl_sun: 'Sun',
 
   dk_disk: 'Disk', dk_model: 'Model / Serial', dk_size: 'Size',
-  dk_temp: 'Temp.', dk_smart: 'SMART health', dk_pool: 'Pool',
+  dk_temp: 'Temp.', dk_temp_hist: '{dev} temperature (24 h)', dk_smart: 'SMART health', dk_pool: 'Pool',
   dk_test_short: 'Short test', dk_test_long: 'Long test',
   dk_test_started: 'SMART test started',
   dk_poweroff: 'Power off', dk_poweroff_arm: 'Confirm?',

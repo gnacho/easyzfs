@@ -5,7 +5,7 @@ import { notifyAuthExpired } from './events';
 import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
-  Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
+  Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings, SeriesResp,
   SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
 
@@ -142,6 +142,8 @@ export class HttpProvider implements DataProvider {
     post<void>(`/pools/${enc(pool)}/checkpoint`, { action, confirm });
   getPoolHistory = (pool: string) => get<PoolHistoryEntry[]>(`/pools/${enc(pool)}/history`);
   getPerformance = () => get<Performance>('/performance');
+  getSeries = (source: string, days: number, points = 800) =>
+    get<SeriesResp>(`/series?source=${enc(source)}&days=${days}&points=${points}`);
 
   getDatasets = () => get<Dataset[]>('/datasets');
   createDataset = (r: CreateDatasetReq) => post<void>('/datasets', r);

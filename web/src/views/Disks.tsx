@@ -6,8 +6,28 @@ import { useData } from '../ui/useData';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, fmtInt } from '../ui/format';
 import { Badge, InfoBubble, Spinner } from '../components/ui';
-import type { Disk } from '../data/types';
+import { Sparkline } from '../components/Sparkline';
+import type { Disk, SeriesPoint } from '../data/types';
 import { useModal } from '../components/Modal';
+
+// DiskTempSpark — sparkline de temperatura 24h bajo el valor actual.
+function DiskTempSpark({ dev }: { dev: string }) {
+  const { t } = useApp();
+  const [pts, setPts] = useState<SeriesPoint[] | null>(null);
+  useEffect(() => {
+    let alive = true;
+    getProvider().getSeries(`disk.${dev}.temp`, 1, 80)
+      .then((r) => { if (alive) setPts(r.points); })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [dev]);
+  if (!pts || pts.length < 2) return null;
+  return (
+    <div style={{ marginTop: 4, color: 'var(--text3)' }}>
+      <Sparkline points={pts} width={64} height={18} ariaLabel={t('dk_temp_hist', { dev })} />
+    </div>
+  );
+}
 
 const TIPO_SMART: Record<string, 'ok' | 'warn' | 'err' | 'info'> = {
   ok: 'ok', warn: 'warn', crit: 'err', unknown: 'info',
@@ -110,7 +130,10 @@ export default function Disks() {
                   </div>
                 </td>
                 <td className="num hide-md" data-l={t('dk_size')}>{fmtBytes(d.size_bytes)}</td>
-                <td className="num" data-l={t('dk_temp')}>{d.temp_c === null ? '—' : `${d.temp_c}°C`}</td>
+                <td className="num" data-l={t('dk_temp')}>
+                  {d.temp_c === null ? '—' : `${d.temp_c}°C`}
+                  <DiskTempSpark dev={d.dev} />
+                </td>
                 <td className="smartcell">
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                     <span title={d.smart_detail}>
