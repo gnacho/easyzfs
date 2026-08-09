@@ -152,6 +152,8 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("POST /api/pools/{name}/clear", s.auth.RequireAdmin(s.clearPool))
 	a.HandleFunc("GET /api/pools/{name}/history", s.poolHistory)
 	a.HandleFunc("GET /api/performance", s.getPerformance)
+	// series históricas (U2): rangos con downsampling LTTB
+	a.HandleFunc("GET /api/series", s.getSeries)
 	// datasets
 	a.HandleFunc("GET /api/datasets", s.listDatasets)
 	a.HandleFunc("POST /api/datasets", s.auth.RequireAdmin(s.createDataset))

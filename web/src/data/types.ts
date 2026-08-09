@@ -179,6 +179,16 @@ export interface Performance {
   pools: PoolPerf[];
 }
 
+// GET /api/series?source=&days=&points= (U2: sparklines históricos)
+export interface SeriesPoint {
+  ts: number; // epoch segundos
+  value: number;
+}
+export interface SeriesResp {
+  source: string;
+  points: SeriesPoint[];
+}
+
 export type DatasetType = 'fs' | 'volume';
 export interface Dataset {
   name: string;

@@ -6,6 +6,7 @@ import { t } from '../ui/i18n';
 import { fmtBytes, fmtBytesPair, fmtPct, fmtRatio, timeAgo } from '../ui/format';
 import { statusLabel } from '../ui/labels';
 import { Badge, InfoBubble, Meter, Switch } from './ui';
+import { Sparkline } from './Sparkline';
 import { useModal } from './Modal';
 import { useEffect, useState } from 'react';
 
@@ -51,6 +52,7 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
   const [err, setErr] = useState('');
   const [disks, setDisks] = useState<Disk[]>([]);
   const [trimOverride, setTrimOverride] = useState<boolean | null>(null);
+  const [hist, setHist] = useState<{ days: number; points: { ts: number; value: number }[] }[]>([]);
   const pct = pool.total_bytes > 0 ? (pool.used_bytes / pool.total_bytes) * 100 : 0;
   const cap = fmtBytesPair(pool.used_bytes, pool.total_bytes);
   const running = pool.scrub.state === 'running';
@@ -61,6 +63,13 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
   useEffect(() => {
     let alive = true;
     getProvider().getDisks().then((d) => { if (alive) setDisks(d); }).catch(() => {});
+    const src = `pool.${pool.name}.used_pct`;
+    getProvider().getSeries(src, 7, 120)
+      .then((r) => { if (alive) setHist((cur) => [...cur.filter((h) => h.days !== 7), { days: 7, points: r.points }]); })
+      .catch(() => {});
+    getProvider().getSeries(src, 30, 160)
+      .then((r) => { if (alive) setHist((cur) => [...cur.filter((h) => h.days !== 30), { days: 30, points: r.points }]); })
+      .catch(() => {});
     return () => { alive = false; };
   }, [pool]);
 
@@ -117,6 +126,17 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
           <div className="t2">{pool.topo}</div>
           <TopoHelp topo={pool.topo} />
           <Meter pct={pct} />
+          {hist.length > 0 && (
+            <div className="sparks" aria-label={t('pool_history_series')}>
+              {hist.sort((a, b) => a.days - b.days).map((h) => (
+                <span key={h.days} className="spark" title={t('pool_history_days', { days: h.days })}>
+                  <Sparkline points={h.points} width={72} height={26}
+                    ariaLabel={t('pool_history_days', { days: h.days })} />
+                  <em>{h.days}d</em>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ fontWeight: 700, fontSize: 17 }}>
