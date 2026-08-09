@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.8.4
+
+- **Gráficas históricas (U2)**: las tarjetas de pool ahora muestran una mini-gráfica de ocupación de los últimos 7 y 30 días bajo la barra de capacidad, y cada disco muestra una gráfica de temperatura de 24 h. Lo respalda un nuevo endpoint `GET /api/series` que lee la tabla `series` con downsampling LTTB en el servidor, para que los rangos largos se dibujen con fluidez sin enviar miles de puntos al navegador.
+
 ### v2.8.3
 
 - **Canal de alertas por email (S5)**: las alertas ahora pueden llegar por correo, además del Web Push y el webhook saliente. El SMTP se configura con variables de entorno (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_ENCRYPTION`, `SMTP_TIMEOUT`, y opcional `SMTP_TEST_TO`). Los usuarios con email configurado y el tipo de alerta habilitado reciben el mensaje en su idioma (plantillas ES/EN, texto plano + HTML). El canal queda inerte hasta que el SMTP esté configurado.

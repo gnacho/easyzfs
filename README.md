@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.8.4
+
+- **Historical sparklines (U2)**: pool cards now show a small capacity chart for the last 7 and 30 days under the meter, and each disk row shows a 24h temperature chart. Backed by a new `GET /api/series` endpoint that reads the `series` table with server-side LTTB downsampling, so long ranges render smoothly without shipping thousands of points to the browser.
+
 ### v2.8.3
 
 - **Email alert channel (S5)**: alerts can now be delivered by email alongside Web Push and the outgoing webhook. SMTP is configured via environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_ENCRYPTION`, `SMTP_TIMEOUT`, optional `SMTP_TEST_TO`). Users with an email set and the alert type enabled receive a message in their language (ES/EN templates, plain text + HTML). The channel stays inert until SMTP is configured.
