@@ -176,10 +176,7 @@ func parseArcSummary(out string) (*model.ArcStats, bool) {
 	}
 	st := &model.ArcStats{}
 	if sm != nil {
-		unit := strings.ToUpper(sm[2])
-		if strings.HasSuffix(unit, "IB") { // "GiB" → "G" (parseHumanSize espera sufijo simple)
-			unit = unit[:len(unit)-2]
-		}
+		unit := strings.TrimSuffix(strings.ToUpper(sm[2]), "IB") // "GiB" → "G" (parseHumanSize espera sufijo simple)
 		if sz, ok := parseHumanSize(sm[1] + unit); ok {
 			st.SizeBytes = sz
 		}
