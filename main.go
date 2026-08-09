@@ -38,6 +38,7 @@ import (
 	"easyzfs/internal/settings"
 	"easyzfs/internal/updater"
 	"easyzfs/internal/users"
+	"easyzfs/internal/webhook"
 )
 
 // Inyectadas por ldflags (-X main.version=... -X main.build=...).
@@ -88,6 +89,23 @@ func main() {
 
 	h := hub.NewHub()
 	alerter := alerts.New(database, h, stStore)
+
+	// Webhook saliente (issue #18): worker async con cola acotada + DLQ. La URL
+	// se resuelve de settings en cada envío (dinámica, editable por UI); secret,
+	// timeout y retries vienen de env leídos una vez al arranque (bootstrap).
+	webhookNotifier := webhook.NewNotifier(webhook.Config{
+		Secret:     cfg.WebhookSecret,
+		Timeout:    cfg.WebhookTimeout,
+		Retries:    cfg.WebhookRetries,
+		RetryDelay: time.Second,
+	}, database, func() string {
+		st, err := stStore.Load(context.Background())
+		if err != nil {
+			return ""
+		}
+		return st.Webhook
+	})
+	alerter.SetWebhook(webhookNotifier)
 
 	// Sender Web Push: inerte si faltan claves VAPID; en demo nunca envía.
 	pushSender := push.New(cfg, database, h)
@@ -173,6 +191,8 @@ func main() {
 	if err := httpSrv.Shutdown(shCtx); err != nil {
 		log.Printf("shutdown: %v", err)
 	}
+	// Para el worker del webhook ANTES de cerrar SQLite (la DLQ escribe en BD).
+	webhookNotifier.Close()
 	if err := database.Close(); err != nil {
 		log.Printf("sqlite close: %v", err)
 	}
