@@ -361,6 +361,13 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.8.1
+
+- **Webhook saliente endurecido (issue #18)**: las alertas ahora se entregan mediante un worker con cola acotada (cap 64) en vez de lanzar una goroutine por alerta, así una ráfaga se encola en lugar de abrir N POST paralelos. Los eventos cuyos reintentos se agotan van a una nueva tabla dead-letter `webhook_events`, el payload lleva un `event_id` (el id de la alerta) para deduplicar en el receptor, y las respuestas se limitan a 64 KiB. El secreto de firma, el timeout y los reintentos se leen una vez de env al arrancar; la URL sigue en ajustes, así los cambios aplican sin reiniciar.
+- **Búsqueda nueva en el store de replicación**: ahora obtiene un job por id con una consulta directa en vez de listar y filtrar (`O(1)` en vez de `O(n)`).
+- **Más tests**: 7 tests de concurrencia del hub y 11 de auth (firmas, manipulación, expiración, roles y purga), todos bajo `go test -race`.
+- **Pipeline de CI**: `go vet`, `go test -race`, staticcheck, comprobación de TypeScript y el build del frontend se ejecutan en cada push y PR.
+
 ### v2.8.0
 
 - **Fix TOCTOU en replicación**: un slot atómico (`TryAcquire`/`Release`) evita la doble ejecución de jobs de replicación. Antes, un tick concurrente o un `RunNow` manual durante la ventana del snapshot podía lanzar un segundo pipeline `zfs send | zfs recv` contra el mismo destino.

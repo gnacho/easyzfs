@@ -353,6 +353,13 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.8.1
+
+- **Outgoing webhook hardened (issue #18)**: alerts are now delivered through a dedicated worker with a bounded queue (cap 64) instead of spawning a goroutine per alert, so a burst queues instead of fanning out N parallel POSTs. Events whose retries are exhausted land in a new `webhook_events` dead-letter table, the payload carries an `event_id` (the alert id) for receiver-side dedup, and response bodies are capped at 64 KiB. The signing secret, timeout and retry count are read once from env at startup, while the URL stays in settings so changes apply without restart.
+- **New replication store lookup**: the replication store now fetches a job by id with a direct query instead of listing and filtering (`O(1)` vs `O(n)`).
+- **More tests**: 7 concurrency tests for the hub and 11 tests for auth signatures, tampering, expiry, roles and purge, all run under `go test -race`.
+- **CI pipeline**: `go vet`, `go test -race`, staticcheck, TypeScript check and the frontend build now run on every push and PR.
+
 ### v2.8.0
 
 - **Replication TOCTOU fix**: an atomic job slot (`TryAcquire`/`Release`) prevents double execution of replication jobs. Before, a concurrent tick or manual `RunNow` during the snapshot window could launch a second `zfs send | zfs recv` pipeline against the same destination.
