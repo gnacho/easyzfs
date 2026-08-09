@@ -12,8 +12,7 @@ import type { SysSchedState } from '../ui/syssched';
 import type { Dataset, DatasetProp, Disk, DiskSmartLogResp, DiskSmartResp, Job, Pool, PropGroup, ReplicationJob, SystemTimer, Topo } from '../data/types';
 
 // ---------- utilidades comunes ----------
-function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []) {
-  const [data, setData] = useState<T | null>(null);
+function useLoad<T>(fn: () => Promise<T>, deps: unknown[] = []) {  const [data, setData] = useState<T | null>(null);
   useEffect(() => {
     let alive = true;
     fn().then((d) => { if (alive) setData(d); }).catch(() => { if (alive) setData(null); });
@@ -27,6 +26,18 @@ function todayStamp(): string {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
+
+// topoTipKey — clave i18n que explica la topología (ayuda contextual U4).
+const topoTipKey = (topo: Topo) => {
+  switch (topo) {
+    case 'mirror': return 'topo_mirror';
+    case 'raidz1': return 'topo_raidz1';
+    case 'raidz2': return 'topo_raidz2';
+    default: return 'topo_stripe';
+  }
+};
+// topoLabel — nombre corto de la topología para el título del tooltip.
+const topoLabel = (topo: Topo) => topo.toUpperCase();
 
 // Botón de envío con estado de carga
 function SubmitBtn({ label, busy, disabled, danger }: {
@@ -267,7 +278,9 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
         <label htmlFor="np-name">{t('np_name')}</label>
         <input id="np-name" placeholder={t('np_name_ph')} value={name}
           onChange={(e) => setName(e.target.value)} />
-        <label>{t('np_topo')}</label>
+        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>{t('np_topo')}
+          <InfoBubble title={topoLabel(topo)}>{t(topoTipKey(topo))}</InfoBubble>
+        </label>
         <Seg<Topo> ariaLabel={t('np_topo')} value={topo} onChange={setTopo}
           options={[
             { v: 'mirror', label: 'Mirror' }, { v: 'raidz1', label: 'RaidZ1' },
@@ -1123,7 +1136,9 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
         </p>
 
         {mode === 'vdev' && (<>
-          <label>{t('np_topo')}</label>
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>{t('np_topo')}
+            <InfoBubble title={topoLabel(topo)}>{t(topoTipKey(topo))}</InfoBubble>
+          </label>
           <Seg<Topo> ariaLabel={t('np_topo')} value={topo} onChange={setTopo}
             options={[
               { v: 'mirror', label: 'Mirror' }, { v: 'raidz1', label: 'RaidZ1' },
