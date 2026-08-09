@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.8.3
+
+- **Canal de alertas por email (S5)**: las alertas ahora pueden llegar por correo, además del Web Push y el webhook saliente. El SMTP se configura con variables de entorno (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_ENCRYPTION`, `SMTP_TIMEOUT`, y opcional `SMTP_TEST_TO`). Los usuarios con email configurado y el tipo de alerta habilitado reciben el mensaje en su idioma (plantillas ES/EN, texto plano + HTML). El canal queda inerte hasta que el SMTP esté configurado.
+
 ### v2.8.2
 
 - **Ayuda contextual de topologías (U4)**: una burbuja de ayuda junto al selector de topología en Crear pool y Añadir vdev explica el esquema seleccionado en lenguaje claro (mirror, raidz1, raidz2, stripe, qué tolera y cómo queda la capacidad útil). La tarjeta de pool muestra también esa explicación para su distribución.

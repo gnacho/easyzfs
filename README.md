@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.8.3
+
+- **Email alert channel (S5)**: alerts can now be delivered by email alongside Web Push and the outgoing webhook. SMTP is configured via environment variables (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM`, `SMTP_ENCRYPTION`, `SMTP_TIMEOUT`, optional `SMTP_TEST_TO`). Users with an email set and the alert type enabled receive a message in their language (ES/EN templates, plain text + HTML). The channel stays inert until SMTP is configured.
+
 ### v2.8.2
 
 - **Contextual topology help (U4)**: a help bubble next to the topology selector in Create pool and Add vdev explains the selected layout in plain language (mirror, raidz1, raidz2, stripe, what it tolerates and how usable capacity works). The pool card now also shows the same explanation for its layout.
