@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 )
 
 // Config — configuración de la app (todo por variables de entorno).
@@ -24,6 +25,10 @@ type Config struct {
 	VAPIDPublicKey  string // VAPID_PUBLIC_KEY (Web Push; la genera el instalador)
 	VAPIDPrivateKey string // VAPID_PRIVATE_KEY (solo servidor; si falta, push desactivado)
 	VAPIDSubject    string // VAPID_SUBJECT (def "mailto:easyzfs@localhost"; siempre mailto:)
+
+	WebhookSecret  string        // WEBHOOK_SECRET (firma HMAC del webhook saliente)
+	WebhookTimeout time.Duration // WEBHOOK_TIMEOUT en segundos (def 10)
+	WebhookRetries int           // WEBHOOK_RETRIES (def 3)
 }
 
 // DataDir — directorio de datos del daemon (deriva de DB_PATH): ahí viven la
@@ -54,6 +59,10 @@ func Load() *Config {
 		VAPIDPublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
 		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:    env("VAPID_SUBJECT", "mailto:easyzfs@localhost"),
+
+		WebhookSecret:  os.Getenv("WEBHOOK_SECRET"),
+		WebhookTimeout: time.Duration(envInt("WEBHOOK_TIMEOUT", 10)) * time.Second,
+		WebhookRetries: envInt("WEBHOOK_RETRIES", 3),
 	}
 	if cfg.Demo {
 		cfg.Mock = true // demo implica colectores mock

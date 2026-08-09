@@ -5,7 +5,7 @@ package push
 
 import (
 	"context"
-	"crypto/elliptic"
+	"crypto/ecdh"
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
@@ -26,8 +26,7 @@ import (
 // auth = 16 bytes), como las que genera el navegador.
 func clavesSub(t *testing.T) (p256dh, auth string) {
 	t.Helper()
-	curve := elliptic.P256()
-	_, x, y, err := elliptic.GenerateKey(curve, rand.Reader)
+	priv, err := ecdh.P256().GenerateKey(rand.Reader)
 	if err != nil {
 		t.Fatalf("ecdh: %v", err)
 	}
@@ -35,7 +34,7 @@ func clavesSub(t *testing.T) (p256dh, auth string) {
 	if _, err := rand.Read(secret); err != nil {
 		t.Fatalf("auth secret: %v", err)
 	}
-	return base64.RawURLEncoding.EncodeToString(elliptic.Marshal(curve, x, y)),
+	return base64.RawURLEncoding.EncodeToString(priv.PublicKey().Bytes()),
 		base64.RawURLEncoding.EncodeToString(secret)
 }
 

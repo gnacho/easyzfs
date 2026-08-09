@@ -81,18 +81,6 @@ var reSize = regexp.MustCompile(`^[0-9]+([KMGTPE]i?B?)?$`)
 // sin ';' ni metacharacteres; también admite none|legacy).
 var reMountpoint = regexp.MustCompile(`^/[a-zA-Z0-9_./\-]+$`)
 
-// propSource — agrupa propiedades por origen para la UI (solo lectura vs
-// editables vs user properties). Devuelve "" si la propiedad no es editable.
-func propSource(name string) string {
-	if _, ok := propValidators[name]; ok {
-		return "editable"
-	}
-	if strings.HasPrefix(name, "user:") || strings.HasPrefix(name, "org.openzfs:") {
-		return "user"
-	}
-	return "readonly"
-}
-
 // valid — comprueba que el valor es admisible para la propiedad.
 func (p propSpec) valid(v string) bool {
 	switch p.kind {

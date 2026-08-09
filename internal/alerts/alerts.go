@@ -5,26 +5,18 @@
 package alerts
 
 import (
-	"bytes"
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"math/rand"
-	"net/http"
-	"os"
-	"strconv"
 	"time"
 
 	"easyzfs/internal/hub"
 	"easyzfs/internal/model"
 	"easyzfs/internal/push"
 	"easyzfs/internal/settings"
+	"easyzfs/internal/webhook"
 )
 
 // Alerter evalúa umbrales y persiste/emite alertas.
@@ -33,6 +25,7 @@ type Alerter struct {
 	hub  *hub.Hub
 	st   *settings.Store
 	push *push.Sender // puede ser nil (push no configurado)
+	wh   *webhook.Notifier // puede ser nil (webhook desactivado)
 }
 
 // New crea el Alerter.
@@ -42,6 +35,10 @@ func New(d *sql.DB, h *hub.Hub, st *settings.Store) *Alerter {
 
 // SetPush conecta el sender Web Push (opcional; nil = sin notificaciones push).
 func (a *Alerter) SetPush(s *push.Sender) { a.push = s }
+
+// SetWebhook conecta el notificador de webhook saliente (opcional; nil = sin
+// webhook). El notifier ya arranca su worker al crearse; aquí solo se enlaza.
+func (a *Alerter) SetWebhook(w *webhook.Notifier) { a.wh = w }
 
 // Raise inserta una alerta sin metadatos estructurados (kind "").
 func (a *Alerter) Raise(ctx context.Context, level, source, target, message string) {
@@ -103,75 +100,17 @@ func (a *Alerter) RaiseKind(ctx context.Context, level, source, target, message,
 	a.hub.Publish("alert.new", map[string]any{
 		"alert": model.Alert{ID: id, Ts: now, Level: level, Source: source, Target: target, Message: message},
 	})
-	a.notifyWebhook(level, source, target, message, now)
+	// Webhook saliente (async, cola acotada + DLQ): encola y sigue.
+	if a.wh != nil {
+		a.wh.Notify(webhook.Event{
+			ID: id, Ts: now, Level: level, Source: source, Target: target, Message: message,
+		})
+	}
 	// Push (app cerrada): fire-and-forget; el sender decide a quién y nunca falla.
 	if a.push != nil && kind != "" {
 		go a.push.Notify(context.Background(),
 			push.Alert{Level: level, Source: source, Target: target, Kind: kind, Params: params})
 	}
-}
-
-// notifyWebhook envía la alerta al webhook de settings (si no está vacío) en
-// una goroutine con HMAC-SHA256, timeout configurable y 3 reintentos con
-// backoff exponencial + jitter. Best-effort: solo log si falla.
-func (a *Alerter) notifyWebhook(level, source, target, message string, ts time.Time) {
-	st, err := a.st.Load(context.Background())
-	if err != nil || st.Webhook == "" {
-		return
-	}
-	payload, err := json.Marshal(map[string]any{
-		"level": level, "source": source, "target": target, "message": message,
-		"ts": ts.UTC().Format(time.RFC3339),
-	})
-	if err != nil {
-		return
-	}
-	secret := os.Getenv("WEBHOOK_SECRET")
-	timeout := 10
-	if v := os.Getenv("WEBHOOK_TIMEOUT"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			timeout = n
-		}
-	}
-	go func(url string, body []byte) {
-		client := &http.Client{Timeout: time.Duration(timeout) * time.Second}
-		var lastErr error
-		for attempt := 1; attempt <= 3; attempt++ {
-			req, err := http.NewRequestWithContext(context.Background(), "POST", url, bytes.NewReader(body))
-			if err != nil {
-				log.Printf("alerts: webhook %s (intento %d): request: %v", url, attempt, err)
-				return
-			}
-			req.Header.Set("Content-Type", "application/json")
-			req.Header.Set("User-Agent", "EasyZFS-Webhook/1.0")
-			if secret != "" {
-				mac := hmac.New(sha256.New, []byte(secret))
-				mac.Write(body)
-				req.Header.Set("X-EasyZFS-Signature", "sha256="+hex.EncodeToString(mac.Sum(nil)))
-			}
-			resp, err := client.Do(req)
-			if err != nil {
-				lastErr = err
-			} else {
-				respBody, _ := io.ReadAll(resp.Body)
-				resp.Body.Close()
-				if resp.StatusCode >= 200 && resp.StatusCode < 300 {
-					return // éxito
-				}
-				lastErr = fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
-				// 4xx (excepto 429) no reintentar: es error del cliente, no temporal.
-				if resp.StatusCode >= 400 && resp.StatusCode != 429 {
-					break
-				}
-			}
-			if attempt < 3 {
-				base := time.Duration(1<<(attempt-1)) * time.Second // 1s, 2s, 4s
-				jitter := time.Duration(rand.Intn(1000)) * time.Millisecond
-				time.Sleep(base + jitter)
-			}
-		}
-		log.Printf("alerts: webhook %s: %v (3 intentos agotados)", url, lastErr)
-	}(st.Webhook, payload)
 }
 
 // EvaluatePools aplica umbrales de capacidad y scrub con errores.

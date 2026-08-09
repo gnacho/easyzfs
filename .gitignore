@@ -1,5 +1,7 @@
 # Binario y artefactos de build
 easyzfs
+easyzfs-local
+bin/
 *.test
 
 # Datos en runtime

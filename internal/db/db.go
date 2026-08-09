@@ -112,6 +112,14 @@ var migrations = []string{
 	// v16: avatar del usuario (foto de perfil). Nombre del fichero dentro de
 	// <datadir>/avatars/ (p. ej. 'nacho.webp'); vacío = sin foto.
 	`ALTER TABLE users ADD COLUMN avatar TEXT NOT NULL DEFAULT '';`,
+	// v17: DLQ del webhook saliente (issue #18): eventos no entregados tras
+	// agotar reintentos. event_id = id de la alerta (clave de idempotencia).
+	`CREATE TABLE IF NOT EXISTS webhook_events (
+	  event_id  TEXT PRIMARY KEY,
+	  payload   TEXT NOT NULL,
+	  sent_at   TEXT NOT NULL DEFAULT (datetime('now')),
+	  error     TEXT NOT NULL
+	);`,
 }
 
 // Open abre la BD con WAL, busy_timeout y una sola conexión escritora.
