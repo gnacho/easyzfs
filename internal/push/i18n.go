@@ -58,6 +58,13 @@ var estadosES = map[string]string{
 	"FAULTED":  "fallado",
 }
 
+// Compose devuelve título y cuerpo interpolados para (lang, kind, params),
+// reutilizado por los canales email/webhook además del push. Idiomas/kind
+// desconocidos → fallback ('es' / 'generic'), igual que catalog.
+func Compose(lang, kind string, params map[string]any) (title, body string) {
+	return catalog(lang, kind, params)
+}
+
 // catalog devuelve título y cuerpo interpolados para (lang, kind). Idioma o
 // kind desconocido → fallback ('es' / 'generic').
 func catalog(lang, kind string, params map[string]any) (title, body string) {

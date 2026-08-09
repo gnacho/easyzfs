@@ -31,6 +31,7 @@ import (
 	"easyzfs/internal/httpapi"
 	"easyzfs/internal/hub"
 	"easyzfs/internal/longops"
+	"easyzfs/internal/notifier"
 	"easyzfs/internal/push"
 	"easyzfs/internal/replication"
 	"easyzfs/internal/scheduler"
@@ -106,6 +107,17 @@ func main() {
 		return st.Webhook
 	})
 	alerter.SetWebhook(webhookNotifier)
+
+	// Canal email (S5): inerte si SMTP no está configurado (log aviso en config).
+	var emailNotifier *notifier.Mailer
+	if smtpCfg := notifier.FromConfig(cfg); smtpCfg.Validate() == nil {
+		emailNotifier, err = notifier.NewMailer(smtpCfg)
+		if err != nil {
+			log.Printf("aviso: email desactivado: %v", err)
+		} else {
+			alerter.SetEmail(emailNotifier)
+		}
+	}
 
 	// Sender Web Push: inerte si faltan claves VAPID; en demo nunca envía.
 	pushSender := push.New(cfg, database, h)
@@ -193,6 +205,11 @@ func main() {
 	}
 	// Para el worker del webhook ANTES de cerrar SQLite (la DLQ escribe en BD).
 	webhookNotifier.Close()
+	if emailNotifier != nil {
+		if err := emailNotifier.Close(); err != nil {
+			log.Printf("email close: %v", err)
+		}
+	}
 	if err := database.Close(); err != nil {
 		log.Printf("sqlite close: %v", err)
 	}

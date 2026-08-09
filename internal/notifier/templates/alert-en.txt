@@ -1,0 +1,10 @@
+{{.Title}}
+Severity: {{.Severity}}
+
+{{.Summary}}
+
+Pool: {{.Target}}
+Date: {{.Timestamp}}
+
+---
+Sent by EasyZFS · No telemetry, everything stays on your server.

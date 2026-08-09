@@ -29,6 +29,16 @@ type Config struct {
 	WebhookSecret  string        // WEBHOOK_SECRET (firma HMAC del webhook saliente)
 	WebhookTimeout time.Duration // WEBHOOK_TIMEOUT en segundos (def 10)
 	WebhookRetries int           // WEBHOOK_RETRIES (def 3)
+
+	// Email/SMTP (canal de alertas S5). Vacio = email desactivado.
+	SMTPHost       string // SMTP_HOST
+	SMTPPort       int    // SMTP_PORT (def 587)
+	SMTPUser       string // SMTP_USER (vacío = SMTP sin autenticación)
+	SMTPPass       string // SMTP_PASS (solo servidor; nunca en logs ni BD)
+	SMTPFrom       string // SMTP_FROM ("EasyZFS <easyzfs@example.com>")
+	SMTPEncryption string // SMTP_ENCRYPTION: none | starttls | tls (def starttls)
+	SMTPTimeout    time.Duration // SMTP_TIMEOUT (def 10s)
+	SMTPTestTo     string // SMTP_TEST_TO: fuerza destino de prueba en todos los envíos
 }
 
 // DataDir — directorio de datos del daemon (deriva de DB_PATH): ahí viven la
@@ -63,6 +73,15 @@ func Load() *Config {
 		WebhookSecret:  os.Getenv("WEBHOOK_SECRET"),
 		WebhookTimeout: time.Duration(envInt("WEBHOOK_TIMEOUT", 10)) * time.Second,
 		WebhookRetries: envInt("WEBHOOK_RETRIES", 3),
+
+		SMTPHost:       os.Getenv("SMTP_HOST"),
+		SMTPPort:       envInt("SMTP_PORT", 587),
+		SMTPUser:       os.Getenv("SMTP_USER"),
+		SMTPPass:       os.Getenv("SMTP_PASS"),
+		SMTPFrom:       os.Getenv("SMTP_FROM"),
+		SMTPEncryption: env("SMTP_ENCRYPTION", "starttls"),
+		SMTPTimeout:    time.Duration(envInt("SMTP_TIMEOUT", 10)) * time.Second,
+		SMTPTestTo:     os.Getenv("SMTP_TEST_TO"),
 	}
 	if cfg.Demo {
 		cfg.Mock = true // demo implica colectores mock
@@ -87,6 +106,12 @@ func Load() *Config {
 		} else {
 			log.Println("aviso: claves VAPID no configuradas; notificaciones push desactivadas (deploy/install.sh las genera)")
 		}
+	}
+	// Email es opcional: sin SMTP_HOST no se sale; se desactiva con aviso.
+	if cfg.SMTPHost == "" {
+		log.Println("aviso: SMTP_HOST no configurado; notificaciones por email desactivadas")
+	} else if cfg.SMTPFrom == "" {
+		log.Println("aviso: SMTP_FROM no configurado; notificaciones por email desactivadas")
 	}
 	return cfg
 }
