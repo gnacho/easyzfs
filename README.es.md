@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.8.2
+
+- **Ayuda contextual de topologías (U4)**: una burbuja de ayuda junto al selector de topología en Crear pool y Añadir vdev explica el esquema seleccionado en lenguaje claro (mirror, raidz1, raidz2, stripe, qué tolera y cómo queda la capacidad útil). La tarjeta de pool muestra también esa explicación para su distribución.
+
 ### v2.8.1
 
 - **Webhook saliente endurecido (issue #18)**: las alertas ahora se entregan mediante un worker con cola acotada (cap 64) en vez de lanzar una goroutine por alerta, así una ráfaga se encola en lugar de abrir N POST paralelos. Los eventos cuyos reintentos se agotan van a una nueva tabla dead-letter `webhook_events`, el payload lleva un `event_id` (el id de la alerta) para deduplicar en el receptor, y las respuestas se limitan a 64 KiB. El secreto de firma, el timeout y los reintentos se leen una vez de env al arrancar; la URL sigue en ajustes, así los cambios aplican sin reiniciar.

@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.8.2
+
+- **Contextual topology help (U4)**: a help bubble next to the topology selector in Create pool and Add vdev explains the selected layout in plain language (mirror, raidz1, raidz2, stripe, what it tolerates and how usable capacity works). The pool card now also shows the same explanation for its layout.
+
 ### v2.8.1
 
 - **Outgoing webhook hardened (issue #18)**: alerts are now delivered through a dedicated worker with a bounded queue (cap 64) instead of spawning a goroutine per alert, so a burst queues instead of fanning out N parallel POSTs. Events whose retries are exhausted land in a new `webhook_events` dead-letter table, the payload carries an `event_id` (the alert id) for receiver-side dedup, and response bodies are capped at 64 KiB. The signing secret, timeout and retry count are read once from env at startup, while the URL stays in settings so changes apply without restart.
