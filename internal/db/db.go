@@ -120,6 +120,21 @@ var migrations = []string{
 	  sent_at   TEXT NOT NULL DEFAULT (datetime('now')),
 	  error     TEXT NOT NULL
 	);`,
+	// v18: historial de actualizaciones (#28). Registra cada apply con
+	// versión origen/destino, quién y estado.
+	`CREATE TABLE IF NOT EXISTS update_history (
+	  event_id     TEXT PRIMARY KEY,
+	  timestamp    TEXT NOT NULL DEFAULT (datetime('now')),
+	  action       TEXT NOT NULL DEFAULT 'update',
+	  channel      TEXT NOT NULL DEFAULT 'stable',
+	  version_from TEXT NOT NULL,
+	  version_to   TEXT NOT NULL,
+	  initiated_by TEXT,
+	  status       TEXT NOT NULL DEFAULT 'started',
+	  duration_ms  INTEGER,
+	  notes        TEXT
+	);
+	CREATE INDEX IF NOT EXISTS idx_update_hist_ts ON update_history(timestamp);`,
 }
 
 // Open abre la BD con WAL, busy_timeout y una sola conexión escritora.

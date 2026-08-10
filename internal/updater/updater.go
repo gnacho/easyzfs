@@ -26,6 +26,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	selfupdate "github.com/creativeprojects/go-selfupdate"
@@ -287,5 +288,98 @@ func (u *Updater) Apply(ctx context.Context) error {
 		return fmt.Errorf("updater: flag: %w", err)
 	}
 	log.Printf("[easyzfs] actualización %s descargada y validada → %s (flag .restart-me)", stripV(latest.Version()), u.NewBinary())
+	return nil
+}
+
+// ---- readiness checks (#30) ----
+
+// Plan — resultado de la comprobación pre-vuelo antes de aplicar.
+type Plan struct {
+	CanApply bool    `json:"canApply"`
+	Checks   []Check `json:"checks"`
+}
+
+// Check — una comprobación individual con estado y descripción.
+type Check struct {
+	ID      string `json:"id"`
+	Status  string `json:"status"` // "pass" | "warn" | "fail"
+	Title   string `json:"title"`
+	Summary string `json:"summary"`
+}
+
+// Plan — comprobaciones pre-vuelo locales (espacio, permisos, concurrencia).
+func (u *Updater) Plan() Plan {
+	u.mu.Lock()
+	inProgress := u.inProgress
+	u.mu.Unlock()
+
+	checks := []Check{
+		{ID: "disk_space", Status: "pass", Title: "Disk space", Summary: "Enough space for download and backup."},
+		{ID: "write_perms", Status: "pass", Title: "Write permissions", Summary: "Data directory is writable."},
+		{ID: "no_concurrent", Status: "pass", Title: "No update in progress", Summary: "No other update is running."},
+	}
+
+	var st syscall.Statfs_t
+	if err := syscall.Statfs(u.dataDir, &st); err == nil {
+		freeMB := st.Bavail * uint64(st.Bsize) / 1024 / 1024
+		if freeMB < 50 {
+			checks[0].Status = "fail"
+			checks[0].Summary = fmt.Sprintf("Only %d MB free in %s (need at least 50 MB).", freeMB, u.dataDir)
+		}
+	}
+
+	if err := os.MkdirAll(u.updateDir(), 0o750); err != nil {
+		checks[1].Status = "fail"
+		checks[1].Summary = fmt.Sprintf("Cannot write to %s: %v", u.updateDir(), err)
+	}
+
+	if inProgress {
+		checks[2].Status = "fail"
+		checks[2].Summary = "An update is already in progress."
+	}
+
+	canApply := true
+	for _, c := range checks {
+		if c.Status == "fail" {
+			canApply = false
+			break
+		}
+	}
+	return Plan{CanApply: canApply, Checks: checks}
+}
+
+// ---- rollback (#29) ----
+
+// Rollback restaura el binario anterior (.old) y toca el flag para que la unit
+// systemd lo instale y reinicie.
+func (u *Updater) Rollback() error {
+	u.mu.Lock()
+	if u.inProgress {
+		u.mu.Unlock()
+		return errors.New("rollback: operation already in progress")
+	}
+	u.inProgress = true
+	u.mu.Unlock()
+	defer func() {
+		u.mu.Lock()
+		u.inProgress = false
+		u.mu.Unlock()
+	}()
+
+	backup := u.NewBinary() + ".old"
+	if _, err := os.Stat(backup); os.IsNotExist(err) {
+		return errors.New("rollback: no backup available (.old not found)")
+	}
+	if err := os.Rename(backup, u.NewBinary()); err != nil {
+		return fmt.Errorf("rollback: rename: %w", err)
+	}
+	if err := os.Chmod(u.NewBinary(), 0o755); err != nil {
+		return fmt.Errorf("rollback: chmod: %w", err)
+	}
+	flag := u.RestartFlag()
+	if err := os.WriteFile(flag, []byte(time.Now().Format(time.RFC3339)), 0o644); err != nil {
+		return fmt.Errorf("rollback: flag: %w", err)
+	}
+	log.Printf("[easyzfs] rollback: restored %s → pending install", backup)
 	return nil
 }

@@ -1,6 +1,7 @@
 // update_handlers.go — /api/update/*: estado y aplicación de actualizaciones.
 // Patrón app-auto-update: GET /api/update/status (admin, consulta GitHub bajo
-// demanda) y POST /api/update/apply (admin, descarga+valida y toca el flag para
+// demanda), GET /api/update/plan (admin, comprobaciones pre-vuelo) y
+// POST /api/update/apply (admin, descarga+valida y toca el flag para
 // que easyzfs-update.path reinicie con el binario nuevo).
 package httpapi
 
@@ -31,6 +32,15 @@ func (s *Server) getUpdateStatus(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, st)
 }
 
+// getUpdatePlan — GET /api/update/plan (admin). Comprobaciones pre-vuelo.
+func (s *Server) getUpdatePlan(w http.ResponseWriter, r *http.Request) {
+	if s.updater == nil {
+		writeErr(w, http.StatusServiceUnavailable, "update_unavailable", "actualizaciones desactivadas (sin DATA_DIR)")
+		return
+	}
+	writeJSON(w, http.StatusOK, s.updater.Plan())
+}
+
 // postUpdateApply — POST /api/update/apply (admin). Descarga+valida el binario
 // nuevo y toca el flag; el servicio se reinicia vía easyzfs-update.path.
 func (s *Server) postUpdateApply(w http.ResponseWriter, r *http.Request) {
@@ -38,10 +48,29 @@ func (s *Server) postUpdateApply(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusServiceUnavailable, "update_unavailable", "actualizaciones desactivadas (sin DATA_DIR)")
 		return
 	}
+	st := s.updater.Status()
+	eid := s.recordUpdateStart("admin", st.Current, st.Latest)
+	start := time.Now()
 	ctx, cancel := context.WithTimeout(r.Context(), 3*time.Minute)
 	defer cancel()
-	if err := s.updater.Apply(ctx); err != nil {
+	err := s.updater.Apply(ctx)
+	s.recordUpdateResult(eid, err == nil, time.Since(start).Milliseconds())
+	if err != nil {
 		writeErr(w, http.StatusConflict, "update_apply_failed", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true, "restarting": true})
+}
+
+// postUpdateRollback — POST /api/update/rollback (admin). Restaura el binario
+// anterior (.old) y toca el flag para que easyzfs-update.path reinicie.
+func (s *Server) postUpdateRollback(w http.ResponseWriter, r *http.Request) {
+	if s.updater == nil {
+		writeErr(w, http.StatusServiceUnavailable, "update_unavailable", "actualizaciones desactivadas (sin DATA_DIR)")
+		return
+	}
+	if err := s.updater.Rollback(); err != nil {
+		writeErr(w, http.StatusConflict, "update_rollback_failed", err.Error())
 		return
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true, "restarting": true})
@@ -53,7 +82,10 @@ func (s *Server) wireUpdater(a *http.ServeMux) {
 		return
 	}
 	a.HandleFunc("GET /api/update/status", s.auth.RequireAdmin(s.getUpdateStatus))
+	a.HandleFunc("GET /api/update/plan", s.auth.RequireAdmin(s.getUpdatePlan))
+	a.HandleFunc("GET /api/updates/history", s.auth.RequireAdmin(s.getUpdateHistory))
 	a.HandleFunc("POST /api/update/apply", s.auth.RequireAdmin(s.postUpdateApply))
+	a.HandleFunc("POST /api/update/rollback", s.auth.RequireAdmin(s.postUpdateRollback))
 }
 
 var _ = updater.Status{} // mantener el import si el updater solo se usa vía wiring
