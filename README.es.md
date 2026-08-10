@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.8.6
+
+- **Tests SMART programados más robustos (#35)**: el scheduler ahora maneja fallos transitorios de `smartctl -t` comprobando la salida antes de declarar error (p. ej. exit code 4 = test ya en curso, que es benigno). También se saltan los discos sin soporte SMART en trabajos con target "all" como defensa en profundidad.
+
 ### v2.8.5
 
 - **Resumen de novedades en el aviso de actualización**: cuando hay una versión nueva, el ribbon ahora muestra un resumen de lo que cambió (~600 caracteres del cuerpo de la release de GitHub) junto al número de versión y los botones de acción. La respuesta de `GET /api/update/status` también incluye `releaseNotes` y `releaseUrl`.

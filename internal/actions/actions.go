@@ -738,8 +738,14 @@ func (s *Service) SmartTest(ctx context.Context, actor, dev, testType string) er
 		return fmt.Errorf("type inválido (short|long)")
 	}
 	s.audit(ctx, actor, "disk.smart_test."+testType, dev, nil, false)
-	if _, err := executil.Run(ctx, 15*time.Second, "smartctl",
-		"-t", testType, "/dev/"+dev); err != nil {
+	out, err := executil.RunTolerant(ctx, 15*time.Second, "smartctl",
+		"-t", testType, "/dev/"+dev)
+	if err != nil {
+		outStr := string(out)
+		if strings.Contains(outStr, "Testing has begun") ||
+			strings.Contains(outStr, "Self-test has begun") {
+			return nil
+		}
 		return fmt.Errorf("smart test: %w", err)
 	}
 	return nil
