@@ -320,6 +320,9 @@ func (s *Scheduler) execute(ctx context.Context, j Job) error {
 			}
 			var firstErr error
 			for _, d := range s.disks() {
+				if d.Smart == "unknown" {
+					continue
+				}
 				if err := s.actions.SmartTest(ctx, "scheduler", d.Dev, testType); err != nil && firstErr == nil {
 					firstErr = err
 				}
