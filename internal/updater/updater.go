@@ -22,6 +22,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 	"sync"
 	"time"
 
@@ -32,14 +34,22 @@ import (
 const (
 	repoSlug     = "gnacho/easyzfs"
 	checksumsFile = "checksums.txt" // fichero único con los hashes de TODOS los assets
+	notesMax     = 600
+)
+
+var (
+	rxHeading = regexp.MustCompile(`(?m)^#{1,4}\s+.*$`)
+	rxBold    = regexp.MustCompile(`\*\*`)
 )
 
 // Status — respuesta de GET /api/update/status.
 type Status struct {
-	Current    string `json:"current"`
-	Latest     string `json:"latest"`
-	Available  bool   `json:"available"`
-	InProgress bool   `json:"inProgress,omitempty"`
+	Current      string `json:"current"`
+	Latest       string `json:"latest"`
+	Available    bool   `json:"available"`
+	InProgress   bool   `json:"inProgress,omitempty"`
+	ReleaseNotes string `json:"releaseNotes,omitempty"`
+	ReleaseURL   string `json:"releaseUrl,omitempty"`
 }
 
 // Updater gestiona el chequeo y la descarga de actualizaciones.
@@ -47,9 +57,11 @@ type Updater struct {
 	current string   // versión local (inyectada por ldflags), sin 'v'
 	dataDir string   // DATA_DIR; el binario nuevo y el flag viven en dataDir/update/
 
-	mu            sync.Mutex
-	currentLatest string // última versión detectada (cache del último Check)
-	inProgress    bool
+	mu               sync.Mutex
+	currentLatest    string // última versión detectada (cache del último Check)
+	currentNotes     string
+	currentURL       string
+	inProgress       bool
 }
 
 // New crea el updater. current es la versión del binario (main.version).
@@ -62,6 +74,23 @@ func stripV(v string) string {
 		return v[1:]
 	}
 	return v
+}
+
+func truncateReleaseNotes(body string) string {
+	if body == "" {
+		return ""
+	}
+	cleaned := rxHeading.ReplaceAllString(body, "")
+	cleaned = rxBold.ReplaceAllString(cleaned, "")
+	cleaned = strings.TrimSpace(cleaned)
+	if len(cleaned) <= notesMax {
+		return cleaned
+	}
+	cut := cleaned[:notesMax]
+	if idx := strings.LastIndexAny(cut, " \n\r\t"); idx > 0 {
+		cut = cut[:idx]
+	}
+	return cut + "…"
 }
 
 // updateDir — directorio escribible por el servicio para el binario nuevo y el flag.
@@ -77,7 +106,7 @@ func (u *Updater) NewBinary() string { return filepath.Join(u.updateDir(), "easy
 func (u *Updater) Status() Status {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	return Status{Current: u.current, Latest: u.currentLatest, InProgress: u.inProgress}
+	return Status{Current: u.current, Latest: u.currentLatest, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL}
 }
 
 // Check consulta GitHub y devuelve si hay una release semver más reciente.
@@ -103,6 +132,9 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 	}
 
 	latestV := stripV(latest.Version())
+	notes := truncateReleaseNotes(latest.ReleaseNotes)
+	releaseURL := latest.URL
+
 	// Comparación semver defensiva: si la versión local no es semver válido
 	// (p.ej. 'dev' o un build local), se considera al día solo si coincide la
 	// cadena; en caso contrario hay versión nueva.
@@ -119,9 +151,11 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 
 	u.mu.Lock()
 	u.currentLatest = latestV
+	u.currentNotes = notes
+	u.currentURL = releaseURL
 	u.mu.Unlock()
 
-	return Status{Current: u.current, Latest: latestV, Available: available}, nil
+	return Status{Current: u.current, Latest: latestV, Available: available, ReleaseNotes: notes, ReleaseURL: releaseURL}, nil
 }
 
 // Apply descarga+valida el binario nuevo a $DATA_DIR/update/easyzfs.new y toca
