@@ -237,6 +237,11 @@ function Shell() {
               </button>
             </div>
           </div>
+          {!collapsed && version && (
+            <div style={{ fontSize: 10, color: 'var(--text3)', padding: '4px 12px 8px', textAlign: 'left' }}>
+              v{version}
+            </div>
+          )}
         </aside>
 
         <main className="main">

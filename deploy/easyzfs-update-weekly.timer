@@ -1,0 +1,11 @@
+[Unit]
+Description=EasyZFS weekly auto-update timer
+After=network-online.target
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=4h
+
+[Install]
+WantedBy=timers.target
