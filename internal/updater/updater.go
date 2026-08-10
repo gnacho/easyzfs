@@ -50,8 +50,15 @@ type Status struct {
 	Latest       string `json:"latest"`
 	Available    bool   `json:"available"`
 	InProgress   bool   `json:"inProgress,omitempty"`
+	Progress     *Progress `json:"progress,omitempty"`
 	ReleaseNotes string `json:"releaseNotes,omitempty"`
 	ReleaseURL   string `json:"releaseUrl,omitempty"`
+}
+
+// Progress — paso actual durante un apply.
+type Progress struct {
+	Step       string `json:"step"`       // "downloading" | "installing" | "restarting"
+	Percentage int    `json:"percentage"`  // 0-100 (estimado)
 }
 
 // Updater gestiona el chequeo y la descarga de actualizaciones.
@@ -64,6 +71,8 @@ type Updater struct {
 	currentNotes     string
 	currentURL       string
 	inProgress       bool
+	progressStep     string
+	progressPct      int
 }
 
 // New crea el updater. current es la versión del binario (main.version).
@@ -157,7 +166,11 @@ func (u *Updater) NewBinary() string { return filepath.Join(u.updateDir(), "easy
 func (u *Updater) Status() Status {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	return Status{Current: u.current, Latest: u.currentLatest, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL}
+	s := Status{Current: u.current, Latest: u.currentLatest, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL}
+	if u.inProgress && u.progressStep != "" {
+		s.Progress = &Progress{Step: u.progressStep, Percentage: u.progressPct}
+	}
+	return s
 }
 
 // Check consulta GitHub y devuelve si hay una release semver más reciente.
@@ -276,6 +289,13 @@ func (u *Updater) Apply(ctx context.Context) error {
 	if err := os.WriteFile(u.NewBinary(), nil, 0o755); err != nil {
 		return fmt.Errorf("updater: placeholder: %w", err)
 	}
+
+	// Progreso: descargando + validando (go-selfupdate hace todo en UpdateTo)
+	u.mu.Lock()
+	u.progressStep = "downloading"
+	u.progressPct = 30
+	u.mu.Unlock()
+
 	if err := up.UpdateTo(ctx, latest, u.NewBinary()); err != nil {
 		return fmt.Errorf("updater: apply: %w", err)
 	}
@@ -283,10 +303,23 @@ func (u *Updater) Apply(ctx context.Context) error {
 		return fmt.Errorf("updater: chmod: %w", err)
 	}
 
+	// Progreso: instalando (binario descargado y verificado)
+	u.mu.Lock()
+	u.progressStep = "installing"
+	u.progressPct = 70
+	u.mu.Unlock()
+
 	flag := u.RestartFlag()
 	if err := os.WriteFile(flag, []byte(time.Now().Format(time.RFC3339)), 0o644); err != nil {
 		return fmt.Errorf("updater: flag: %w", err)
 	}
+
+	// Progreso: listo (el .path hará el restart)
+	u.mu.Lock()
+	u.progressStep = "restarting"
+	u.progressPct = 100
+	u.mu.Unlock()
+
 	log.Printf("[easyzfs] actualización %s descargada y validada → %s (flag .restart-me)", stripV(latest.Version()), u.NewBinary())
 	return nil
 }

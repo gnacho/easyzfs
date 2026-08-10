@@ -119,6 +119,7 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
   const [latest, setLatest] = useState('');
   const [checks, setChecks] = useState<{id:string;status:string;title:string;summary:string}[]>([]);
   const [canApply, setCanApply] = useState(true);
+  const [progress, setProgress] = useState<{step:string;percentage:number}|null>(null);
 
   const check = async () => {
     setState('checking');
@@ -140,14 +141,24 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
 
   const apply = async () => {
     setApplying(true);
+    setProgress(null);
     try {
-      await getProvider().applyUpdate();
-      // El servidor reinicia el servicio; la app se recarga con el build nuevo.
+      void getProvider().applyUpdate();
+      // Poll progress while the update runs
+      const poll = async () => {
+        try {
+          const st = await getProvider().getUpdateStatus();
+          if (st.progress) setProgress(st.progress);
+          if (st.inProgress && applying) setTimeout(poll, 1500);
+        } catch { /* stop polling */ }
+      };
+      setTimeout(poll, 1000);
       setState('uptodate');
     } catch {
       setState('error');
     } finally {
       setApplying(false);
+      setProgress(null);
     }
   };
 
@@ -167,6 +178,17 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
             : t('s_about_d')}
         </div>
       </div>
+      {progress && (
+        <div className="grow" style={{ flexBasis: '100%', marginTop: 4 }}>
+          <div className="d" style={{ fontSize: 12, marginBottom: 4 }}>
+            {progress.step === 'downloading' ? 'Downloading...' : progress.step === 'installing' ? 'Installing...' : 'Restarting...'}
+            {' '}{progress.percentage}%
+          </div>
+          <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${progress.percentage}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width .3s' }} />
+          </div>
+        </div>
+      )}
       {checks.length > 0 && state === 'available' && (
         <div className="grow" style={{ flexBasis: '100%', marginTop: 4 }}>
           {checks.map((c) => (
