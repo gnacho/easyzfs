@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.8.6
+
+- **Robust SMART test scheduling (#35)**: the scheduler now handles transient `smartctl -t` failures gracefully by checking the command output before declaring an error (e.g. exit code 4 = test already running, which is benign). Disks without SMART support are also skipped in "all" target jobs as defense in depth.
+
 ### v2.8.5
 
 - **Release notes in the update ribbon**: when a new version is available, the ribbon now shows a summary of what changed (~600 chars from the GitHub release body) alongside the version number and action buttons. The backend `GET /api/update/status` response also includes `releaseNotes` and `releaseUrl`.
