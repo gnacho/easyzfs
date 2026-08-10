@@ -1062,6 +1062,49 @@ EOF
     run "${SUDO[@]}" systemctl daemon-reload
     run "${SUDO[@]}" systemctl enable --now easyzfs-update.path
     ok "Auto-update: easyzfs-update.path activo (aplica versiones descargadas por /api/update/apply)."
+
+    # Timer de auto-update semanal (patrón Keynest/Deltos): comprueba releases
+    # estables una vez por semana y aplica automáticamente con checksums.
+    local upd_weekly_svc="/etc/systemd/system/easyzfs-update-weekly.service"
+    local upd_weekly_timer="/etc/systemd/system/easyzfs-update-weekly.timer"
+    local upd_script="/opt/easyzfs/easyzfs-update-weekly.sh"
+    if [ "$DRY_RUN" = "1" ]; then
+      info "[DRY-RUN] instalaría easyzfs-update-weekly.timer + .service + script"
+    else
+      "${SUDO[@]}" mkdir -p /opt/easyzfs
+      cp deploy/easyzfs-update-weekly.sh "$upd_script"
+      "${SUDO[@]}" chmod +x "$upd_script"
+      printf '%s\n' "${NEW_VERSION#v}" > /opt/easyzfs/.release-id
+      write_root_file "$upd_weekly_svc" 0644 <<EOF
+[Unit]
+Description=EasyZFS weekly auto-update check and apply
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/easyzfs/easyzfs-update-weekly.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+EOF
+      write_root_file "$upd_weekly_timer" 0644 <<EOF
+[Unit]
+Description=EasyZFS weekly auto-update timer
+After=network-online.target
+
+[Timer]
+OnCalendar=weekly
+Persistent=true
+RandomizedDelaySec=4h
+
+[Install]
+WantedBy=timers.target
+EOF
+      run "${SUDO[@]}" systemctl daemon-reload
+      run "${SUDO[@]}" systemctl enable --now easyzfs-update-weekly.timer
+      ok "Auto-update semanal: easyzfs-update-weekly.timer activo (comprueba y aplica releases estables 1 vez/semana)."
+    fi
   fi
 }
 

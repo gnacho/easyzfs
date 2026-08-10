@@ -1,0 +1,11 @@
+[Unit]
+Description=EasyZFS weekly auto-update check and apply
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/easyzfs/easyzfs-update-weekly.sh
+User=root
+StandardOutput=journal
+StandardError=journal
