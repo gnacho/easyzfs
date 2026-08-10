@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.8.5
+
+- **Resumen de novedades en el aviso de actualización**: cuando hay una versión nueva, el ribbon ahora muestra un resumen de lo que cambió (~600 caracteres del cuerpo de la release de GitHub) junto al número de versión y los botones de acción. La respuesta de `GET /api/update/status` también incluye `releaseNotes` y `releaseUrl`.
+
 ### v2.8.4
 
 - **Gráficas históricas (U2)**: las tarjetas de pool ahora muestran una mini-gráfica de ocupación de los últimos 7 y 30 días bajo la barra de capacidad, y cada disco muestra una gráfica de temperatura de 24 h. Lo respalda un nuevo endpoint `GET /api/series` que lee la tabla `series` con downsampling LTTB en el servidor, para que los rangos largos se dibujen con fluidez sin enviar miles de puntos al navegador.

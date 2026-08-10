@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.8.5
+
+- **Release notes in the update ribbon**: when a new version is available, the ribbon now shows a summary of what changed (~600 chars from the GitHub release body) alongside the version number and action buttons. The backend `GET /api/update/status` response also includes `releaseNotes` and `releaseUrl`.
+
 ### v2.8.4
 
 - **Historical sparklines (U2)**: pool cards now show a small capacity chart for the last 7 and 30 days under the meter, and each disk row shows a 24h temperature chart. Backed by a new `GET /api/series` endpoint that reads the `series` table with server-side LTTB downsampling, so long ranges render smoothly without shipping thousands of points to the browser.
