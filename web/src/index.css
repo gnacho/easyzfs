@@ -114,11 +114,23 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
   border-radius:12px;font-size:13.5px;font-weight:600;flex-wrap:wrap;
 }
 
-/* ribbon de release nueva en GitHub (releasecheck, check pasivo 1/día) */
+/* ribbon de release nueva en GitHub (releasecheck, check pasivo 1/semana).
+   Layout: título + resumen de novedades + fila de acciones (ver/actualizar/descartar). */
 .relbar{
-  display:flex;align-items:center;gap:10px;margin-bottom:14px;padding:10px 14px;
+  display:flex;align-items:stretch;margin-bottom:14px;padding:12px 14px;
   background:var(--info-soft);color:var(--info);border:1px solid var(--info);
-  border-radius:12px;font-size:13.5px;font-weight:600;flex-wrap:wrap;
+  border-radius:12px;font-size:13.5px;
+}
+.relbar-body{
+  display:flex;flex-direction:column;gap:8px;width:100%;
+}
+.relbar-title{font-weight:700}
+.relbar-notes{
+  font-size:12.5px;font-weight:400;opacity:.85;line-height:1.5;
+  white-space:pre-line;max-height:90px;overflow:hidden;
+}
+.relbar-actions{
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
 }
 .relbar a{color:inherit;text-decoration:underline}
 

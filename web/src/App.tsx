@@ -250,16 +250,21 @@ function Shell() {
           )}
           {rel.kind === 'available' && relDismissed !== rel.version && (
             <div className="relbar" role="status">
-              <span>{t('upd_rel_banner', { v: rel.version })}</span>
-              <a href={rel.url} target="_blank" rel="noreferrer">{t('ab_upd_new')}</a>
-              <button className="btn sm primary" style={{ marginLeft: 'auto' }} disabled={applyingRel}
-                onClick={() => { void applyRel(); }}>
-                {applyingRel ? t('ab_updapp') : t('upd_rel_upd')}
-              </button>
-              <button className="btn sm"
-                onClick={() => { dismissRelease(rel.version); setRelDismissed(rel.version); }}>
-                {t('upd_rel_dismiss')}
-              </button>
+              <div className="relbar-body">
+                <span className="relbar-title">{t('upd_rel_banner', { v: rel.version })}</span>
+                {rel.notes && <span className="relbar-notes">{rel.notes}</span>}
+                <div className="relbar-actions">
+                  <a href={rel.url} target="_blank" rel="noreferrer" className="btn sm">{t('ab_upd_new')}</a>
+                  <button className="btn sm primary" disabled={applyingRel}
+                    onClick={() => { void applyRel(); }}>
+                    {applyingRel ? t('ab_updapp') : t('upd_rel_upd')}
+                  </button>
+                  <button className="btn sm"
+                    onClick={() => { dismissRelease(rel.version); setRelDismissed(rel.version); }}>
+                    {t('upd_rel_dismiss')}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
           {demo && (

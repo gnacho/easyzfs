@@ -3,7 +3,8 @@
 // con una GET anónima: el servidor no hace phone-home. Si hay versión más
 // nueva, la shell muestra un ribbon superior (descartable por versión, con
 // botón Actualizar) y Ajustes → Acerca de ofrece "Comprobar actualizaciones"
-// (solo admin; fuerza la consulta al momento).
+// (solo admin; fuerza la consulta al momento). Incluye las release notes
+// (primeros ~600 caracteres del body) para mostrar un resumen de novedades.
 import { useEffect, useState } from 'react';
 
 const REPO = 'gnacho/easyzfs';
@@ -11,13 +12,14 @@ export const RELEASES_URL = `https://github.com/${REPO}/releases`;
 const CACHE_KEY = 'easyzfs-release-check';
 const DISMISS_KEY = 'easyzfs-release-dismissed';
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const NOTES_MAX = 600;
 
 export type ReleaseState =
   | { kind: 'unknown' }
   | { kind: 'uptodate' }
-  | { kind: 'available'; version: string; url: string };
+  | { kind: 'available'; version: string; url: string; notes: string };
 
-interface Cache { ts: number; tag: string; url: string }
+interface Cache { ts: number; tag: string; url: string; notes: string }
 
 // Comparación semver numérica ('v' opcional): 1.10.0 > 1.9.0.
 export function compareSemver(a: string, b: string): number {
@@ -39,14 +41,23 @@ function readCache(): Cache | null {
   } catch { return null; }
 }
 
+function truncateNotes(body: string): string {
+  if (!body) return '';
+  const cleaned = body.replace(/^#{1,4}\s+.*$/gm, '').replace(/\*\*/g, '').trim();
+  if (cleaned.length <= NOTES_MAX) return cleaned;
+  return cleaned.slice(0, NOTES_MAX).replace(/\s+\S*$/, '') + '…';
+}
+
 async function fetchLatest(): Promise<Cache> {
   let res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
   let tag = '';
   let url = RELEASES_URL;
+  let notes = '';
   if (res.ok) {
     const j = await res.json();
     tag = j.tag_name ?? '';
     url = j.html_url ?? url;
+    notes = truncateNotes(j.body ?? '');
   } else if (res.status === 404) {
     // Sin release publicada: fallback al último tag
     res = await fetch(`https://api.github.com/repos/${REPO}/tags?per_page=1`);
@@ -57,7 +68,7 @@ async function fetchLatest(): Promise<Cache> {
   } else {
     throw new Error(`HTTP ${res.status}`); // 403 = rate-limit 60/h por IP
   }
-  const c: Cache = { ts: Date.now(), tag, url };
+  const c: Cache = { ts: Date.now(), tag, url, notes };
   try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* sin storage */ }
   return c;
 }
@@ -65,7 +76,7 @@ async function fetchLatest(): Promise<Cache> {
 function toState(c: Cache | null, currentVersion: string | undefined): ReleaseState {
   if (!c || !c.tag || !currentVersion) return { kind: 'unknown' };
   return compareSemver(c.tag, currentVersion) > 0
-    ? { kind: 'available', version: c.tag.replace(/^v/, ''), url: c.url }
+    ? { kind: 'available', version: c.tag.replace(/^v/, ''), url: c.url, notes: c.notes }
     : { kind: 'uptodate' };
 }
 
