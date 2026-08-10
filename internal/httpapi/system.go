@@ -10,7 +10,22 @@ import (
 
 	"easyzfs/internal/db"
 	"easyzfs/internal/model"
+	"easyzfs/internal/updater"
 )
+
+func pendingUpdateJSON(u *updater.Updater) any {
+	if u == nil {
+		return nil
+	}
+	p := u.ConsumePendingApply()
+	if p == nil {
+		return nil
+	}
+	return map[string]any{
+		"from": p.FromVersion,
+		"to":   p.ToVersion,
+	}
+}
 
 // getVersion — GET /api/version → estado del backend y del runtime.
 func (s *Server) getVersion(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +48,7 @@ func (s *Server) getVersion(w http.ResponseWriter, r *http.Request) {
 		"zfs_version":  caps.Version,
 		"capabilities": caps,
 		"demo":         s.cfg.Demo,
+		"pendingUpdate": pendingUpdateJSON(s.updater),
 	})
 }
 
