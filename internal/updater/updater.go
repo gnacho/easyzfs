@@ -17,6 +17,7 @@ package updater
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -98,6 +99,55 @@ func (u *Updater) updateDir() string { return filepath.Join(u.dataDir, "update")
 
 // RestartFlag — ruta del flag que vigila easyzfs-update.path.
 func (u *Updater) RestartFlag() string { return filepath.Join(u.updateDir(), ".restart-me") }
+
+// PendingApply — registro efímero de la actualización en curso para confirmación
+// post-reinicio. Se escribe antes de Apply y se consume en el siguiente arranque.
+type PendingApply struct {
+	FromVersion string `json:"fromVersion"`
+	ToVersion   string `json:"toVersion"`
+	StartedAt   int64  `json:"startedAt"`
+}
+
+func (u *Updater) pendingFile() string { return filepath.Join(u.updateDir(), ".pending-apply") }
+
+// WritePendingApply guarda el registro antes de aplicar. Si el apply falla, el
+// archivo se borra; si triunfa, el siguiente arranque lo consume.
+func (u *Updater) WritePendingApply(from, to string) error {
+	if err := os.MkdirAll(u.updateDir(), 0o750); err != nil {
+		return err
+	}
+	b, _ := json.Marshal(PendingApply{FromVersion: from, ToVersion: to, StartedAt: time.Now().UnixMilli()})
+	return os.WriteFile(u.pendingFile(), b, 0o644)
+}
+
+// ConsumePendingApply lee el registro pendiente y, si la versión actual es
+// distinta de la registrada (el update triunfó), devuelve los datos y borra
+// el archivo. Si la versión NO cambió (falló), borra el archivo y devuelve nil.
+// Si no hay archivo, devuelve nil.
+func (u *Updater) ConsumePendingApply() *PendingApply {
+	data, err := os.ReadFile(u.pendingFile())
+	if err != nil {
+		return nil
+	}
+	var p PendingApply
+	if err := json.Unmarshal(data, &p); err != nil {
+		os.Remove(u.pendingFile())
+		return nil
+	}
+	if p.FromVersion != u.current {
+		// El update triunfó: confirmar y borrar
+		os.Remove(u.pendingFile())
+		return &p
+	}
+	// La versión no cambió (falló o rollback): borrar sin confirmar
+	os.Remove(u.pendingFile())
+	return nil
+}
+
+// ClearPendingApply borra el archivo de pending (usado cuando el apply falla).
+func (u *Updater) ClearPendingApply() {
+	os.Remove(u.pendingFile())
+}
 
 // NewBinary — ruta donde el updater deja el binario nuevo descargado y validado.
 func (u *Updater) NewBinary() string { return filepath.Join(u.updateDir(), "easyzfs.new") }
@@ -202,6 +252,11 @@ func (u *Updater) Apply(ctx context.Context) error {
 	}
 	if !newer {
 		return errors.New("updater: no hay versión más reciente")
+	}
+
+	// Registrar pending apply para confirmación post-reinicio
+	if err := u.WritePendingApply(u.current, latestV); err != nil {
+		log.Printf("updater: no se pudo escribir pending-apply: %v", err)
 	}
 
 	// Descarga + validación + descompresión a un path temporal, y lo movemos al

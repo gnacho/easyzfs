@@ -37,6 +37,7 @@ export interface VersionInfo {
   zfs_version: string;
   demo: boolean;
   capabilities?: Capabilities; // ausente en respuestas viejas del server
+  pendingUpdate?: { from: string; to: string } | null;
 }
 
 // Estado de actualización (GET /api/update/status). El apply lo ejecuta el

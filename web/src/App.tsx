@@ -128,10 +128,17 @@ function Shell() {
   const [version, setVersion] = useState('');
   const [relDismissed, setRelDismissed] = useState(getReleaseDismissed());
   const [applyingRel, setApplyingRel] = useState(false);
+  const [updateToast, setUpdateToast] = useState('');
   const rel = useReleaseCheck(version || undefined, ready && !!user && !demo && isAdmin);
   useEffect(() => {
     if (!ready || !user || demo) return;
-    getProvider().getVersion().then((v) => setVersion(v.version)).catch(() => {});
+    getProvider().getVersion().then((v) => {
+      setVersion(v.version);
+      if (v.pendingUpdate?.to) {
+        setUpdateToast(t('upd_toast_updated', { v: v.pendingUpdate.to }));
+        setTimeout(() => setUpdateToast(''), 5000);
+      }
+    }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, demo]);
 
@@ -245,6 +252,11 @@ function Shell() {
         </aside>
 
         <main className="main">
+          {updateToast && (
+            <div className="updatebar" role="status">
+              <span>{updateToast}</span>
+            </div>
+          )}
           {updateAvailable && (
             <div className="updatebar" role="status">
               <span>{t('upd_banner')}</span>
