@@ -117,11 +117,16 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
   const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
   const [applying, setApplying] = useState(false);
   const [latest, setLatest] = useState('');
+  const [checks, setChecks] = useState<{id:string;status:string;title:string;summary:string}[]>([]);
+  const [canApply, setCanApply] = useState(true);
 
   const check = async () => {
     setState('checking');
+    setChecks([]);
     try {
-      const st = await getProvider().getUpdateStatus();
+      const [st, plan] = await Promise.all([getProvider().getUpdateStatus(), getProvider().getUpdatePlan()]);
+      setChecks(plan.checks);
+      setCanApply(plan.canApply);
       if (st.available) {
         setLatest(st.latest);
         setState('available');
@@ -162,8 +167,17 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
             : t('s_about_d')}
         </div>
       </div>
+      {checks.length > 0 && state === 'available' && (
+        <div className="grow" style={{ flexBasis: '100%', marginTop: 4 }}>
+          {checks.map((c) => (
+            <div key={c.id} className="d" style={{ fontSize: 12, opacity: c.status === 'pass' ? .7 : 1, color: c.status === 'fail' ? 'var(--danger)' : c.status === 'warn' ? 'var(--warn)' : 'inherit' }}>
+              {c.status === 'fail' ? '✗ ' : c.status === 'warn' ? '⚠ ' : '✓ '}{c.summary}
+            </div>
+          ))}
+        </div>
+      )}
       {state === 'available' && (
-        <button className="btn sm primary" disabled={applying} onClick={() => { void apply(); }}>
+        <button className="btn sm primary" disabled={applying || !canApply} onClick={() => { void apply(); }}>
           {applying ? t('ab_updapp') : t('upd_rel_upd')}
         </button>
       )}

@@ -242,6 +242,7 @@ export class MockProvider implements DataProvider {
   // ---- Sistema ----
   getVersion = async () => { await delay(); return { ...this.version }; };
   getUpdateStatus = async () => { await delay(); return { current: this.version.version, latest: this.version.version, available: false }; };
+  getUpdatePlan = async () => { await delay(); return { canApply: true, checks: [{id:'disk_space',status:'pass',title:'Disk space',summary:'Enough space available.'}] }; };
   applyUpdate = async () => { await delay(); }; // demo: no-op
   getSettings = async () => { await delay(); return { ...this.settings }; };
   putSettings = async (s: Settings) => { await delay(); this.settings = { ...s }; };
