@@ -272,6 +272,8 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 .thresh-line .tf{display:flex;flex-direction:column;gap:5px;min-width:110px}
 .thresh-line .tf label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin:0}
 .thresh-line .tf input{width:110px}
+.thresh-line .tf input.dirty{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.thresh-msg{margin-top:10px;font-size:13px;font-weight:600;color:var(--ok)}
 .thresh-line .m-actions{margin-left:auto;display:flex;align-items:center}
 
 /* ---- AdminBar (asset webapp-shell, una fila) ---- */
@@ -656,35 +658,31 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
 .rolebadge.admin{background:var(--accent-soft);color:var(--accent)}
 .rolebadge.user{background:var(--info-soft);color:var(--info)}
 
-/* acerca de */
-.about{display:flex;gap:14px;align-items:flex-start}
-.about .logo{width:46px;height:46px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;flex-shrink:0;overflow:hidden}
+/* acerca de (patrón Keynest: logo+desc izq, tiles bajos der, una línea de
+   versión, botones de acción; se eliminan el bloque Sistema y el pie) */
+.about-top{display:grid;gap:16px}
+@media(min-width:900px){.about-top{grid-template-columns:1fr 1fr;align-items:start}}
+.about-id{display:flex;gap:14px;align-items:flex-start;min-width:0}
+.about-id .logo{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;flex-shrink:0;overflow:hidden}
+.about-idtxt{flex:1;min-width:0}
+.about-tiles{display:grid;grid-template-columns:1fr;gap:6px}
+@media(min-width:640px){.about-tiles{grid-template-columns:repeat(2,1fr)}}
+.abouttile{
+  display:flex;align-items:center;gap:8px;padding:6px 10px;min-width:0;
+  border:1px solid var(--border);border-radius:8px;font-size:12px;font-weight:600;
+  color:var(--text2);text-decoration:none;
+}
+.abouttile span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+a.abouttile:hover{color:var(--accent);border-color:var(--accent)}
+.abouttile svg{flex-shrink:0;color:var(--text3)}
+a.abouttile:hover svg{color:var(--accent)}
+.about-meta{margin-top:16px;font-size:11.5px;color:var(--text2)}
+.about-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-top:12px;padding-top:14px;border-top:1px solid var(--border)}
+.about-actions .upd-widget{flex:1;min-width:220px}
 .kv{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border)}
 .kv:last-child{border-bottom:none}
 .kv span:first-child{color:var(--text2)}
 .kv span:last-child{font-weight:600;text-align:right}
-
-/* acerca de: tiles de enlaces/notas (estilo netpulse) */
-.abouttiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:16px}
-@media(min-width:640px){.abouttiles{grid-template-columns:repeat(4,1fr)}}
-.abouttile{
-  display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;
-  border:1px solid var(--border);border-radius:12px;padding:12px;
-  background:var(--surface);color:var(--text);text-decoration:none;width:100%;
-}
-a.abouttile:hover,button.abouttile:hover{background:var(--surface2)}
-.abouttile .t-ico{width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
-.abouttile b{font-size:13px}
-.abouttile>span:last-child{font-size:11.5px;color:var(--text2);line-height:1.35}
-
-/* acerca de: tira de instalación PWA y pie */
-.installstrip{
-  display:flex;align-items:center;gap:10px;margin-top:16px;padding:11px 13px;
-  border:1px dashed var(--border);border-radius:12px;font-size:13px;
-}
-.installstrip .grow{flex:1;min-width:0}
-.installstrip .d{font-size:11.5px;color:var(--text2);margin-top:1px}
-.aboutfoot{margin-top:16px;text-align:center;font-size:11.5px;color:var(--text2)}
 
 /* Panel: en pantalla ancha las secciones apiladas (alertas + actividad)
    pasan a 2 columnas para no dejar media pantalla vacía */

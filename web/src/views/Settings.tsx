@@ -9,9 +9,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
-import { fmtBytes, fmtDuration, timeAgo } from '../ui/format';
+import { fmtBytes, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconDownload, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { usePush } from '../data/push';
@@ -162,12 +162,10 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
     <div className="upd-widget">
       <div className="upd-line">
         <span className="upd-status">
-          {state === 'checking' ? t('ab_checking')
-            : applying ? t('ab_updapp')
-            : state === 'available' ? t('ab_newver', { v: latest })
+          {state === 'available' ? t('ab_newver', { v: latest })
             : state === 'error' ? t('ab_upderr')
             : state === 'uptodate' ? t('ab_uptodate', { v: version ?? '' })
-            : t('ab_checkupd')}
+            : null}
         </span>
         <span className="upd-actions">
           {state === 'available' && (
@@ -736,10 +734,21 @@ export default function Settings() {
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone());
   const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | null>(null);
+  // Snapshot de los umbrales guardados (para resaltar los campos modificados
+  // y limpiar la marca al guardar) + mensaje de feedback local de la tarjeta.
+  const [threshSaved, setThreshSaved] = useState<{ cap_warn_pct: number; cap_crit_pct: number; disk_temp_c: number } | null>(null);
+  const [threshMsg, setThreshMsg] = useState('');
+  const [threshErr, setThreshErr] = useState('');
 
   useEffect(() => {
     let alive = true;
-    getProvider().getSettings().then((s) => alive && setSettings(s)).catch(() => {});
+    getProvider().getSettings().then((s) => {
+      alive && setSettings(s);
+      // Primera carga: lo que viene del servidor es la base de "guardado".
+      setThreshSaved((cur) => cur ?? {
+        cap_warn_pct: s.cap_warn_pct, cap_crit_pct: s.cap_crit_pct, disk_temp_c: s.disk_temp_c,
+      });
+    }).catch(() => {});
     getProvider().getVersion().then((v) => alive && setVersion(v)).catch(() => {});
     if (isAdmin) getProvider().getUsers().then((u) => alive && setUsers(u)).catch(() => {});
     return () => { alive = false; };
@@ -767,6 +776,18 @@ export default function Settings() {
       await getProvider().putSettings(next);
       setMsg(t('saved_ok'));
     } catch (e) { setErr(errorMessage(e, t)); }
+  };
+
+  // Guardado de la tarjeta Datos y umbrales: feedback local (mensaje dentro de
+  // la tarjeta) y actualiza el snapshot para limpiar la marca de "modificado".
+  const saveThresh = async () => {
+    if (!settings) return;
+    setThreshMsg(''); setThreshErr('');
+    try {
+      await getProvider().putSettings(settings);
+      setThreshSaved({ cap_warn_pct: settings.cap_warn_pct, cap_crit_pct: settings.cap_crit_pct, disk_temp_c: settings.disk_temp_c });
+      setThreshMsg(t('saved_ok'));
+    } catch (e) { setThreshErr(errorMessage(e, t)); }
   };
 
   if (!settings) return <Spinner label={t('loading')} />;
@@ -798,23 +819,28 @@ export default function Settings() {
             <div className="tf">
               <label htmlFor="th-warn">{t('s_cap_warn')}</label>
               <input id="th-warn" type="number" value={settings.cap_warn_pct}
-                onChange={(e) => setSettings({ ...settings, cap_warn_pct: +e.target.value })} />
+                className={threshSaved && settings.cap_warn_pct !== threshSaved.cap_warn_pct ? 'dirty' : ''}
+                onChange={(e) => { setSettings({ ...settings, cap_warn_pct: +e.target.value }); setThreshMsg(''); }} />
             </div>
             <div className="tf">
               <label htmlFor="th-crit">{t('s_cap_crit')}</label>
               <input id="th-crit" type="number" value={settings.cap_crit_pct}
-                onChange={(e) => setSettings({ ...settings, cap_crit_pct: +e.target.value })} />
+                className={threshSaved && settings.cap_crit_pct !== threshSaved.cap_crit_pct ? 'dirty' : ''}
+                onChange={(e) => { setSettings({ ...settings, cap_crit_pct: +e.target.value }); setThreshMsg(''); }} />
             </div>
             <div className="tf">
               <label htmlFor="th-temp">{t('s_temp')}</label>
               <input id="th-temp" type="number" value={settings.disk_temp_c}
-                onChange={(e) => setSettings({ ...settings, disk_temp_c: +e.target.value })} />
+                className={threshSaved && settings.disk_temp_c !== threshSaved.disk_temp_c ? 'dirty' : ''}
+                onChange={(e) => { setSettings({ ...settings, disk_temp_c: +e.target.value }); setThreshMsg(''); }} />
             </div>
             {!threshOk && <p className="form-err" role="alert">{t('s_thresh_invalid')}</p>}
             <div className="m-actions">
-              <button className="btn primary" disabled={!threshOk} onClick={() => saveSettings({})}>{t('save')}</button>
+              <button className="btn primary" disabled={!threshOk} onClick={() => { void saveThresh(); }}>{t('save')}</button>
             </div>
           </div>
+          {threshMsg && <p className="thresh-msg" role="status">{threshMsg}</p>}
+          {threshErr && <p className="form-err" role="alert" style={{ marginTop: 8 }}>{threshErr}</p>}
         </div>
       )}
 
@@ -966,86 +992,51 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ---- Acerca de (ancho completo: 4 tiles + instalar PWA + sistema) ---- */}
+      {/* ---- Acerca de (patrón Keynest: logo+desc izq, tiles bajos der, una línea de versión, botones) ---- */}
       {version && (
         <div className="card pad st-about">
           <h3 className="cardtitle">{t('s_about')}</h3>
-          <div className="about">
-            <div className="logo"><Logo size={46} /></div>
-            <div style={{ flex: 1 }}>
-              <div style={{ fontWeight: 800, fontSize: 16 }}>{version?.name ?? 'EasyZFS'}</div>
-              {version && (
-                <div style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 700 }}>
-                  v{version.version} · build {version.build}
-                </div>
-              )}
-              <div className="muted" style={{ marginTop: 2 }}>{t('s_about_d')}</div>
+
+          {/* Fila 1: logo + nombre + descripción (izq) · tiles de enlaces bajos (der) */}
+          <div className="about-top">
+            <div className="about-id">
+              <div className="logo"><Logo size={40} /></div>
+              <div className="about-idtxt">
+                <div style={{ fontWeight: 800, fontSize: 16 }}>{version?.name ?? 'EasyZFS'}</div>
+                <div className="muted" style={{ marginTop: 2 }}>{t('s_about_d')}</div>
+              </div>
+            </div>
+            <div className="about-tiles">
+              <a className="abouttile" href={REPO_URL} target="_blank" rel="noreferrer">
+                <IconCode size={14} /><span>{t('ab_code')}</span>
+              </a>
+              <a className="abouttile" href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer">
+                <IconList size={14} /><span>{t('ab_chlog')}</span>
+              </a>
+              <div className="abouttile">
+                <IconHeart size={14} /><span>{t('ab_kofi')}</span>
+              </div>
+              <div className="abouttile">
+                <IconShield size={14} /><span>{t('ab_priv')}</span>
+              </div>
             </div>
           </div>
 
-          <div className="abouttiles">
-            <a className="abouttile" href={REPO_URL} target="_blank" rel="noreferrer">
-              <span className="t-ico"><IconCode size={16} /></span>
-              <b>{t('ab_code')}</b>
-              <span>{t('ab_code_d')}</span>
-            </a>
-            <a className="abouttile" href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer">
-              <span className="t-ico"><IconList size={16} /></span>
-              <b>{t('ab_chlog')}</b>
-              <span>{t('ab_chlog_d')}</span>
-            </a>
-            <div className="abouttile">
-              <span className="t-ico"><IconHeart size={16} /></span>
-              <b>{t('ab_kofi')}</b>
-              <span>{t('ab_kofi_d')}</span>
-            </div>
-            <div className="abouttile">
-              <span className="t-ico"><IconShield size={16} /></span>
-              <b>{t('ab_priv')}</b>
-              <span>{t('ab_priv_d')}</span>
-            </div>
-          </div>
+          {/* Fila 2: versión · licencia · runtime en UNA línea sin recuadros */}
+          <p className="about-meta mono">v{version.version} · AGPL-3.0 · {version.go} {version.os_arch}</p>
 
-          {/* Instalación PWA + Comprobar actualizaciones (admin) en la misma
-              fila. La tira PWA SOLO se renderiza si el navegador lo soporta
-              (evento capturado, iOS con instrucciones o ya instalada);
-              sin soporte no se renderiza nada (regla webapp-shell) */}
-          <div className="aboutrow">
+          {/* Botones de acción: instalar PWA + comprobar actualizaciones (admin) */}
+          <div className="about-actions">
             {(installed || installEvt || isIOS()) && (
-              <div className="installstrip">
-                <span className="t-ico" style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--accent-soft)', color: 'var(--accent)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                  <IconDownload size={16} />
-                </span>
-                <div className="grow">
-                  <b>{t('ab_install')}</b>
-                  <div className="d">
-                    {installed ? t('ab_installed_d')
-                      : isIOS() ? t('ab_install_ios')
-                      : t('ab_install_d')}
-                  </div>
-                </div>
-                {installed
-                  ? <Badge tone="ok" dot={false}>{t('ab_installed')}</Badge>
+              installed
+                ? <Badge tone="ok" dot={false}>{t('ab_installed')}</Badge>
+                : isIOS()
+                  ? <span className="muted" style={{ fontSize: 12 }}>{t('ab_install_ios')}</span>
                   : installEvt
                     ? <button className="btn sm primary" onClick={() => { void installEvt.prompt(); }}>{t('ab_install_btn')}</button>
-                    : null}
-              </div>
+                    : null
             )}
             {isAdmin && <UpdateCheckRow version={version?.version} />}
-          </div>
-
-          {/* Sistema (datos del servidor, integrados en Acerca de) */}
-          <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-            <div className="kv"><span>{t('ab_rt')}</span><span className="mono">{version.go} {version.os_arch}</span></div>
-            <div className="kv"><span>{t('ab_up')}</span><span>{fmtDuration(version.uptime_sec)}</span></div>
-            <div className="kv"><span>{t('ab_mem')}</span><span>{fmtBytes(version.rss_bytes)}</span></div>
-            <div className="kv"><span>{t('ab_db')}</span><span>{fmtBytes(version.db_bytes)} · {version.db_path}</span></div>
-            <div className="kv"><span>ZFS</span><span className="mono">{version.zfs_version}</span></div>
-            <div className="kv"><span>{t('ab_lic')}</span><span>AGPL-3.0</span></div>
-          </div>
-
-          <div className="aboutfoot mono">
-            {version?.name ?? 'EasyZFS'} v{version?.version ?? '0.1.0'} · {version?.zfs_version ?? 'OpenZFS'} · AGPL-3.0
           </div>
         </div>
       )}
