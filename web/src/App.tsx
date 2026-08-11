@@ -9,6 +9,7 @@ import { ModalProvider, ModalHost } from './components/ModalHost';
 import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconMonitor, IconChev, IconFoldLeft, IconFoldRight, IconUser } from './components/icons';
 import { Spinner } from './components/ui';
 import ErrorBoundary from './components/ErrorBoundary';
+import PullToRefresh from './components/PullToRefresh';
 import { getProvider } from './data';
 import { subscribeEvents } from './data/events';
 import { timeAgo } from './ui/format';
@@ -235,6 +236,7 @@ function Shell() {
         </aside>
 
         <main className="main">
+          <PullToRefresh>
           {updateToast && (
             <div className="updatebar" role="status">
               <span>{updateToast}</span>
@@ -323,6 +325,7 @@ function Shell() {
               {view}
             </Suspense>
           </ErrorBoundary>
+          </PullToRefresh>
         </main>
       </div>
 

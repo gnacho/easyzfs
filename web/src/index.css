@@ -313,7 +313,19 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 .relico{display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-size:12px;font-weight:700;vertical-align:1px}
 .relico.ok{color:var(--ok)}
 .relico.new{color:var(--accent);text-decoration:none}
-main.main{flex:1;max-width:1400px;margin:0 auto;padding:20px 18px calc(86px + env(safe-area-inset-bottom));min-width:0}
+ main.main{flex:1;max-width:1400px;margin:0 auto;padding:20px 18px calc(86px + env(safe-area-inset-bottom));min-width:0}
+
+/* Pull-to-refresh móvil (issue #20): indicador que aparece al tirar hacia
+   abajo desde el top; solo es relevante en táctil, inerte en desktop */
+.ptr{position:relative}
+.ptr-ind{
+  pointer-events:none;position:absolute;inset-inline:0;top:0;z-index:50;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;
+  color:var(--text3);
+}
+.ptr-spin{animation:ptr-rot .8s linear infinite}
+@keyframes ptr-rot{to{transform:rotate(360deg)}}
+
 
 /* ---------- bottom nav (móvil) ---------- */
 .bottomnav{

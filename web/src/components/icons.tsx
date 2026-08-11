@@ -44,7 +44,8 @@ export const IconTrash = (p: P) => base(p, <><path d="M3 6h18M8 6V4a1 1 0 0 1 1-
 export const IconLogout = (p: P) => base(p, <><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><path d="m16 17 5-5-5-5" /><path d="M21 12H9" /></>);
 export const IconPencil = (p: P) => base(p, <><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></>);
 export const IconMail = (p: P) => base(p, <><rect width="20" height="16" x="2" y="4" rx="2" /><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" /></>);
-
+// Icono de refresco (patrón lucide RefreshCw): pull-to-refresh móvil
+export const IconRefresh = (p: P) => base(p, <><path d="M21 12a9 9 0 1 1-9-9" /><path d="M21 3v6h-6" /></>);
 // Logo de la app: diseño "E de capas" (assets de branding en /icons)
 export function Logo({ size = 30 }: { size?: number }) {
   return (
