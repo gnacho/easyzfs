@@ -215,23 +215,7 @@ function Shell() {
             })}
           </nav>
           <div className="sidefoot">
-            <button type="button" className={`userblock${active === 'settings' ? ' active' : ''}`}
-              onClick={() => navigate('settings')} title={collapsed ? `${user.user} · ${t('settings' as never)}` : undefined}>
-              <span className="avatar" aria-hidden="true">
-                {user.avatar ? <img src={getProvider().avatarUrl(user.avatar)} alt="" /> : <IconUser size={16} />}
-              </span>
-              {!collapsed && (
-                <span className="ublbl">
-                  <b>{user.display_name || user.user}</b>
-                  <span>{isAdmin ? t('mu_r_admin') : t('mu_r_user')} · {t('s_account')}</span>
-                </span>
-              )}
-            </button>
             <div className="sideactions">
-              <button type="button" className="iconbtn" onClick={toggleTheme}
-                aria-label={t('a11y_theme')} title={t('a11y_theme')}>
-                {themeEff === 'dark' ? <IconSun /> : <IconMoon />}
-              </button>
               <a href="#/settings" className={active === 'settings' ? 'active' : ''}
                 aria-current={active === 'settings' ? 'page' : undefined}
                 title={collapsed ? t('settings' as never) : undefined}>
@@ -308,8 +292,20 @@ function Shell() {
                 <IconBell />
                 {hasPending && <span className="ping" />}
               </button>
-              <button className="iconbtn themebtn" title={t('a11y_theme')} aria-label={t('a11y_theme')} onClick={toggleTheme}>
+              <button className="iconbtn" title={t('a11y_theme')} aria-label={t('a11y_theme')} onClick={toggleTheme}>
                 {themeEff === 'dark' ? <IconSun /> : <IconMoon />}
+              </button>
+              <button type="button" className={`topuser${active === 'settings' ? ' active' : ''}`}
+                onClick={() => navigate('settings')}
+                aria-label={user.display_name || user.user}
+                title={t('settings' as never)}>
+                <span className="avatar" aria-hidden="true">
+                  {user.avatar ? <img src={getProvider().avatarUrl(user.avatar)} alt="" /> : <IconUser size={16} />}
+                </span>
+                <span className="tulbl">
+                  <b>{user.display_name || user.user}</b>
+                  <span>{isAdmin ? t('mu_r_admin') : t('mu_r_user')}</span>
+                </span>
               </button>
               {showAlerts && <AlertsPanel onClose={() => setShowAlerts(false)} />}
             </div>

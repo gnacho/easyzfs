@@ -49,8 +49,10 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin:12p
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
 
 /* ---------- layout ---------- */
-/* El contenido aprovecha TODO el ancho de la ventana (regla del usuario
-   2-Ago-2026: nada de columna centrada con márgenes vacíos en desktop) */
+/* El contenido se centra con un max-width en pantallas anchas (regla del
+   usuario 11-Ago-2026: sin estirar la lectura hasta el infinito en ultra-
+   wide). El sidebar queda pegado a la izquierda; el main se centra en el
+   hueco restante. */
 .app-shell{display:flex;min-height:100vh}
 /* pantallas anchas: pools a 2 columnas (3 en ultra-ancho). auto-fit +
    minmax: las pistas vacías colapsan, así que con menos pools de los que
@@ -71,22 +73,9 @@ aside.sidebar nav a{
 aside.sidebar nav a.active{background:var(--accent-soft);color:var(--accent);font-weight:600}
 aside.sidebar nav a:hover:not(.active){background:var(--surface2)}
 
-/* pie del sidebar (patrón webapp-shell): usuario clicable + ajustes + plegar */
+/* pie del sidebar (patrón webapp-shell): ajustes + plegar (el usuario vive
+   en la topbar) */
 .sidefoot{margin-top:auto;padding-top:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
-.userblock{
-  display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:10px;width:100%;
-  border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer;
-}
-.userblock:hover{background:var(--surface2)}
-.userblock.active{background:var(--accent-soft);color:var(--accent)}
-.userblock .avatar{
-  width:30px;height:30px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
-  background:var(--accent-soft);color:var(--accent);overflow:hidden;
-}
-.userblock .avatar img{width:100%;height:100%;object-fit:cover;display:block}
-.userblock .ublbl{display:flex;flex-direction:column;min-width:0;line-height:1.25}
-.userblock .ublbl b{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.userblock .ublbl span{font-size:11px;color:var(--text2)}
 .sideactions{display:flex;align-items:center;gap:6px}
 .sideactions a{
   flex:1;display:flex;align-items:center;gap:11px;padding:9px 12px;border-radius:10px;
@@ -96,6 +85,24 @@ aside.sidebar nav a:hover:not(.active){background:var(--surface2)}
 .sideactions a:hover:not(.active){background:var(--surface2)}
 .sideactions .iconbtn{flex-shrink:0;border:1px solid var(--border)}
 
+/* bloque de usuario en la topbar (avatar + nombre en desktop, solo avatar
+   en móvil). Clicable → /settings. */
+.topuser{
+  display:flex;align-items:center;gap:9px;padding:5px 10px 5px 5px;border-radius:10px;
+  border:1px solid var(--border);background:var(--surface);color:inherit;font:inherit;text-align:left;cursor:pointer;
+}
+.topuser:hover{background:var(--surface2)}
+.topuser.active{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+.topuser .avatar{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;
+  background:var(--accent-soft);color:var(--accent);overflow:hidden;
+}
+.topuser .avatar img{width:100%;height:100%;object-fit:cover;display:block}
+.topuser .tulbl{display:flex;flex-direction:column;min-width:0;line-height:1.2;text-align:left}
+.topuser .tulbl b{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:140px}
+.topuser .tulbl span{font-size:10.5px;color:var(--text2)}
+@media(max-width:859px){ .topuser{padding:3px} .topuser .tulbl{display:none} }
+
 /* sidebar colapsado a raíl de iconos (64px, manual; persiste en localStorage) */
 aside.sidebar.collapsed{width:64px;padding:22px 8px;align-items:center}
 aside.sidebar.collapsed .brand{padding:4px 4px 22px;justify-content:center}
@@ -103,7 +110,6 @@ aside.sidebar.collapsed nav{width:100%}
 aside.sidebar.collapsed nav a{justify-content:center;padding:10px 0;gap:0}
 aside.sidebar.collapsed .nlbl{display:none}
 aside.sidebar.collapsed .sidefoot{width:100%;align-items:center}
-aside.sidebar.collapsed .userblock{justify-content:center;padding:8px 0}
 aside.sidebar.collapsed .sideactions{flex-direction:column;align-items:stretch;width:100%}
 aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex:none}
 
@@ -212,7 +218,7 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 .relico{display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-size:12px;font-weight:700;vertical-align:1px}
 .relico.ok{color:var(--ok)}
 .relico.new{color:var(--accent);text-decoration:none}
-main.main{flex:1;padding:20px 18px calc(86px + env(safe-area-inset-bottom));min-width:0}
+main.main{flex:1;max-width:1400px;margin:0 auto;padding:20px 18px calc(86px + env(safe-area-inset-bottom));min-width:0}
 
 /* ---------- bottom nav (móvil) ---------- */
 .bottomnav{
@@ -239,9 +245,6 @@ main.main{flex:1;padding:20px 18px calc(86px + env(safe-area-inset-bottom));min-
 .bottomnav svg{width:22px;height:22px}
 /* Desktop: sidebar visible, bottom-nav oculta (después de las reglas base por especificidad) */
 @media(min-width:860px){ aside.sidebar{display:flex;flex-direction:column} main.main{padding:28px 34px 40px} .bottomnav{display:none} }
-/* El toggle de tema del topbar solo aplica en móvil; en desktop vive en el
-   pie del sidebar (patrón webapp-shell: [tema | Ajustes | plegar]) */
-@media(min-width:860px){ .head-actions .themebtn{display:none} }
 
 /* ---------- header ---------- */
 header.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px}
