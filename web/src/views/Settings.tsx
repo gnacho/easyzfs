@@ -162,12 +162,10 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
     <div className="upd-widget">
       <div className="upd-line">
         <span className="upd-status">
-          {state === 'checking' ? t('ab_checking')
-            : applying ? t('ab_updapp')
-            : state === 'available' ? t('ab_newver', { v: latest })
+          {state === 'available' ? t('ab_newver', { v: latest })
             : state === 'error' ? t('ab_upderr')
             : state === 'uptodate' ? t('ab_uptodate', { v: version ?? '' })
-            : t('ab_checkupd')}
+            : null}
         </span>
         <span className="upd-actions">
           {state === 'available' && (
