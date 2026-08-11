@@ -243,6 +243,10 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
   color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;
 }
 .plang:focus{outline:2px solid var(--accent);outline-offset:-1px}
+/* Idioma en móvil: solo icono; desktop: select completo */
+.lang-mobile{display:none}
+.lang-desktop{width:120px}
+@media(max-width:639px){.lang-mobile{display:inline-flex}.lang-desktop{display:none}}
 .plogout{
   margin-left:auto;border-color:color-mix(in srgb, var(--err) 35%, transparent);
   background:color-mix(in srgb, var(--err) 10%, transparent);color:var(--err);
@@ -291,6 +295,12 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 .admin-bar .ab-btn.on .chev{transform:rotate(180deg)}
 .admin-bar .ab-right{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600}
 .admin-bar .ab-panel{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* Widget compacto "Comprobar actualizaciones" (AdminBar y Acerca de) */
+.upd-widget{display:flex;flex-direction:column;min-width:0}
+.upd-line{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.upd-status{font-size:13px;color:var(--text2)}
+.upd-actions{display:flex;gap:8px;flex-wrap:wrap}
 /* Acerca de: tira PWA + comprobar actualizaciones en la misma horizontal */
 .aboutrow{display:grid;gap:12px;margin-top:16px}
 .aboutrow .installstrip{margin-top:0}

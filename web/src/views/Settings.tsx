@@ -159,23 +159,29 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
   };
 
   return (
-    <div className="installstrip">
-      <span className="t-ico" style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--accent-soft)', color: 'var(--accent)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-        <IconUpload size={16} />
-      </span>
-      <div className="grow">
-        <b>{t('ab_checkupd')}</b>
-        <div className="d">
+    <div className="upd-widget">
+      <div className="upd-line">
+        <span className="upd-status">
           {state === 'checking' ? t('ab_checking')
             : applying ? t('ab_updapp')
             : state === 'available' ? t('ab_newver', { v: latest })
             : state === 'error' ? t('ab_upderr')
             : state === 'uptodate' ? t('ab_uptodate', { v: version ?? '' })
-            : t('s_about_d')}
-        </div>
+            : t('ab_checkupd')}
+        </span>
+        <span className="upd-actions">
+          {state === 'available' && (
+            <button className="btn sm primary" disabled={applying || !canApply} onClick={() => { void apply(); }}>
+              {applying ? t('ab_updapp') : t('upd_rel_upd')}
+            </button>
+          )}
+          <button className="btn sm" disabled={state === 'checking' || applying} onClick={() => { void check(); }}>
+            {state === 'checking' ? t('ab_checking') : state === 'error' ? t('ab_retry') : t('ab_checkupd')}
+          </button>
+        </span>
       </div>
       {progress && (
-        <div className="grow" style={{ flexBasis: '100%', marginTop: 4 }}>
+        <div style={{ marginTop: 6 }}>
           <div className="d" style={{ fontSize: 12, marginBottom: 4 }}>
             {progress.step === 'downloading' ? 'Downloading...' : progress.step === 'installing' ? 'Installing...' : 'Restarting...'}
             {' '}{progress.percentage}%
@@ -186,22 +192,14 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
         </div>
       )}
       {checks.length > 0 && state === 'available' && (
-        <div className="grow" style={{ flexBasis: '100%', marginTop: 4 }}>
+        <div style={{ marginTop: 6 }}>
           {checks.map((c) => (
-            <div key={c.id} className="d" style={{ fontSize: 12, opacity: c.status === 'pass' ? .7 : 1, color: c.status === 'fail' ? 'var(--danger)' : c.status === 'warn' ? 'var(--warn)' : 'inherit' }}>
+            <div key={c.id} className="d" style={{ fontSize: 12, opacity: c.status === 'pass' ? .7 : 1, color: c.status === 'fail' ? 'var(--err)' : c.status === 'warn' ? 'var(--warn)' : 'inherit' }}>
               {c.status === 'fail' ? '✗ ' : c.status === 'warn' ? '⚠ ' : '✓ '}{c.summary}
             </div>
           ))}
         </div>
       )}
-      {state === 'available' && (
-        <button className="btn sm primary" disabled={applying || !canApply} onClick={() => { void apply(); }}>
-          {applying ? t('ab_updapp') : t('upd_rel_upd')}
-        </button>
-      )}
-      <button className="btn sm" disabled={state === 'checking' || applying} onClick={() => { void check(); }}>
-        {state === 'checking' ? t('ab_checking') : state === 'error' ? t('ab_retry') : t('ab_checkupd')}
-      </button>
     </div>
   );
 }
@@ -598,6 +596,22 @@ function ProfileCard() {
     </select>
   );
 
+  // En móvil: icono de idioma que abre el select (oculto). Desktop: select completo.
+  const langBlock = (
+    <>
+      <label className="pact-ico lang-mobile" aria-label={t('s_lang')} title={t('s_lang')}
+        onClick={(e) => { e.preventDefault(); const s = document.getElementById('mp-lang'); if (s) { (s as HTMLSelectElement).focus(); (s as HTMLSelectElement).click(); } }}>
+        <IconMonitor size={16} />
+      </label>
+      <select id="mp-lang" className="plang lang-desktop" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
+        aria-label={t('s_lang')} title={t('s_lang')}>
+        <option value="auto">🌐 {t('s_lang_auto')}</option>
+        <option value="es">🇪🇸 Español</option>
+        <option value="en">🇬🇧 English</option>
+      </select>
+    </>
+  );
+
   return (
     <div className="card pad">
       <div className="prow">
@@ -662,7 +676,7 @@ function ProfileCard() {
             </button>
           )}
 
-          {langSelect}
+          {langBlock}
 
           <button type="button" className="pact-btn" aria-expanded={showPass}
             onClick={() => setShowPass((v) => !v)} title={t('s_mypass')}>
