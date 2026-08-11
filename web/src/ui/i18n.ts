@@ -388,7 +388,7 @@ const es = {
   al_goto: 'Ver la causa',
 
   // Ajustes
-  s_general: 'General', s_lang: 'Idioma', s_lang_auto: '🌐 Automático',
+  s_general: 'General', s_lang: 'Idioma', s_lang_auto: 'Automático',
   s_appear: 'Apariencia', s_accent: 'Color de acento',
   acc_cyan: 'Cian', acc_steel: 'Acero', acc_emerald: 'Esmeralda', acc_amber: 'Ámbar',
   s_density: 'Densidad', s_density_cozy: 'Cómoda', s_density_compact: 'Compacta',
@@ -467,7 +467,7 @@ const es = {
   ab_newver: 'Nueva versión disponible: v{v}', ab_viewrel: 'Ver novedades',
   ab_upd_new: 'Info de la nueva versión', upd_rel_upd: 'Actualizar',
   ab_upderr: 'No se pudo comprobar la actualización. Inténtalo de nuevo.', ab_retry: 'Reintentar', ab_updapp: 'Aplicando actualización…',
-  s_rm: 'Reducir animaciones', s_rm_d: 'Desactiva transiciones y animaciones de la interfaz',
+  s_rm: 'Activar animaciones', s_rm_d: 'Activa transiciones y animaciones de la interfaz',
   s_admin_zone: 'Administración', s_account: 'Cuenta actual',
   s_data_thresh: 'Datos y umbrales',
   s_data_thresh_d: 'Avisos y umbrales de salud de la instalación.',
@@ -883,7 +883,7 @@ const en: Record<I18nKey, string> = {
   al_ack_all: 'Mark all as read',
   al_goto: 'View the cause',
 
-  s_general: 'General', s_lang: 'Language', s_lang_auto: '🌐 Automatic',
+  s_general: 'General', s_lang: 'Language', s_lang_auto: 'Automatic',
   s_appear: 'Appearance', s_accent: 'Accent color',
   acc_cyan: 'Cyan', acc_steel: 'Steel', acc_emerald: 'Emerald', acc_amber: 'Amber',
   s_density: 'Density', s_density_cozy: 'Comfortable', s_density_compact: 'Compact',
@@ -962,7 +962,7 @@ const en: Record<I18nKey, string> = {
   ab_newver: 'New version available: v{v}', ab_viewrel: "What's new",
   ab_upd_new: 'New version info', upd_rel_upd: 'Update',
   ab_upderr: "Couldn't check for updates. Try again.", ab_retry: 'Retry', ab_updapp: 'Applying update…',
-  s_rm: 'Reduce motion', s_rm_d: 'Disables interface transitions and animations',
+  s_rm: 'Enable animations', s_rm_d: 'Enables interface transitions and animations',
   s_admin_zone: 'Administration', s_account: 'Current account',
   s_data_thresh: 'Data and thresholds',
   s_data_thresh_d: 'Alerts and health thresholds of this installation.',

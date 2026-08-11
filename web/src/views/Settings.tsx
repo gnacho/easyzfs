@@ -11,19 +11,16 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, fmtDuration, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconDownload, IconCheck, IconSun, IconMoon, IconMonitor, IconUpload, IconCamera, IconTrash, IconLock, IconBell, IconChev, IconData, IconUser } from '../components/icons';
-import { useModal, ModalBox } from '../components/Modal';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconDownload, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor } from '../components/icons';
+import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { usePush } from '../data/push';
-import { checkReleaseNow, useReleaseCheck } from '../ui/releasecheck';
-import {
-  ACCENTS, getAccent, setAccent, getDensity, setDensity,
-  getReduceMotion, setReduceMotion,
-} from '../ui/theme';
+import { useReleaseCheck } from '../ui/releasecheck';
+import { ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion } from '../ui/theme';
 import type { AccentId, Density, ThemeMode } from '../ui/theme';
 import type { I18nKey } from '../ui/i18n';
 import type {
-  ActivityItem, BackupStatus, Lang, PushAlertTipo, PushPreference,
+  BackupStatus, Lang, PushAlertTipo, PushPreference,
   Settings as SettingsData,
 } from '../data/types';
 
@@ -42,9 +39,8 @@ function isStandalone(): boolean {
     || (navigator as { standalone?: boolean }).standalone === true;
 }
 
-// Mini-preview de un tema estilo NetPulse: mini-UI (barra superior, sidebar,
-// barra de acento, bloque) pintada con las VARIABLES CSS REALES scopeando
-// data-theme en el propio contenedor — cero valores duplicados.
+// Mini-preview de tema con las VARIABLES CSS REALES scopeadas por data-theme
+// (cero hex duplicados). Mismo patrón que el asset webapp-shell.
 function ThemePreview({ mode }: { mode: ThemeMode }) {
   const half = (
     <div className="tpv-half">
@@ -163,23 +159,29 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
   };
 
   return (
-    <div className="installstrip">
-      <span className="t-ico" style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--accent-soft)', color: 'var(--accent)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-        <IconUpload size={16} />
-      </span>
-      <div className="grow">
-        <b>{t('ab_checkupd')}</b>
-        <div className="d">
+    <div className="upd-widget">
+      <div className="upd-line">
+        <span className="upd-status">
           {state === 'checking' ? t('ab_checking')
             : applying ? t('ab_updapp')
             : state === 'available' ? t('ab_newver', { v: latest })
             : state === 'error' ? t('ab_upderr')
             : state === 'uptodate' ? t('ab_uptodate', { v: version ?? '' })
-            : t('s_about_d')}
-        </div>
+            : t('ab_checkupd')}
+        </span>
+        <span className="upd-actions">
+          {state === 'available' && (
+            <button className="btn sm primary" disabled={applying || !canApply} onClick={() => { void apply(); }}>
+              {applying ? t('ab_updapp') : t('upd_rel_upd')}
+            </button>
+          )}
+          <button className="btn sm" disabled={state === 'checking' || applying} onClick={() => { void check(); }}>
+            {state === 'checking' ? t('ab_checking') : state === 'error' ? t('ab_retry') : t('ab_checkupd')}
+          </button>
+        </span>
       </div>
       {progress && (
-        <div className="grow" style={{ flexBasis: '100%', marginTop: 4 }}>
+        <div style={{ marginTop: 6 }}>
           <div className="d" style={{ fontSize: 12, marginBottom: 4 }}>
             {progress.step === 'downloading' ? 'Downloading...' : progress.step === 'installing' ? 'Installing...' : 'Restarting...'}
             {' '}{progress.percentage}%
@@ -190,22 +192,14 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
         </div>
       )}
       {checks.length > 0 && state === 'available' && (
-        <div className="grow" style={{ flexBasis: '100%', marginTop: 4 }}>
+        <div style={{ marginTop: 6 }}>
           {checks.map((c) => (
-            <div key={c.id} className="d" style={{ fontSize: 12, opacity: c.status === 'pass' ? .7 : 1, color: c.status === 'fail' ? 'var(--danger)' : c.status === 'warn' ? 'var(--warn)' : 'inherit' }}>
+            <div key={c.id} className="d" style={{ fontSize: 12, opacity: c.status === 'pass' ? .7 : 1, color: c.status === 'fail' ? 'var(--err)' : c.status === 'warn' ? 'var(--warn)' : 'inherit' }}>
               {c.status === 'fail' ? '✗ ' : c.status === 'warn' ? '⚠ ' : '✓ '}{c.summary}
             </div>
           ))}
         </div>
       )}
-      {state === 'available' && (
-        <button className="btn sm primary" disabled={applying || !canApply} onClick={() => { void apply(); }}>
-          {applying ? t('ab_updapp') : t('upd_rel_upd')}
-        </button>
-      )}
-      <button className="btn sm" disabled={state === 'checking' || applying} onClick={() => { void check(); }}>
-        {state === 'checking' ? t('ab_checking') : state === 'error' ? t('ab_retry') : t('ab_checkupd')}
-      </button>
     </div>
   );
 }
@@ -325,63 +319,6 @@ function BackupCard({ settings, onSave }: {
 // Tarjeta "Actividad" (zona admin): registro de auditoría en la misma fila
 // que Usuarios, misma altura. Muestra las primeras entradas y "Ver más"
 // (GET /api/activity con límite mayor) si hay más.
-function ActivityCard() {
-  const { t } = useApp();
-  const [items, setItems] = useState<ActivityItem[] | null>(null);
-  const [expanded, setExpanded] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [err, setErr] = useState('');
-
-  useEffect(() => {
-    let alive = true;
-    getProvider().getActivity(30)
-      .then((a) => alive && setItems(a)).catch(() => {});
-    return () => { alive = false; };
-  }, []);
-
-  const show = items ?? [];
-  const visible = expanded ? show.slice(0, 30) : show.slice(0, 8);
-
-  const loadMore = () => {
-    setExpanded(true);
-    if (show.length >= 30) {
-      setLoading(true); setErr('');
-      getProvider().getActivity(200)
-        .then((a) => { setItems(a); setLoading(false); })
-        .catch((e) => { setErr(errorMessage(e, t)); setLoading(false); });
-    }
-  };
-
-  return (
-    <div className="card pad admin-card">
-      <h3 className="cardtitle">{t('s_activity')}</h3>
-      <p className="muted">{t('s_activity_d')}</p>
-      {items === null && <p className="muted">{t('loading')}</p>}
-      {items && items.length === 0 && <div className="empty">{t('empty')}</div>}
-      <div>
-        {visible.map((a, i) => (
-          <div className="rowitem" key={i}>
-            <div className="grow">
-              <div className="t1" style={{ fontSize: 13.5 }}>{a.text}</div>
-              <div className="t2">{a.detail}</div>
-            </div>
-            <span style={{ fontSize: 11.5, color: 'var(--text2)', whiteSpace: 'nowrap' }}>{timeAgo(a.ts, t)}</span>
-          </div>
-        ))}
-      </div>
-      {show.length > 8 && (
-        <div style={{ marginTop: 10 }}>
-          <button className="btn sm" disabled={loading}
-            onClick={() => (expanded ? setExpanded(false) : loadMore())}>
-            {expanded ? t('s_activity_less') : (loading ? t('loading') : t('s_activity_more'))}
-          </button>
-        </div>
-      )}
-      {err && <p className="form-err" role="alert" style={{ marginTop: 8 }}>{err}</p>}
-    </div>
-  );
-}
-
 // Subsección de configuración de alertas (visible con push activado): preset
 // rápido (Todas / Solo importantes / Ninguna) + switches por tipo + horario
 // silencioso. Las críticas siempre llegan (texto visible).
@@ -569,36 +506,71 @@ function PushPanel() {
   );
 }
 
-// Tarjeta "Mi perfil" HORIZONTAL (canon ajustes.md 5-Ago-2026): cabecera con
-// avatar (subir foto con recorte cuadrado 1:1, EXIF y re-codificación webp)
-// + nombre/email visibles; grid de campos: nombre visible, email opcional,
-// idioma y fila de notificaciones push (abre modal con PushPanel); cambio de
-// contraseña INLINE (estilo NetPulse) + cerrar sesión.
+// Tarjeta "Mi perfil" (barra horizontal compacta, asset webapp-shell):
+// sin título, avatar + nombre editable + rol; a la derecha email, idioma,
+// contraseña y notificaciones (despliegan inline); cerrar sesión rojo.
 function ProfileCard() {
-  const { t, user, langMode, setLang, logout, reloadUser } = useApp();
-  const push = usePush();
-  const [name, setName] = useState(user?.display_name ?? '');
-  const [email, setEmail] = useState(user?.email ?? '');
+  const { t, user, langMode, setLang, logout, reloadUser, isAdmin } = useApp();
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [showNotifs, setShowNotifs] = useState(false);
   const [cur, setCur] = useState('');
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
   const [cropFile, setCropFile] = useState<File | null>(null);
-  const [showNotifs, setShowNotifs] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(user?.display_name ?? '');
+  const [editingEmail, setEditingEmail] = useState(false);
+  const [emailDraft, setEmailDraft] = useState(user?.email ?? '');
+
+  const displayName = user?.display_name || user?.user || '';
   const avatarUrl = user?.avatar ? getProvider().avatarUrl(user.avatar) : '';
   const initial = (user?.display_name || user?.user || '?').trim().charAt(0).toUpperCase();
 
-  const save = async () => {
+  const uploadAvatar = async (blob: Blob) => {
+    setMsg(''); setErr('');
+    try {
+      await getProvider().setMyAvatar(blob);
+      reloadUser();
+      setMsg(t('saved_ok'));
+    } catch (e) { setErr(errorMessage(e, t)); throw e; }
+  };
+
+  const removeAvatar = async () => {
+    setMsg(''); setErr('');
+    try {
+      await getProvider().deleteMyAvatar();
+      reloadUser();
+      setMsg(t('s_avatar_removed'));
+    } catch (e) { setErr(errorMessage(e, t)); }
+  };
+
+  const saveName = async () => {
+    const v = nameDraft.trim();
+    if (v === (user?.display_name || '')) { setEditingName(false); return; }
     setBusy(true); setMsg(''); setErr('');
     try {
-      await getProvider().updateMyProfile(name.trim(), email.trim());
-      reloadUser(); // actualiza sidebar/saludo con el nombre nuevo
+      await getProvider().updateMyProfile(v, (user?.email ?? '').trim());
+      reloadUser();
       setMsg(t('saved_ok'));
+      setEditingName(false);
+    } catch (e) { setErr(errorMessage(e, t)); }
+    setBusy(false);
+  };
+
+  const saveEmail = async () => {
+    const v = emailDraft.trim();
+    if (v === (user?.email || '')) { setEditingEmail(false); return; }
+    setBusy(true); setMsg(''); setErr('');
+    try {
+      await getProvider().updateMyProfile(user?.display_name ?? '', v);
+      reloadUser();
+      setMsg(t('saved_ok'));
+      setEditingEmail(false);
     } catch (e) { setErr(errorMessage(e, t)); }
     setBusy(false);
   };
@@ -615,84 +587,109 @@ function ProfileCard() {
     setBusy(false);
   };
 
-  const uploadAvatar = async (blob: Blob) => {
-    setMsg(''); setErr('');
-    try {
-      await getProvider().setMyAvatar(blob);
-      reloadUser(); // el sidebar y la tarjeta muestran la foto nueva
-      setMsg(t('saved_ok'));
-    } catch (e) { setErr(errorMessage(e, t)); throw e; }
-  };
-
-  const removeAvatar = async () => {
-    setMsg(''); setErr('');
-    try {
-      await getProvider().deleteMyAvatar();
-      reloadUser();
-      setMsg(t('s_avatar_removed'));
-    } catch (e) { setErr(errorMessage(e, t)); }
-  };
+  // En móvil: icono de idioma que abre el select (oculto). Desktop: select completo.
+  const langBlock = (
+    <>
+      <label className="pact-ico lang-mobile" aria-label={t('s_lang')} title={t('s_lang')}
+        onClick={(e) => { e.preventDefault(); const s = document.getElementById('mp-lang'); if (s) { (s as HTMLSelectElement).focus(); (s as HTMLSelectElement).click(); } }}>
+        <IconMonitor size={16} />
+      </label>
+      <select id="mp-lang" className="plang lang-desktop" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
+        aria-label={t('s_lang')} title={t('s_lang')}>
+        <option value="auto">{t('s_lang_auto')}</option>
+        <option value="es">Español</option>
+        <option value="en">English</option>
+      </select>
+    </>
+  );
 
   return (
     <div className="card pad">
-      <h3 className="cardtitle">{t('s_profile')}</h3>
-
-      {/* Cabecera horizontal: avatar editable + nombre/email reales */}
-      <div className="profile-head">
+      <div className="prow">
+        {/* Avatar editable */}
         <button type="button" className="avatar-lg" onClick={() => fileRef.current?.click()}
           aria-label={t('s_avatar_change')} title={t('s_avatar_change')}>
           {avatarUrl ? <img src={avatarUrl} alt="" /> : <span aria-hidden="true">{initial}</span>}
           <span className="cam" aria-hidden="true"><IconCamera size={18} /></span>
+          {avatarUrl && (
+            <span className="cam-del" onClick={(e) => { e.stopPropagation(); void removeAvatar(); }}
+              aria-label={t('s_avatar_remove')} title={t('s_avatar_remove')}><IconTrash size={16} /></span>
+          )}
         </button>
         <input ref={fileRef} type="file" accept="image/*" hidden
           onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropFile(f); e.target.value = ''; }} />
-        <div className="ph-lbl">
-          <b>{user?.display_name || user?.user}</b>
-          <span>@{user?.user}</span>
-        </div>
-        {avatarUrl && (
-          <button type="button" className="iconbtn" onClick={() => { void removeAvatar(); }}
-            aria-label={t('s_avatar_remove')} title={t('s_avatar_remove')}><IconTrash size={15} /></button>
-        )}
-      </div>
 
-      {/* Grid de campos: nombre | email / idioma | notificaciones */}
-      <div className="profile-grid">
-        <div>
-          <label htmlFor="pf-name">{t('s_displayname')}</label>
-          <input id="pf-name" value={name} maxLength={64} placeholder={user?.user}
-            autoComplete="nickname" onChange={(e) => setName(e.target.value)} />
-          <p className="muted" style={{ marginTop: 4 }}>{t('s_displayname_d')}</p>
+        {/* Nombre editable + rol */}
+        <div className="pname">
+          {editingName ? (
+            <div className="p-edit">
+              <input type="text" value={nameDraft} maxLength={64} autoFocus autoComplete="nickname"
+                placeholder={user?.user}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveName(); if (e.key === 'Escape') { setEditingName(false); setNameDraft(displayName); } }} />
+              <button type="button" className="p-ok" disabled={busy} onClick={() => void saveName()}
+                aria-label={t('save')} title={t('save')}><IconCheck size={14} /></button>
+              <button type="button" className="p-x" onClick={() => { setEditingName(false); setNameDraft(displayName); }}
+                aria-label={t('cancel')} title={t('cancel')}><IconX size={14} /></button>
+            </div>
+          ) : (
+            <button type="button" className="pname-btn"
+              onClick={() => { setNameDraft(displayName); setEditingName(true); }}
+              title={t('s_displayname')}>
+              <b>{displayName}</b>
+              <IconPencil size={13} aria-hidden="true" />
+            </button>
+          )}
+          <span className="pname-role">
+            {isAdmin ? t('mu_r_admin') : t('mu_r_user')} · @{user?.user}
+          </span>
         </div>
-        <div>
-          <label htmlFor="pf-email">{t('s_email')}</label>
-          <input id="pf-email" type="email" value={email} maxLength={254}
-            autoComplete="email" onChange={(e) => setEmail(e.target.value)} />
-          <p className="muted" style={{ marginTop: 4 }}>{t('s_email_d')}</p>
-        </div>
-        <div>
-          <label>{t('s_lang')}</label>
-          <Select value={langMode} onChange={setLang} ariaLabel={t('s_lang')}
-            options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: '🇪🇸 Español' }, { v: 'en', label: '🇬🇧 English' }]} />
-        </div>
-        <div>
-          <label>{t('s_notifs')}</label>
-          <button type="button" className="notif-row" onClick={() => setShowNotifs(true)}>
+
+        {/* Grupo de acciones: email + idioma + contraseña + notificaciones */}
+        <div className="pacts">
+          {editingEmail ? (
+            <div className="p-edit">
+              <input type="email" value={emailDraft} autoFocus autoComplete="email"
+                placeholder={t('s_email')}
+                onChange={(e) => setEmailDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') void saveEmail(); if (e.key === 'Escape') { setEditingEmail(false); setEmailDraft(user?.email ?? ''); } }} />
+              <button type="button" className="p-ok" disabled={busy} onClick={() => void saveEmail()}
+                aria-label={t('save')} title={t('save')}><IconCheck size={14} /></button>
+              <button type="button" className="p-x" onClick={() => { setEditingEmail(false); setEmailDraft(user?.email ?? ''); }}
+                aria-label={t('cancel')} title={t('cancel')}><IconX size={14} /></button>
+            </div>
+          ) : (
+            <button type="button" className={`pact-ico${user?.email ? ' has' : ''}`}
+              onClick={() => { setEmailDraft(user?.email ?? ''); setEditingEmail(true); }}
+              title={user?.email ? user.email : t('s_email_d')}
+              aria-label={user?.email ? t('s_email') : t('s_email_d')}>
+              <IconMail size={16} />
+            </button>
+          )}
+
+          {langBlock}
+
+          <button type="button" className="pact-btn" aria-expanded={showPass}
+            onClick={() => setShowPass((v) => !v)} title={t('s_mypass')}>
+            <IconLock size={16} aria-hidden="true" />
+            <span className="hidden-sm">{t('s_mypass')}</span>
+          </button>
+
+          <button type="button" className="pact-btn" aria-expanded={showNotifs}
+            onClick={() => setShowNotifs((v) => !v)} title={t('s_notifs')}>
             <IconBell size={16} aria-hidden="true" />
-            <span className="nr-lbl">{t('s_push')}</span>
-            <Badge tone={push.state === 'subscribed' ? 'ok' : 'info'} dot={false}>
-              {push.state === 'subscribed' ? t('s_push_on') : t('s_push_off')}
-            </Badge>
-            <IconChev size={14} aria-hidden="true" />
+            <span className="hidden-sm">{t('s_notifs')}</span>
           </button>
         </div>
+
+        {/* Cerrar sesión — siempre a la derecha, rojo */}
+        <button type="button" className="plogout" onClick={logout} title={t('logout')}>
+          <IconLogout size={16} aria-hidden="true" />
+          <span className="hidden-sm">{t('logout')}</span>
+        </button>
       </div>
 
-      <div className="m-actions" style={{ justifyContent: 'flex-start' }}>
-        <button className="btn primary" disabled={busy} onClick={() => { void save(); }}>{t('save')}</button>
-        <button className="btn" onClick={() => setShowPass((v) => !v)}><IconLock size={14} /> {t('s_mypass')}</button>
-        <button className="btn danger" onClick={logout}>{t('logout')}</button>
-      </div>
+      {/* Cambio de contraseña INLINE */}
       {showPass && (
         <form onSubmit={(e) => { void changePass(e); }}
           style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
@@ -711,31 +708,22 @@ function ProfileCard() {
           </div>
         </form>
       )}
+
+      {/* Notificaciones push INLINE */}
+      {showNotifs && (
+        <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+          <PushPanel />
+        </div>
+      )}
+
       {msg && <p style={{ fontSize: 13, color: 'var(--ok)', fontWeight: 600, marginTop: 10 }} role="status">{msg}</p>}
       {err && <p className="form-err" role="alert" style={{ marginTop: 10 }}>{err}</p>}
-
-      {/* Diálogo de recorte cuadrado para la foto de perfil */}
-      {cropFile && (
-        <AvatarCropDialog file={cropFile} onClose={() => setCropFile(null)}
-          onCrop={(blob) => uploadAvatar(blob)} />
-      )}
-
-      {/* Modal de notificaciones push (contenido = PushPanel) */}
-      {showNotifs && (
-        <ModalBox label={t('s_push')} onClose={() => setShowNotifs(false)}>
-          <h3 className="cardtitle">{t('s_push')}</h3>
-          <PushPanel />
-          <div className="m-actions">
-            <button className="btn" onClick={() => setShowNotifs(false)}>{t('close')}</button>
-          </div>
-        </ModalBox>
-      )}
     </div>
   );
 }
 
 export default function Settings() {
-  const { t, themeMode, themeEff, setTheme, isAdmin, user, refresh } = useApp();
+  const { t, themeMode, themeEff, setTheme, isAdmin, user, refresh, reloadUser, logout, setLang } = useApp();
   const { openModal } = useModal();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [users, setUsers] = useState<Awaited<ReturnType<ReturnType<typeof getProvider>['getUsers']>> | null>(null);
@@ -802,204 +790,180 @@ export default function Settings() {
 
   return (
     <div className="view">
-      {/* ---- Fila 1: Datos y umbrales (50%, admin) + Apariencia (50%) ---- */}
-      <div className={`st-row${isAdmin ? '' : ' st-single'}`}>
+      {/* ---- Datos y umbrales (solo admin, UNA línea) ---- */}
       {isAdmin && (
         <div className="card pad admin-card">
           <h3 className="cardtitle">{t('s_data_thresh')}</h3>
-          <p className="muted">{t('s_data_thresh_d')}</p>
-          <label htmlFor="th-warn">{t('s_cap_warn')}</label>
-          <input id="th-warn" type="number" value={settings.cap_warn_pct}
-            onChange={(e) => setSettings({ ...settings, cap_warn_pct: +e.target.value })} />
-          <label htmlFor="th-crit">{t('s_cap_crit')}</label>
-          <input id="th-crit" type="number" value={settings.cap_crit_pct}
-            onChange={(e) => setSettings({ ...settings, cap_crit_pct: +e.target.value })} />
-          <label htmlFor="th-temp">{t('s_temp')}</label>
-          <input id="th-temp" type="number" value={settings.disk_temp_c}
-            onChange={(e) => setSettings({ ...settings, disk_temp_c: +e.target.value })} />
-          {!threshOk && <p className="form-err" role="alert">{t('s_thresh_invalid')}</p>}
-          <div className="m-actions">
-            <button className="btn primary" disabled={!threshOk} onClick={() => saveSettings({})}>{t('save')}</button>
+          <div className="thresh-line">
+            <div className="tf">
+              <label htmlFor="th-warn">{t('s_cap_warn')}</label>
+              <input id="th-warn" type="number" value={settings.cap_warn_pct}
+                onChange={(e) => setSettings({ ...settings, cap_warn_pct: +e.target.value })} />
+            </div>
+            <div className="tf">
+              <label htmlFor="th-crit">{t('s_cap_crit')}</label>
+              <input id="th-crit" type="number" value={settings.cap_crit_pct}
+                onChange={(e) => setSettings({ ...settings, cap_crit_pct: +e.target.value })} />
+            </div>
+            <div className="tf">
+              <label htmlFor="th-temp">{t('s_temp')}</label>
+              <input id="th-temp" type="number" value={settings.disk_temp_c}
+                onChange={(e) => setSettings({ ...settings, disk_temp_c: +e.target.value })} />
+            </div>
+            {!threshOk && <p className="form-err" role="alert">{t('s_thresh_invalid')}</p>}
+            <div className="m-actions">
+              <button className="btn primary" disabled={!threshOk} onClick={() => saveSettings({})}>{t('save')}</button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ---- Apariencia (mitad derecha; la primera con usuario no-admin) ---- */}
+      {/* ---- Apariencia (horizontal: tema izq + controles der) ---- */}
       <div className="card pad">
         <h3 className="cardtitle">{t('s_appear')}</h3>
-        <label>{t('s_theme')}</label>
-        <div className="themegrid" role="radiogroup" aria-label={t('s_theme')}>
-          {themeOpts.map((o) => {
-            const Ico = o.icon;
-            return (
-              <button key={o.v} type="button" role="radio" aria-checked={themeMode === o.v}
-                className={`themecard${themeMode === o.v ? ' sel' : ''}`}
-                onClick={() => setTheme(o.v)}>
-                <ThemePreview mode={o.v} />
-                <span className="lbl"><Ico size={13} />{o.label}</span>
-                {themeMode === o.v && <span className="check"><IconCheck /></span>}
-              </button>
-            );
-          })}
-        </div>
-        <label>{t('s_accent')}</label>
-        <div className="swatches" role="group" aria-label={t('s_accent')}>
-          {(Object.keys(ACCENTS) as AccentId[]).map((id) => (
-            <button key={id} type="button" title={t(`acc_${id}`)} aria-label={t(`acc_${id}`)}
-              className={`swatch${accent === id ? ' sel' : ''}`}
-              aria-pressed={accent === id}
-              onClick={() => { setAccent(id); setAccentState(id); }}>
-              {/* el círculo pinta el color del tema EFECTIVO (el que se aplicará) */}
-              <span style={{ background: ACCENTS[id][themeEff][0] }} />
-            </button>
-          ))}
-        </div>
-        <label>{t('s_density')}</label>
-        <Seg value={density} ariaLabel={t('s_density')}
-          onChange={(d) => { setDensity(d); setDensityState(d); }}
-          options={[
-            { v: 'cozy', label: t('s_density_cozy') },
-            { v: 'compact', label: t('s_density_compact') },
-          ]} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginTop: 14 }}>
-          <span style={{ flex: 1 }}>
-            <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600 }}>{t('s_rm')}</span>
-            <span className="muted">{t('s_rm_d')}</span>
-          </span>
-          <Switch checked={reduceMotion} ariaLabel={t('s_rm')}
-            onChange={(v) => { setReduceMotion(v); setReduceMotionState(v); }} />
-        </div>
-      </div>
-      </div>
-
-      {/* ---- Fila 2: Mi perfil (horizontal, ancho completo: avatar + campos + notificaciones) ---- */}
-      <ProfileCard />
-
-      {/* ---- Zona de administración (solo admin): AdminBar canónica ---- */}
-      {isAdmin && (
-      <>
-      {/* AdminBar horizontal: Actualizaciones → Respaldos → Usuarios → Modo demo (derecha) */}
-      <div className="admin-bar">
-        <div className="ab-row">
-          <div className="ab-title">
-            <IconShield size={18} />
-            <span>{t('s_admin_zone')}</span>
-            <ReleaseIcon version={version?.version} />
+        <div className="aprow">
+          {/* Tiles de tema (izquierda ~50%) */}
+          <div className="ap-theme" role="radiogroup" aria-label={t('s_theme')}>
+            {themeOpts.map((o) => {
+              const Ico = o.icon;
+              return (
+                <button key={o.v} type="button" role="radio" aria-checked={themeMode === o.v}
+                  className={`themecard${themeMode === o.v ? ' sel' : ''}`}
+                  onClick={() => setTheme(o.v)}>
+                  <ThemePreview mode={o.v} />
+                  <span className="lbl"><Ico size={13} />{o.label}</span>
+                  {themeMode === o.v && <span className="check"><IconCheck /></span>}
+                </button>
+              );
+            })}
           </div>
-          <span className="ab-sep" />
 
-          {/* 1. Comprobar actualizaciones (widget inline) */}
-          <UpdateCheckRow version={version?.version} />
-
-          {/* 2. Respaldos (desplegable) */}
-          <button
-            type="button"
-            aria-expanded={adminPanel === 'backup'}
-            onClick={() => setAdminPanel(adminPanel === 'backup' ? null : 'backup')}
-            className={`ab-btn${adminPanel === 'backup' ? ' on' : ''}`}
-          >
-            <IconData size={15} />
-            <span className="hidden-sm">{t('bk_title')}</span>
-            <IconChev className="chev" />
-          </button>
-
-          {/* 3. Usuarios (desplegable) */}
-          <button
-            type="button"
-            aria-expanded={adminPanel === 'users'}
-            onClick={() => setAdminPanel(adminPanel === 'users' ? null : 'users')}
-            className={`ab-btn${adminPanel === 'users' ? ' on' : ''}`}
-          >
-            <IconUser size={15} />
-            <span className="hidden-sm">{t('s_users')}</span>
-            <IconChev className="chev" />
-          </button>
-
-          {/* 4. Modo demo a la derecha */}
-          <div className="ab-right">
-            <span>{t('s_demo_enable')}</span>
-            <Switch checked={settings.demo_enabled} ariaLabel={t('s_demo_enable')}
-              onChange={(v) => { void saveSettings({ demo_enabled: v }); }} />
-          </div>
-        </div>
-
-        {/* Paneles desplegables */}
-        {adminPanel === 'backup' && (
-          <div className="ab-panel">
-            <BackupCard settings={settings} onSave={saveSettings} />
-          </div>
-        )}
-        {adminPanel === 'users' && (
-          <div className="ab-panel">
-            <div className="card pad admin-card">
-              <h3 className="cardtitle">{t('s_users')}
-                <span className="actions" style={{ float: 'right' }}>
-                  <button className="btn sm primary" onClick={() => openModal('newuser')}>+ {t('s_newuser')}</button>
-                </span>
-              </h3>
-              <div>
-                {(users ?? []).map((u) => (
-                  <div className="rowitem" key={u.user}>
-                    <div className="grow">
-                      <div className="t1" style={{ fontSize: 14 }}>
-                        {u.display_name || u.user}
-                        {u.user === user?.user && <span style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>{t('you')}</span>}
-                        <span className={`rolebadge ${u.role}`}>{u.role === 'admin' ? t('mu_r_admin') : t('mu_r_user')}</span>
-                      </div>
-                      <div className="t2">
-                        {u.user} · {t('s_last_login')}: {timeAgo(u.last_login, t)} · {u.sessions}{' '}
-                        {u.sessions === 1 ? t('s_session_one') : t('s_sessions')}
-                      </div>
-                    </div>
-                    <Select value={u.language ?? 'auto'} ariaLabel={t('s_lang')}
-                      options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: '🇪🇸 Español' }, { v: 'en', label: '🇬🇧 English' }]}
-                      onChange={(v) => {
-                        const lang = v as 'auto' | 'es' | 'en';
-                        setUsers((cur) => cur?.map((x) => (x.user === u.user ? { ...x, language: lang } : x)) ?? cur);
-                        getProvider().setUserLanguage(u.user, lang).catch(() => {});
-                      }} />
-                    <button className="btn sm" onClick={() => openModal('passwd', { user: u.user })}>{t('s_passwd')}</button>
-                    {u.user !== user?.user && (
-                      <button className="btn sm danger" onClick={() => openModal('deluser', { user: u.user })}>{t('s_delete_user')}</button>
-                    )}
-                  </div>
-                ))}
-                {users && users.length === 0 && <div className="empty">{t('empty')}</div>}
+          {/* Controles (derecha, flex-1) */}
+          <div className="ap-controls">
+            <div>
+              <span className="lbl">{t('s_accent')}</span>
+              <div className="ap-accent-row">
+                <div className="swatches" role="group" aria-label={t('s_accent')}>
+                  {(Object.keys(ACCENTS) as AccentId[]).map((id) => (
+                    <button key={id} type="button" title={t(`acc_${id}`)} aria-label={t(`acc_${id}`)}
+                      className={`swatch${accent === id ? ' sel' : ''}`}
+                      aria-pressed={accent === id}
+                      onClick={() => { setAccent(id); setAccentState(id); }}>
+                      <span style={{ background: ACCENTS[id][themeEff][0] }} />
+                    </button>
+                  ))}
+                </div>
+                <div className="ap-anim">
+                  <span className="lbl">{t('s_rm')}</span>
+                  <Switch checked={!reduceMotion} ariaLabel={t('s_rm')}
+                    onChange={(v) => { setReduceMotion(!v); setReduceMotionState(!v); }} />
+                </div>
               </div>
-              <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>{t('s_roles_d')}</p>
+            </div>
+
+            <div>
+              <span className="lbl">{t('s_density')}</span>
+              <Seg value={density} ariaLabel={t('s_density')}
+                onChange={(d) => { setDensity(d); setDensityState(d); }}
+                options={[
+                  { v: 'cozy', label: t('s_density_cozy') },
+                  { v: 'compact', label: t('s_density_compact') },
+                ]} />
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Fila de dominio: Notificaciones webhook | Actividad */}
-      <div className="st-row st-users">
-
-      {/* ---- Notificaciones webhook ---- */}
-      <div className="card pad admin-card">
-        <h3 className="cardtitle">{t('s_notif')}</h3>
-        <label htmlFor="nf-hook">{t('s_webhook')}</label>
-        <input id="nf-hook" placeholder={t('s_webhook_ph')} value={settings.webhook}
-          onChange={(e) => setSettings({ ...settings, webhook: e.target.value })} />
-        <label className="checklabel" style={{ marginTop: 16 }}>
-          <input type="checkbox" checked={settings.notify_scrub_errors}
-            onChange={(e) => setSettings({ ...settings, notify_scrub_errors: e.target.checked })} />
-          {t('s_n_scrub')}
-        </label>
-        <label className="checklabel">
-          <input type="checkbox" checked={settings.notify_smart_change}
-            onChange={(e) => setSettings({ ...settings, notify_smart_change: e.target.checked })} />
-          {t('s_n_smart')}
-        </label>
-        <div className="m-actions">
-          <button className="btn primary" onClick={() => saveSettings({})}>{t('save')}</button>
         </div>
       </div>
 
-      {/* ---- Actividad (audit log, "ver más") ---- */}
-      <ActivityCard />
-      </div>
-      </>
+      {/* ---- Mi perfil (barra compacta sin título) ---- */}
+      <ProfileCard />
+
+      {/* ---- Zona de administración (solo admin) en UNA fila ---- */}
+      {isAdmin && (
+        <div className="admin-bar">
+          <div className="ab-row">
+            <div className="ab-title">
+              <IconShield size={18} />
+              <span>{t('s_admin_zone')}</span>
+            </div>
+            <span className="ab-sep" />
+
+            {/* 1. Comprobar actualizaciones (widget inline) */}
+            <UpdateCheckRow version={version?.version} />
+
+            {/* 2. Respaldos (desplegable) */}
+            <button type="button" aria-expanded={adminPanel === 'backup'}
+              onClick={() => setAdminPanel(adminPanel === 'backup' ? null : 'backup')}
+              className={`ab-btn${adminPanel === 'backup' ? ' on' : ''}`}>
+              <IconData size={15} />
+              <span className="hidden-sm">{t('bk_title')}</span>
+              <IconChev className="chev" />
+            </button>
+
+            {/* 3. Usuarios (desplegable) */}
+            <button type="button" aria-expanded={adminPanel === 'users'}
+              onClick={() => setAdminPanel(adminPanel === 'users' ? null : 'users')}
+              className={`ab-btn${adminPanel === 'users' ? ' on' : ''}`}>
+              <IconUser size={15} />
+              <span className="hidden-sm">{t('s_users')}</span>
+              <IconChev className="chev" />
+            </button>
+
+            {/* 4. Modo demo a la derecha */}
+            <div className="ab-right">
+              <span>{t('s_demo_enable')}</span>
+              <Switch checked={settings.demo_enabled} ariaLabel={t('s_demo_enable')}
+                onChange={(v) => { void saveSettings({ demo_enabled: v }); }} />
+            </div>
+          </div>
+
+          {/* Paneles desplegables */}
+          {adminPanel === 'backup' && (
+            <div className="ab-panel">
+              <BackupCard settings={settings} onSave={saveSettings} />
+            </div>
+          )}
+          {adminPanel === 'users' && (
+            <div className="ab-panel">
+              <div className="card pad admin-card">
+                <h3 className="cardtitle">{t('s_users')}
+                  <span className="actions" style={{ float: 'right' }}>
+                    <button className="btn sm primary" onClick={() => openModal('newuser')}>+ {t('s_newuser')}</button>
+                  </span>
+                </h3>
+                <div>
+                  {(users ?? []).map((u) => (
+                    <div className="rowitem" key={u.user}>
+                      <div className="grow">
+                        <div className="t1" style={{ fontSize: 14 }}>
+                          {u.display_name || u.user}
+                          {u.user === user?.user && <span style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>{t('you')}</span>}
+                          <span className={`rolebadge ${u.role}`}>{u.role === 'admin' ? t('mu_r_admin') : t('mu_r_user')}</span>
+                        </div>
+                        <div className="t2">
+                          {u.user} · {t('s_last_login')}: {timeAgo(u.last_login, t)} · {u.sessions}{' '}
+                          {u.sessions === 1 ? t('s_session_one') : t('s_sessions')}
+                        </div>
+                      </div>
+                      <Select value={u.language ?? 'auto'} ariaLabel={t('s_lang')}
+                        options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: 'Español' }, { v: 'en', label: 'English' }]}
+                        onChange={(v) => {
+                          const lang = v as 'auto' | 'es' | 'en';
+                          setUsers((cur) => cur?.map((x) => (x.user === u.user ? { ...x, language: lang } : x)) ?? cur);
+                          getProvider().setUserLanguage(u.user, lang).catch(() => {});
+                        }} />
+                      <button className="btn sm" onClick={() => openModal('passwd', { user: u.user })}>{t('s_passwd')}</button>
+                      {u.user !== user?.user && (
+                        <button className="btn sm danger" onClick={() => openModal('deluser', { user: u.user })}>{t('s_delete_user')}</button>
+                      )}
+                    </div>
+                  ))}
+                  {users && users.length === 0 && <div className="empty">{t('empty')}</div>}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>{t('s_roles_d')}</p>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ---- Acerca de (ancho completo: 4 tiles + instalar PWA + sistema) ---- */}
