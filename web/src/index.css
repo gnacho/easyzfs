@@ -178,7 +178,7 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 /* ---- Apariencia: layout horizontal (tema izq ~50% + controles der) ---- */
 .aprow{display:flex;flex-direction:column;gap:18px}
 @media(min-width:700px){.aprow{flex-direction:row;gap:28px}}
-.ap-theme{flex-shrink:0}
+.ap-theme{flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;min-width:0}
 @media(min-width:700px){.ap-theme{width:50%}}
 .ap-controls{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
 .ap-accent-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -344,6 +344,20 @@ header.top{display:flex;align-items:center;justify-content:space-between;margin-
 header.top h1{font-size:22px;font-weight:700;letter-spacing:-.01em}
 header.top .sub{font-size:13px;color:var(--text2);margin-top:2px}
 .head-actions{display:flex;gap:8px;align-items:center;position:relative}
+/* Toggle de tema de 3 estados (pill) en la topbar — patrón Deltos ThemeTogglePill */
+.theme-pill{
+  display:flex;align-items:center;gap:2px;height:32px;padding:2px;
+  border:1px solid var(--border);border-radius:999px;background:var(--surface2);
+}
+.theme-pill button{
+  display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 9px;border-radius:999px;
+  font-size:12px;font-weight:600;color:var(--text3);transition:color .15s,background .15s,box-shadow .15s;white-space:nowrap;
+}
+.theme-pill button:hover{color:var(--text)}
+.theme-pill button.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.theme-pill .plbl{display:none}
+@media(min-width:640px){.theme-pill .plbl{display:inline}}
+@media(max-width:639px){.theme-pill button{padding:0 6px}}
 .iconbtn{
   width:38px;height:38px;border-radius:10px;display:grid;place-items:center;
   background:var(--surface);border:1px solid var(--border);color:var(--text2);

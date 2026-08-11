@@ -587,15 +587,6 @@ function ProfileCard() {
     setBusy(false);
   };
 
-  const langSelect = (
-    <select className="plang" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
-      aria-label={t('s_lang')} title={t('s_lang')}>
-      <option value="auto">🌐 {t('s_lang_auto')}</option>
-      <option value="es">🇪🇸 Español</option>
-      <option value="en">🇬🇧 English</option>
-    </select>
-  );
-
   // En móvil: icono de idioma que abre el select (oculto). Desktop: select completo.
   const langBlock = (
     <>
@@ -605,9 +596,9 @@ function ProfileCard() {
       </label>
       <select id="mp-lang" className="plang lang-desktop" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
         aria-label={t('s_lang')} title={t('s_lang')}>
-        <option value="auto">🌐 {t('s_lang_auto')}</option>
-        <option value="es">🇪🇸 Español</option>
-        <option value="en">🇬🇧 English</option>
+        <option value="auto">{t('s_lang_auto')}</option>
+        <option value="es">Español</option>
+        <option value="en">English</option>
       </select>
     </>
   );
@@ -864,8 +855,8 @@ export default function Settings() {
                 </div>
                 <div className="ap-anim">
                   <span className="lbl">{t('s_rm')}</span>
-                  <Switch checked={reduceMotion} ariaLabel={t('s_rm')}
-                    onChange={(v) => { setReduceMotion(v); setReduceMotionState(v); }} />
+                  <Switch checked={!reduceMotion} ariaLabel={t('s_rm')}
+                    onChange={(v) => { setReduceMotion(!v); setReduceMotionState(!v); }} />
                 </div>
               </div>
             </div>
@@ -954,7 +945,7 @@ export default function Settings() {
                         </div>
                       </div>
                       <Select value={u.language ?? 'auto'} ariaLabel={t('s_lang')}
-                        options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: '🇪🇸 Español' }, { v: 'en', label: '🇬🇧 English' }]}
+                        options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: 'Español' }, { v: 'en', label: 'English' }]}
                         onChange={(v) => {
                           const lang = v as 'auto' | 'es' | 'en';
                           setUsers((cur) => cur?.map((x) => (x.user === u.user ? { ...x, language: lang } : x)) ?? cur);

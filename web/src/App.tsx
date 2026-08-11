@@ -6,13 +6,12 @@ import type { ComponentType } from 'react';
 import { AppProvider, useApp, alertTargetView } from './ui/store';
 import type { ViewId } from './ui/store';
 import { ModalProvider, ModalHost } from './components/ModalHost';
-import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconChev, IconFoldLeft, IconFoldRight, IconUser } from './components/icons';
+import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconMonitor, IconChev, IconFoldLeft, IconFoldRight, IconUser } from './components/icons';
 import { Spinner } from './components/ui';
 import ErrorBoundary from './components/ErrorBoundary';
 import { getProvider } from './data';
 import { subscribeEvents } from './data/events';
 import { timeAgo } from './ui/format';
-import { toggleTheme } from './ui/theme';
 import { lazyRetry } from './ui/lazyRetry';
 import { useUpdateAvailable } from './ui/updatecheck';
 import { useReleaseCheck, getReleaseDismissed, dismissRelease } from './ui/releasecheck';
@@ -116,7 +115,7 @@ function AlertsPanel({ onClose }: { onClose: () => void }) {
 }
 
 function Shell() {
-  const { t, route, navigate, demo, exitDemo, user, isAdmin, themeEff, ready } = useApp();
+  const { t, route, navigate, demo, exitDemo, user, isAdmin, ready, themeMode, setTheme } = useApp();
   const [showAlerts, setShowAlerts] = useState(false);
   const [hasPending, setHasPending] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
@@ -292,9 +291,17 @@ function Shell() {
                 <IconBell />
                 {hasPending && <span className="ping" />}
               </button>
-              <button className="iconbtn" title={t('a11y_theme')} aria-label={t('a11y_theme')} onClick={toggleTheme}>
-                {themeEff === 'dark' ? <IconSun /> : <IconMoon />}
-              </button>
+              <div className="theme-pill" role="radiogroup" aria-label={t('s_theme')}>
+                {([['auto', IconMonitor], ['light', IconSun], ['dark', IconMoon]] as const).map(([m, Icon]) => (
+                  <button key={m} type="button" role="radio" aria-checked={themeMode === m}
+                    className={themeMode === m ? 'active' : ''}
+                    title={t(`s_theme_${m}` as never)}
+                    onClick={() => setTheme(m)}>
+                    <Icon size={14} />
+                    <span className="plbl">{t(`s_theme_${m}` as never)}</span>
+                  </button>
+                ))}
+              </div>
               <button type="button" className={`topuser${active === 'settings' ? ' active' : ''}`}
                 onClick={() => navigate('settings')}
                 aria-label={user.display_name || user.user}
