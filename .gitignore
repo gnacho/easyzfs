@@ -1,5 +1,6 @@
 # Binario y artefactos de build
 easyzfs
+easyzfs-*
 easyzfs-local
 bin/
 *.test

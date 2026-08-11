@@ -449,9 +449,50 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
   background:rgba(0,0,0,.45);opacity:0;transition:opacity .15s;
 }
 .avatar-lg:hover .cam,.avatar-lg:focus-visible .cam{opacity:1}
-.profile-head .ph-lbl{display:flex;flex-direction:column;min-width:0;gap:2px}
-.profile-head .ph-lbl b{font-size:16px;line-height:1.2}
-.profile-head .ph-lbl span{font-size:12px;color:var(--text2)}
+
+/* Mi perfil — barra horizontal compacta (patrón Deltos). En escritorio todo
+   en una línea; en móvil envuelve (flex-wrap) y los textos se ocultan. */
+.prow{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;min-width:0}
+.pname{display:flex;flex-direction:column;min-width:0;flex:1;gap:2px}
+.pname .pname-btn{
+  display:flex;align-items:center;gap:7px;padding:2px 4px;border-radius:8px;
+  color:inherit;font:inherit;text-align:left;cursor:pointer;max-width:100%;
+}
+.pname .pname-btn:hover{background:var(--surface2)}
+.pname .pname-btn b{font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pname .pname-btn svg{color:var(--text3);flex-shrink:0}
+.pname .pname-btn:hover svg{color:var(--accent)}
+.pname .pname-role{font-size:12px;color:var(--text2)}
+.pacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
+.pact-btn,.pact-ico,.plogout{
+  display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;
+  border:1px solid var(--border);border-radius:10px;background:var(--surface);
+  color:var(--text2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;
+}
+.pact-btn:hover{background:var(--surface2);color:var(--text)}
+.pact-btn[aria-expanded="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.pact-ico{width:36px;padding:0;justify-content:center;border-radius:50%}
+.pact-ico.has{background:color-mix(in srgb, var(--accent) 12%, transparent);border-color:var(--accent);color:var(--accent)}
+.pact-ico:hover{color:var(--accent);border-color:var(--accent)}
+.plang{
+  height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);
+  color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;
+}
+.plang:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.plogout{
+  margin-left:auto;border-color:color-mix(in srgb, var(--err) 35%, transparent);
+  background:color-mix(in srgb, var(--err) 10%, transparent);color:var(--err);
+}
+.plogout:hover{background:color-mix(in srgb, var(--err) 18%, transparent)}
+.p-edit{display:flex;align-items:center;gap:6px}
+.p-edit input{width:200px;padding:7px 10px;border-radius:8px}
+.p-edit .p-ok,.p-edit .p-x{
+  width:30px;height:30px;border-radius:8px;display:grid;place-items:center;cursor:pointer;flex-shrink:0;
+}
+.p-edit .p-ok{background:var(--accent);color:var(--on-accent)}
+.p-edit .p-ok:hover{filter:brightness(1.1)}
+.p-edit .p-x{border:1px solid var(--border);color:var(--text2);background:var(--surface2)}
+.p-edit .p-x:hover{color:var(--text)}
 .profile-grid{display:grid;gap:14px 18px}
 @media(min-width:720px){.profile-grid{grid-template-columns:1fr 1fr}}
 .profile-grid > .full{grid-column:1/-1}
@@ -575,6 +616,15 @@ a.abouttile:hover,button.abouttile:hover{background:var(--surface2)}
 /* apariencia: tarjetas de tema con mini-preview estilo NetPulse.
    Los previews usan las VARIABLES REALES de cada tema scopeadas con
    [data-theme] en el propio contenedor — cero valores duplicados. */
+/* apariencia: layout horizontal (patrón Deltos) — tiles de tema a la
+   izquierda (~50%), controles a la derecha (flex-1). En móvil apila. */
+.aprow{display:flex;flex-direction:column;gap:18px}
+@media(min-width:700px){.aprow{flex-direction:row;gap:28px}}
+.ap-theme{flex-shrink:0}
+@media(min-width:700px){.ap-theme{width:50%}}
+.ap-controls{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
+.ap-accent-row{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+
 .themegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .themecard{
   position:relative;border:1.5px solid var(--border);border-radius:12px;padding:8px;background:var(--surface);
