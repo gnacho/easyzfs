@@ -272,6 +272,8 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 .thresh-line .tf{display:flex;flex-direction:column;gap:5px;min-width:110px}
 .thresh-line .tf label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.04em;margin:0}
 .thresh-line .tf input{width:110px}
+.thresh-line .tf input.dirty{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.thresh-msg{margin-top:10px;font-size:13px;font-weight:600;color:var(--ok)}
 .thresh-line .m-actions{margin-left:auto;display:flex;align-items:center}
 
 /* ---- AdminBar (asset webapp-shell, una fila) ---- */

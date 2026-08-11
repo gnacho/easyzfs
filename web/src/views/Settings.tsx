@@ -734,10 +734,21 @@ export default function Settings() {
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone());
   const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | null>(null);
+  // Snapshot de los umbrales guardados (para resaltar los campos modificados
+  // y limpiar la marca al guardar) + mensaje de feedback local de la tarjeta.
+  const [threshSaved, setThreshSaved] = useState<{ cap_warn_pct: number; cap_crit_pct: number; disk_temp_c: number } | null>(null);
+  const [threshMsg, setThreshMsg] = useState('');
+  const [threshErr, setThreshErr] = useState('');
 
   useEffect(() => {
     let alive = true;
-    getProvider().getSettings().then((s) => alive && setSettings(s)).catch(() => {});
+    getProvider().getSettings().then((s) => {
+      alive && setSettings(s);
+      // Primera carga: lo que viene del servidor es la base de "guardado".
+      setThreshSaved((cur) => cur ?? {
+        cap_warn_pct: s.cap_warn_pct, cap_crit_pct: s.cap_crit_pct, disk_temp_c: s.disk_temp_c,
+      });
+    }).catch(() => {});
     getProvider().getVersion().then((v) => alive && setVersion(v)).catch(() => {});
     if (isAdmin) getProvider().getUsers().then((u) => alive && setUsers(u)).catch(() => {});
     return () => { alive = false; };
@@ -765,6 +776,18 @@ export default function Settings() {
       await getProvider().putSettings(next);
       setMsg(t('saved_ok'));
     } catch (e) { setErr(errorMessage(e, t)); }
+  };
+
+  // Guardado de la tarjeta Datos y umbrales: feedback local (mensaje dentro de
+  // la tarjeta) y actualiza el snapshot para limpiar la marca de "modificado".
+  const saveThresh = async () => {
+    if (!settings) return;
+    setThreshMsg(''); setThreshErr('');
+    try {
+      await getProvider().putSettings(settings);
+      setThreshSaved({ cap_warn_pct: settings.cap_warn_pct, cap_crit_pct: settings.cap_crit_pct, disk_temp_c: settings.disk_temp_c });
+      setThreshMsg(t('saved_ok'));
+    } catch (e) { setThreshErr(errorMessage(e, t)); }
   };
 
   if (!settings) return <Spinner label={t('loading')} />;
@@ -796,23 +819,28 @@ export default function Settings() {
             <div className="tf">
               <label htmlFor="th-warn">{t('s_cap_warn')}</label>
               <input id="th-warn" type="number" value={settings.cap_warn_pct}
-                onChange={(e) => setSettings({ ...settings, cap_warn_pct: +e.target.value })} />
+                className={threshSaved && settings.cap_warn_pct !== threshSaved.cap_warn_pct ? 'dirty' : ''}
+                onChange={(e) => { setSettings({ ...settings, cap_warn_pct: +e.target.value }); setThreshMsg(''); }} />
             </div>
             <div className="tf">
               <label htmlFor="th-crit">{t('s_cap_crit')}</label>
               <input id="th-crit" type="number" value={settings.cap_crit_pct}
-                onChange={(e) => setSettings({ ...settings, cap_crit_pct: +e.target.value })} />
+                className={threshSaved && settings.cap_crit_pct !== threshSaved.cap_crit_pct ? 'dirty' : ''}
+                onChange={(e) => { setSettings({ ...settings, cap_crit_pct: +e.target.value }); setThreshMsg(''); }} />
             </div>
             <div className="tf">
               <label htmlFor="th-temp">{t('s_temp')}</label>
               <input id="th-temp" type="number" value={settings.disk_temp_c}
-                onChange={(e) => setSettings({ ...settings, disk_temp_c: +e.target.value })} />
+                className={threshSaved && settings.disk_temp_c !== threshSaved.disk_temp_c ? 'dirty' : ''}
+                onChange={(e) => { setSettings({ ...settings, disk_temp_c: +e.target.value }); setThreshMsg(''); }} />
             </div>
             {!threshOk && <p className="form-err" role="alert">{t('s_thresh_invalid')}</p>}
             <div className="m-actions">
-              <button className="btn primary" disabled={!threshOk} onClick={() => saveSettings({})}>{t('save')}</button>
+              <button className="btn primary" disabled={!threshOk} onClick={() => { void saveThresh(); }}>{t('save')}</button>
             </div>
           </div>
+          {threshMsg && <p className="thresh-msg" role="status">{threshMsg}</p>}
+          {threshErr && <p className="form-err" role="alert" style={{ marginTop: 8 }}>{threshErr}</p>}
         </div>
       )}
 
