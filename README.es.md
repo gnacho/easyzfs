@@ -361,6 +361,27 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.3
+
+- **Página de Ajustes reconstruida (patrón Deltos, #44)**: tarjeta de perfil como barra horizontal compacta (avatar, nombre editable, email, idioma, contraseña, notificaciones), Apariencia con los tiles de tema ocupando media tarjeta más controles de acento/animaciones/densidad, barra de administración en una fila (comprobar actualizaciones, respaldos, usuarios, modo demo) y un selector de tema de 3 estados en la barra superior (sistema/claro/oscuro).
+- **Pulido de Ajustes (#49)**: Datos y umbrales ahora muestran confirmación al guardar y resaltan en acento los campos modificados hasta guardar; el widget de comprobar actualizaciones ya no duplica su texto en reposo; el interruptor de demo pasa a «Activar modo demo»; y la tarjeta Acerca de sigue el diseño de Keynest (logo, descripción, tiles de enlaces bajos, versión/licencia/runtime en una línea, botones de acción).
+
+### v2.9.2
+
+- **Layout del shell**: contenido principal limitado a 1400px, bloque de usuario movido a la barra superior (avatar + nombre, solo avatar en móvil), botón de tema junto a la campana, pie del sidebar simplificado.
+
+### v2.9.1
+
+- **Updater: progreso en vivo**: la actualización desde la app ahora muestra el progreso de descarga/instalación/reinicio en tiempo real.
+
+### v2.9.0
+
+- **Updater: comprobaciones de preparación, historial y rollback**: el pipeline de actualización valida la preparación antes de aplicar, guarda un historial de actualizaciones y puede volver al binario anterior si algo falla.
+
+### v2.8.7
+
+- **Updater: comprobación semanal automática y aviso de confirmación**: comprobación semanal automática y un aviso que confirma la versión desplegada.
+
 ### v2.8.6
 
 - **Tests SMART programados más robustos (#35)**: el scheduler ahora maneja fallos transitorios de `smartctl -t` comprobando la salida antes de declarar error (p. ej. exit code 4 = test ya en curso, que es benigno). También se saltan los discos sin soporte SMART en trabajos con target "all" como defensa en profundidad.

@@ -353,6 +353,27 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.3
+
+- **Settings page rebuilt (Deltos pattern, #44)**: profile card as a compact horizontal bar (avatar, editable name, email, language, password, notifications), Appearance with theme tiles filling half the card plus accent/animation/density controls, a single-row admin bar (update check, backups, users, demo toggle), and a 3-state theme pill in the topbar (system/light/dark).
+- **Settings polish (#49)**: Data & thresholds now show save feedback and highlight modified fields in accent until saved; the update-check widget no longer duplicates its label while idle; the demo toggle reads "Activar modo demo"; and the About card follows the Keynest layout (logo, description, low link tiles, one-line version/license/runtime, action buttons).
+
+### v2.9.2
+
+- **Shell layout**: main content constrained to 1400px, user block moved to the topbar (avatar + name, avatar only on mobile), theme button next to the bell, simplified sidebar footer.
+
+### v2.9.1
+
+- **Updater: live progress**: the in-app update now shows download/install/restart progress in real time.
+
+### v2.9.0
+
+- **Updater: readiness checks, update history and rollback**: the update pipeline validates readiness before applying, keeps an update history, and can roll back to the previous binary on failure.
+
+### v2.8.7
+
+- **Updater: weekly auto-check and confirmation toast**: automatic weekly update check and a toast confirming the deployed version.
+
 ### v2.8.6
 
 - **Robust SMART test scheduling (#35)**: the scheduler now handles transient `smartctl -t` failures gracefully by checking the command output before declaring an error (e.g. exit code 4 = test already running, which is benign). Disks without SMART support are also skipped in "all" target jobs as defense in depth.
