@@ -802,8 +802,7 @@ export default function Settings() {
 
   return (
     <div className="view">
-      {/* ---- Fila 1: Datos y umbrales (50%, admin) + Apariencia (50%) ---- */}
-      <div className={`st-row${isAdmin ? '' : ' st-single'}`}>
+      {/* ---- Datos y umbrales (solo admin, ancho completo) ---- */}
       {isAdmin && (
         <div className="card pad admin-card">
           <h3 className="cardtitle">{t('s_data_thresh')}</h3>
@@ -824,7 +823,7 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ---- Apariencia (mitad derecha; la primera con usuario no-admin) ---- */}
+      {/* ---- Apariencia (ancho completo) ---- */}
       <div className="card pad">
         <h3 className="cardtitle">{t('s_appear')}</h3>
         <label>{t('s_theme')}</label>
@@ -870,9 +869,8 @@ export default function Settings() {
             onChange={(v) => { setReduceMotion(v); setReduceMotionState(v); }} />
         </div>
       </div>
-      </div>
 
-      {/* ---- Fila 2: Mi perfil (horizontal, ancho completo: avatar + campos + notificaciones) ---- */}
+      {/* ---- Mi perfil (ancho completo) ---- */}
       <ProfileCard />
 
       {/* ---- Zona de administración (solo admin): AdminBar canónica ---- */}
@@ -972,10 +970,7 @@ export default function Settings() {
         )}
       </div>
 
-      {/* Fila de dominio: Notificaciones webhook | Actividad */}
-      <div className="st-row st-users">
-
-      {/* ---- Notificaciones webhook ---- */}
+      {/* ---- Notificaciones webhook (ancho completo) ---- */}
       <div className="card pad admin-card">
         <h3 className="cardtitle">{t('s_notif')}</h3>
         <label htmlFor="nf-hook">{t('s_webhook')}</label>
@@ -996,9 +991,8 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* ---- Actividad (audit log, "ver más") ---- */}
+      {/* ---- Actividad (audit log, "ver más") — ancho completo ---- */}
       <ActivityCard />
-      </div>
       </>
       )}
 

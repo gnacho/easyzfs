@@ -182,31 +182,19 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 .hidden-sm{display:inline}
 @media (max-width:640px){.hidden-sm{display:none}}
 
-/* Ajustes (layout 3-Ago-2026, spec del usuario): filas de tarjetas.
-   Fila 1: Datos y umbrales 50% + Apariencia 50% (misma altura, grid).
-   Fila 2: Mi sesión + Alertas push (misma altura).
-   Zona admin fila 1: Modo demo | Backup | Notificaciones (.st-admin3).
-   Zona admin fila 2: Usuarios | Actividad (.st-users, misma altura).
-   Acerca de: ancho completo (.st-about); fila aboutrow = PWA + check updates.
-   Dentro de cada tarjeta los campos van a ancho de contenido. */
+/* Ajustes (layout 11-Ago-2026, patrón canónico Deltos): cada tarjeta en su
+   propia fila horizontal a ancho completo, apiladas con flex column.
+   Orden: dominio → Apariencia → Mi perfil → Admin → Acerca de. */
 .cardtitle{font-size:15px;font-weight:700;margin:0 0 10px;letter-spacing:-.01em}
-.st-row{display:grid;gap:16px;margin-top:16px}
-.view > .st-row:first-child{margin-top:0}
-.st-row .card{margin:0}
-.st-row .card > input,
-.st-row .card > select,
-.st-row .card > .sel,
-.st-row .card > .seg{max-width:340px}
-.st-row .card > input[type="number"]{max-width:150px}
+.view{display:flex;flex-direction:column;gap:16px}
+.view .card > input,
+.view .card > select,
+.view .card > .sel,
+.view .card > .seg{max-width:340px}
+.view .card > input[type="number"]{max-width:150px}
 .st-about{margin-top:20px}
-/* Filas de 2 tarjetas a la misma altura: grid con alineación stretch. */
-.st-row > .card{display:flex;flex-direction:column}
 @media(min-width:1100px){
-  .st-row{grid-template-columns:1fr 1fr;gap:20px;margin-top:20px}
-  .st-row.st-single{grid-template-columns:1fr;max-width:720px}
-}
-@media(min-width:1500px){
-  .st-row.st-admin3{grid-template-columns:1fr 1fr 1fr}
+  .view{gap:20px}
 }
 /* Acerca de: tira PWA + comprobar actualizaciones en la misma horizontal */
 .aboutrow{display:grid;gap:12px;margin-top:16px}
