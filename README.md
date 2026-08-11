@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.5
+
+- **About card links (#50)**: the four tiles now link to their destination (GitHub, the project website, Ko-fi and the Cloudless Club) instead of being static boxes.
+
 ### v2.9.4
 
 - **Pull-to-refresh on mobile (#20)**: pull down from the top of any view to reload the app and pick up a newly deployed build without closing and reopening it.

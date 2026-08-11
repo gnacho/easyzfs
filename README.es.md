@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.5
+
+- **Enlaces en "Acerca de" (#50)**: los cuatro tiles enlazan ahora a su destino (GitHub, la web del proyecto, Ko-fi y el Club Cloudless) en vez de ser cajas estáticas.
+
 ### v2.9.4
 
 - **Pull-to-refresh en móvil (#20)**: tira hacia abajo desde el top de cualquier vista para recargar la app y coger un despliegue nuevo sin cerrarla y reabrirla.
