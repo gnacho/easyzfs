@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.4
+
+- **Pull-to-refresh en móvil (#20)**: tira hacia abajo desde el top de cualquier vista para recargar la app y coger un despliegue nuevo sin cerrarla y reabrirla.
+
 ### v2.9.3
 
 - **Página de Ajustes reconstruida (patrón Deltos, #44)**: tarjeta de perfil como barra horizontal compacta (avatar, nombre editable, email, idioma, contraseña, notificaciones), Apariencia con los tiles de tema ocupando media tarjeta más controles de acento/animaciones/densidad, barra de administración en una fila (comprobar actualizaciones, respaldos, usuarios, modo demo) y un selector de tema de 3 estados en la barra superior (sistema/claro/oscuro).

@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.4
+
+- **Pull-to-refresh on mobile (#20)**: pull down from the top of any view to reload the app and pick up a newly deployed build without closing and reopening it.
+
 ### v2.9.3
 
 - **Settings page rebuilt (Deltos pattern, #44)**: profile card as a compact horizontal bar (avatar, editable name, email, language, password, notifications), Appearance with theme tiles filling half the card plus accent/animation/density controls, a single-row admin bar (update check, backups, users, demo toggle), and a 3-state theme pill in the topbar (system/light/dark).
