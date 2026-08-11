@@ -177,6 +177,17 @@ function Shell() {
 
   const active = route;
 
+  // Re-tap del tab activo (o logo): scroll suave arriba. Las rutas distintas
+  // navegan normal (el hashchange de store.tsx ya resetea el scroll).
+  const reduceMotion = () =>
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const scrollTopIfActive = (id: ViewId) => () => {
+    if (id === active && window.scrollY > 0) {
+      window.scrollTo({ top: 0, behavior: reduceMotion() ? 'auto' : 'smooth' });
+    }
+  };
+
   const view = (() => {
     switch (active) {
       case 'dash': return <Dashboard />;
@@ -193,7 +204,7 @@ function Shell() {
     <>
       <div className="app-shell">
         <aside className={`sidebar${collapsed ? ' collapsed' : ''}`}>
-          <a className="brand" href="#/dash" aria-label={t('brand_home')} title={collapsed ? 'EasyZFS' : undefined}>
+          <a className="brand" href="#/dash" aria-label={t('brand_home')} title={collapsed ? 'EasyZFS' : undefined} onClick={scrollTopIfActive('dash')}>
             <Logo size={30} />
             {!collapsed && (
               <div>
@@ -333,7 +344,7 @@ function Shell() {
         {[...NAV, { id: 'settings' as ViewId, icon: IconGear }].map((n) => {
           const Ico = n.icon;
           return (
-            <button key={n.id} className={n.id === active ? 'active' : ''} onClick={() => navigate(n.id)}>
+            <button key={n.id} className={n.id === active ? 'active' : ''} onClick={() => { scrollTopIfActive(n.id)(); navigate(n.id); }}>
               <Ico size={22} />
               <span>{t(n.id as never)}</span>
             </button>
