@@ -1010,15 +1010,15 @@ export default function Settings() {
               <a className="abouttile" href={REPO_URL} target="_blank" rel="noreferrer">
                 <IconCode size={14} /><span>{t('ab_code')}</span>
               </a>
-              <a className="abouttile" href={`${REPO_URL}/releases`} target="_blank" rel="noreferrer">
+              <a className="abouttile" href="https://easyzfs.cloudless.club" target="_blank" rel="noreferrer">
                 <IconList size={14} /><span>{t('ab_chlog')}</span>
               </a>
-              <div className="abouttile">
+              <a className="abouttile" href="https://ko-fi.com/gnacho" target="_blank" rel="noreferrer">
                 <IconHeart size={14} /><span>{t('ab_kofi')}</span>
-              </div>
-              <div className="abouttile">
+              </a>
+              <a className="abouttile" href="https://cloudless.club" target="_blank" rel="noreferrer">
                 <IconShield size={14} /><span>{t('ab_priv')}</span>
-              </div>
+              </a>
             </div>
           </div>
 
