@@ -11,16 +11,13 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, fmtDuration, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconDownload, IconCheck, IconSun, IconMoon, IconMonitor, IconUpload, IconCamera, IconLock, IconBell, IconChev, IconData, IconUser, IconLogout, IconPencil, IconMail, IconX } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconDownload, IconCheck, IconUpload, IconCamera, IconData, IconUser, IconTrash } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { usePush } from '../data/push';
 import { checkReleaseNow, useReleaseCheck } from '../ui/releasecheck';
-import {
-  ACCENTS, getAccent, setAccent, getDensity, setDensity,
-  getReduceMotion, setReduceMotion,
-} from '../ui/theme';
-import type { AccentId, Density, ThemeMode } from '../ui/theme';
+import { AppearanceCard, ProfileCard as ProfileCardCanon } from '../components/settings-cards';
+import { AdminBar } from '../components/admin-bar';
 import type { I18nKey } from '../ui/i18n';
 import type {
   ActivityItem, BackupStatus, Lang, PushAlertTipo, PushPreference,
@@ -40,30 +37,6 @@ function isIOS(): boolean {
 function isStandalone(): boolean {
   return window.matchMedia('(display-mode: standalone)').matches
     || (navigator as { standalone?: boolean }).standalone === true;
-}
-
-// Mini-preview de un tema estilo NetPulse: mini-UI (barra superior, sidebar,
-// barra de acento, bloque) pintada con las VARIABLES CSS REALES scopeando
-// data-theme en el propio contenedor — cero valores duplicados.
-function ThemePreview({ mode }: { mode: ThemeMode }) {
-  const half = (
-    <div className="tpv-half">
-      <div className="tpv-top" />
-      <div className="tpv-row">
-        <div className="tpv-side" />
-        <div className="tpv-main">
-          <div className="tpv-accent" />
-          <div className="tpv-block" />
-        </div>
-      </div>
-    </div>
-  );
-  return (
-    <div className="tpv" aria-hidden="true">
-      {mode !== 'dark' && <div className="tpv-scope" data-theme="light">{half}</div>}
-      {mode !== 'light' && <div className="tpv-scope" data-theme="dark">{half}</div>}
-    </div>
-  );
 }
 
 // Etiqueta traducida de cada tipo de alerta (exhaustivo sobre PushAlertTipo).
@@ -569,59 +542,16 @@ function PushPanel() {
   );
 }
 
-// Tarjeta "Mi perfil" HORIZONTAL compacta (canon ajustes.md 10-Ago-2026,
-// patrón Deltos): sin título, una barra con avatar (subir foto con recorte
-// 1:1) + nombre editable inline + rol; a la derecha email (botón), idioma,
-// contraseña y notificaciones (despliegan inline); cerrar sesión rojo al
-// final. En móvil los textos de los botones se ocultan (solo icono).
-function ProfileCard() {
-  const { t, user, langMode, setLang, logout, reloadUser, isAdmin } = useApp();
+// Formulario inline de cambio de contraseña (se despliega en Mi perfil,
+// asset canónico). Al guardar, cierra las otras sesiones del usuario.
+function ProfilePasswordForm() {
+  const { t } = useApp();
+  const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [showPass, setShowPass] = useState(false);
   const [cur, setCur] = useState('');
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
-  const [cropFile, setCropFile] = useState<File | null>(null);
-  const [showNotifs, setShowNotifs] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  // Edición inline de nombre y email (patrón Deltos)
-  const [editingName, setEditingName] = useState(false);
-  const [nameDraft, setNameDraft] = useState(user?.display_name ?? '');
-  const [editingEmail, setEditingEmail] = useState(false);
-  const [emailDraft, setEmailDraft] = useState(user?.email ?? '');
-
-  const displayName = user?.display_name || user?.user || '';
-  const avatarUrl = user?.avatar ? getProvider().avatarUrl(user.avatar) : '';
-  const initial = (user?.display_name || user?.user || '?').trim().charAt(0).toUpperCase();
-
-  const saveName = async () => {
-    const v = nameDraft.trim();
-    if (v === (user?.display_name || '')) { setEditingName(false); return; }
-    setBusy(true); setMsg(''); setErr('');
-    try {
-      await getProvider().updateMyProfile(v, (user?.email ?? '').trim());
-      reloadUser(); // actualiza sidebar/saludo con el nombre nuevo
-      setMsg(t('saved_ok'));
-      setEditingName(false);
-    } catch (e) { setErr(errorMessage(e, t)); }
-    setBusy(false);
-  };
-
-  const saveEmail = async () => {
-    const v = emailDraft.trim();
-    if (v === (user?.email || '')) { setEditingEmail(false); return; }
-    setBusy(true); setMsg(''); setErr('');
-    try {
-      await getProvider().updateMyProfile(user?.display_name ?? '', v);
-      reloadUser();
-      setMsg(t('saved_ok'));
-      setEditingEmail(false);
-    } catch (e) { setErr(errorMessage(e, t)); }
-    setBusy(false);
-  };
 
   const changePass = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -629,174 +559,67 @@ function ProfileCard() {
     setBusy(true); setMsg(''); setErr('');
     try {
       await getProvider().setMyPassword(cur, p1);
-      setShowPass(false); setCur(''); setP1(''); setP2('');
+      setCur(''); setP1(''); setP2('');
       setMsg(t('saved_ok'));
     } catch (ex) { setErr(errorMessage(ex, t)); }
     setBusy(false);
   };
 
-  const uploadAvatar = async (blob: Blob) => {
-    setMsg(''); setErr('');
-    try {
-      await getProvider().setMyAvatar(blob);
-      reloadUser(); // el sidebar y la tarjeta muestran la foto nueva
-      setMsg(t('saved_ok'));
-    } catch (e) { setErr(errorMessage(e, t)); throw e; }
-  };
-
-  const removeAvatar = async () => {
-    setMsg(''); setErr('');
-    try {
-      await getProvider().deleteMyAvatar();
-      reloadUser();
-      setMsg(t('s_avatar_removed'));
-    } catch (e) { setErr(errorMessage(e, t)); }
-  };
-
-  const langSelect = (
-    <select className="plang" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
-      aria-label={t('s_lang')} title={t('s_lang')}>
-      <option value="auto">🌐 {t('s_lang_auto')}</option>
-      <option value="es">🇪🇸 Español</option>
-      <option value="en">🇬🇧 English</option>
-    </select>
-  );
-
   return (
-    <div className="card pad">
-      {/* Barra horizontal compacta (sin título, patrón Deltos) */}
-      <div className="prow">
-        <button type="button" className="avatar-lg" onClick={() => fileRef.current?.click()}
-          aria-label={t('s_avatar_change')} title={t('s_avatar_change')}>
-          {avatarUrl ? <img src={avatarUrl} alt="" /> : <span aria-hidden="true">{initial}</span>}
-          <span className="cam" aria-hidden="true"><IconCamera size={18} /></span>
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" hidden
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropFile(f); e.target.value = ''; }} />
-
-        {/* Nombre editable + rol */}
-        <div className="pname">
-          {editingName ? (
-            <div className="p-edit">
-              <input type="text" value={nameDraft} maxLength={64} autoFocus
-                autoComplete="nickname" placeholder={user?.user}
-                onChange={(e) => setNameDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') void saveName(); if (e.key === 'Escape') { setEditingName(false); setNameDraft(displayName); } }} />
-              <button type="button" className="p-ok" disabled={busy} onClick={() => void saveName()}
-                aria-label={t('save')} title={t('save')}><IconCheck size={14} /></button>
-              <button type="button" className="p-x" onClick={() => { setEditingName(false); setNameDraft(displayName); }}
-                aria-label={t('cancel')} title={t('cancel')}><IconX size={14} /></button>
-            </div>
-          ) : (
-            <button type="button" className="pname-btn"
-              onClick={() => { setNameDraft(displayName); setEditingName(true); }}
-              title={t('s_displayname')}>
-              <b>{displayName}</b>
-              <IconPencil size={13} aria-hidden="true" />
-            </button>
-          )}
-          <span className="pname-role">
-            {isAdmin ? t('mu_r_admin') : t('mu_r_user')} · @{user?.user}
-          </span>
-        </div>
-
-        {/* Grupo de acciones: email + idioma + contraseña + notificaciones */}
-        <div className="pacts">
-          {editingEmail ? (
-            <div className="p-edit">
-              <input type="email" value={emailDraft} autoFocus
-                autoComplete="email" placeholder={t('s_email')}
-                onChange={(e) => setEmailDraft(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') void saveEmail(); if (e.key === 'Escape') { setEditingEmail(false); setEmailDraft(user?.email ?? ''); } }} />
-              <button type="button" className="p-ok" disabled={busy} onClick={() => void saveEmail()}
-                aria-label={t('save')} title={t('save')}><IconCheck size={14} /></button>
-              <button type="button" className="p-x" onClick={() => { setEditingEmail(false); setEmailDraft(user?.email ?? ''); }}
-                aria-label={t('cancel')} title={t('cancel')}><IconX size={14} /></button>
-            </div>
-          ) : (
-            <button type="button" className={`pact-ico${user?.email ? ' has' : ''}`}
-              onClick={() => { setEmailDraft(user?.email ?? ''); setEditingEmail(true); }}
-              title={user?.email ? user.email : t('s_email_d')}
-              aria-label={user?.email ? t('s_email') : t('s_email_d')}>
-              <IconMail size={16} />
-            </button>
-          )}
-
-          {langSelect}
-
-          <button type="button" className="pact-btn" aria-expanded={showPass}
-            onClick={() => setShowPass((v) => !v)} title={t('s_mypass')}>
-            <IconLock size={16} aria-hidden="true" />
-            <span className="hidden-sm">{t('s_mypass')}</span>
-          </button>
-
-          <button type="button" className="pact-btn" aria-expanded={showNotifs}
-            onClick={() => setShowNotifs((v) => !v)} title={t('s_notifs')}>
-            <IconBell size={16} aria-hidden="true" />
-            <span className="hidden-sm">{t('s_notifs')}</span>
-          </button>
-        </div>
-
-        {/* Cerrar sesión — siempre a la derecha, rojo */}
-        <button type="button" className="plogout" onClick={logout} title={t('logout')}>
-          <IconLogout size={16} aria-hidden="true" />
-          <span className="hidden-sm">{t('logout')}</span>
-        </button>
+    <form onSubmit={(e) => { void changePass(e); }}>
+      <label htmlFor="pf-cur">{t('s_mypass_cur')}</label>
+      <input id="pf-cur" type="password" autoComplete="current-password" value={cur}
+        onChange={(e) => setCur(e.target.value)} required />
+      <label htmlFor="pf-p1">{t('mp_new')}</label>
+      <input id="pf-p1" type="password" autoComplete="new-password" value={p1}
+        onChange={(e) => setP1(e.target.value)} minLength={8} required />
+      <label htmlFor="pf-p2">{t('s_mypass2')}</label>
+      <input id="pf-p2" type="password" autoComplete="new-password" value={p2}
+        onChange={(e) => setP2(e.target.value)} minLength={8} required />
+      <div className="m-actions">
+        <button type="submit" className="btn primary"
+          disabled={busy || !cur || p1.length < 8 || p1 !== p2}>{t('update')}</button>
       </div>
-
-      {/* Cambio de contraseña INLINE (estilo NetPulse/Deltos) */}
-      {showPass && (
-        <form onSubmit={(e) => { void changePass(e); }}
-          style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-          <label htmlFor="pf-cur">{t('s_mypass_cur')}</label>
-          <input id="pf-cur" type="password" autoComplete="current-password" value={cur}
-            onChange={(e) => setCur(e.target.value)} required />
-          <label htmlFor="pf-p1">{t('mp_new')}</label>
-          <input id="pf-p1" type="password" autoComplete="new-password" value={p1}
-            onChange={(e) => setP1(e.target.value)} minLength={8} required />
-          <label htmlFor="pf-p2">{t('s_mypass2')}</label>
-          <input id="pf-p2" type="password" autoComplete="new-password" value={p2}
-            onChange={(e) => setP2(e.target.value)} minLength={8} required />
-          <div className="m-actions">
-            <button type="submit" className="btn primary"
-              disabled={busy || !cur || p1.length < 8 || p1 !== p2}>{t('update')}</button>
-          </div>
-        </form>
-      )}
-
-      {/* Notificaciones push INLINE (desplegable, patrón Deltos) */}
-      {showNotifs && (
-        <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-          <PushPanel />
-        </div>
-      )}
-
       {msg && <p style={{ fontSize: 13, color: 'var(--ok)', fontWeight: 600, marginTop: 10 }} role="status">{msg}</p>}
       {err && <p className="form-err" role="alert" style={{ marginTop: 10 }}>{err}</p>}
-
-      {/* Diálogo de recorte cuadrado para la foto de perfil */}
-      {cropFile && (
-        <AvatarCropDialog file={cropFile} onClose={() => setCropFile(null)}
-          onCrop={(blob) => uploadAvatar(blob)} />
-      )}
-    </div>
+    </form>
   );
 }
 
+// Panel de notificaciones push (se despliega en Mi perfil, asset canónico).
+function ProfileNotifications() {
+  return <PushPanel />;
+}
+
 export default function Settings() {
-  const { t, themeMode, themeEff, setTheme, isAdmin, user, refresh } = useApp();
+  const { t, isAdmin, user, refresh, reloadUser, logout, setLang } = useApp();
   const { openModal } = useModal();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [users, setUsers] = useState<Awaited<ReturnType<ReturnType<typeof getProvider>['getUsers']>> | null>(null);
   const [version, setVersion] = useState<Awaited<ReturnType<ReturnType<typeof getProvider>['getVersion']>> | null>(null);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
-  const [accent, setAccentState] = useState<AccentId>(getAccent());
-  const [density, setDensityState] = useState<Density>(getDensity());
-  const [reduceMotion, setReduceMotionState] = useState(getReduceMotion());
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone());
-  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const avatarFileRef = useRef<HTMLInputElement>(null);
+  const initial = (user?.display_name || user?.user || '?').trim().charAt(0).toUpperCase();
+
+  const uploadAvatar = async (blob: Blob) => {
+    try {
+      await getProvider().setMyAvatar(blob);
+      reloadUser();
+      setMsg(t('saved_ok'));
+    } catch (e) { setErr(errorMessage(e, t)); throw e; }
+  };
+
+  const removeAvatar = async () => {
+    try {
+      await getProvider().deleteMyAvatar();
+      reloadUser();
+      setMsg(t('s_avatar_removed'));
+    } catch (e) { setErr(errorMessage(e, t)); }
+  };
 
   useEffect(() => {
     let alive = true;
@@ -843,12 +666,6 @@ export default function Settings() {
     && settings.disk_temp_c >= 20 && settings.disk_temp_c <= 90;
   const threshOk = capOk && tempOk;
 
-  const themeOpts: { v: ThemeMode; label: string; icon: typeof IconSun }[] = [
-    { v: 'light', label: t('s_theme_light'), icon: IconSun },
-    { v: 'dark', label: t('s_theme_dark'), icon: IconMoon },
-    { v: 'auto', label: t('s_theme_auto'), icon: IconMonitor },
-  ];
-
   return (
     <div className="view">
       {/* ---- Datos y umbrales (solo admin, ancho completo) ---- */}
@@ -872,167 +689,125 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ---- Apariencia (ancho completo; layout horizontal: tema izq + controles der) ---- */}
-      <div className="card pad">
-        <h3 className="cardtitle">{t('s_appear')}</h3>
-        <div className="aprow">
-          {/* Tiles de tema (izquierda, ~50%) */}
-          <div className="ap-theme" role="radiogroup" aria-label={t('s_theme')}>
-            {themeOpts.map((o) => {
-              const Ico = o.icon;
-              return (
-                <button key={o.v} type="button" role="radio" aria-checked={themeMode === o.v}
-                  className={`themecard${themeMode === o.v ? ' sel' : ''}`}
-                  onClick={() => setTheme(o.v)}>
-                  <ThemePreview mode={o.v} />
-                  <span className="lbl"><Ico size={13} />{o.label}</span>
-                  {themeMode === o.v && <span className="check"><IconCheck /></span>}
-                </button>
-              );
-            })}
-          </div>
+      {/* ---- Apariencia (asset canónico webapp-shell) ---- */}
+      <AppearanceCard />
 
-          {/* Controles (derecha, flex-1) */}
-          <div className="ap-controls">
-            {/* Acento y animaciones en línea */}
-            <div>
-              <label>{t('s_accent')}</label>
-              <div className="ap-accent-row">
-                <div className="swatches" role="group" aria-label={t('s_accent')}>
-                  {(Object.keys(ACCENTS) as AccentId[]).map((id) => (
-                    <button key={id} type="button" title={t(`acc_${id}`)} aria-label={t(`acc_${id}`)}
-                      className={`swatch${accent === id ? ' sel' : ''}`}
-                      aria-pressed={accent === id}
-                      onClick={() => { setAccent(id); setAccentState(id); }}>
-                      {/* el círculo pinta el color del tema EFECTIVO (el que se aplicará) */}
-                      <span style={{ background: ACCENTS[id][themeEff][0] }} />
-                    </button>
-                  ))}
-                </div>
-                <div className="ap-anim" style={{ display: 'flex', alignItems: 'center', gap: 9, marginLeft: 'auto' }}>
-                  <span>
-                    <span style={{ display: 'block', fontSize: 13.5, fontWeight: 600 }}>{t('s_rm')}</span>
-                    <span className="muted">{t('s_rm_d')}</span>
-                  </span>
-                  <Switch checked={reduceMotion} ariaLabel={t('s_rm')}
-                    onChange={(v) => { setReduceMotion(v); setReduceMotionState(v); }} />
-                </div>
-              </div>
-            </div>
+      {/* ---- Mi perfil (asset canónico webapp-shell) ---- */}
+      {user && (
+      <ProfileCardCanon
+        user={{ username: user.user, display_name: user.display_name, email: user.email, language: user.language, role: user.role }}
+        avatar={
+          <button type="button" className="avatar-lg" onClick={() => avatarFileRef.current?.click()}
+            aria-label={t('s_avatar_change')} title={t('s_avatar_change')}>
+            {user?.avatar ? <img src={getProvider().avatarUrl(user.avatar)} alt="" /> : <span aria-hidden="true">{initial}</span>}
+            <span className="cam" aria-hidden="true"><IconCamera size={18} /></span>
+            {user?.avatar && (
+              <span className="cam-del" onClick={(e) => { e.stopPropagation(); void removeAvatar(); }}
+                aria-label={t('s_avatar_remove')} title={t('s_avatar_remove')}><IconTrash size={16} /></span>
+            )}
+          </button>
+        }
+        roleLabel={user ? (isAdmin ? t('mu_r_admin') : t('mu_r_user')) : undefined}
+        onUpdateProfile={async (changes) => {
+          if (changes.language !== undefined) {
+            await getProvider().setMyLanguage(changes.language as Lang);
+          } else {
+            await getProvider().updateMyProfile(
+              changes.display_name !== undefined ? (changes.display_name ?? '') : (user?.display_name ?? ''),
+              changes.email !== undefined ? (changes.email ?? '') : (user?.email ?? ''),
+            );
+          }
+          reloadUser();
+          return { username: user?.user ?? '', display_name: user?.display_name, email: user?.email, language: user?.language, role: user?.role };
+        }}
+        onLogout={logout}
+        onLanguageChange={(lang) => setLang(lang as Lang)}
+        passwordForm={<ProfilePasswordForm />}
+        notifications={<ProfileNotifications />}
+      />
+      )}
 
-            {/* Densidad */}
-            <div>
-              <label>{t('s_density')}</label>
-              <Seg value={density} ariaLabel={t('s_density')}
-                onChange={(d) => { setDensity(d); setDensityState(d); }}
-                options={[
-                  { v: 'cozy', label: t('s_density_cozy') },
-                  { v: 'compact', label: t('s_density_compact') },
-                ]} />
-            </div>
-          </div>
-        </div>
-      </div>
+      {/* Input oculto del avatar + diálogo de recorte (gestionados por el Settings) */}
+      <input ref={avatarFileRef} type="file" accept="image/*" hidden
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) setCropFile(f); e.target.value = ''; }} />
+      {cropFile && (
+        <AvatarCropDialog file={cropFile} onClose={() => setCropFile(null)}
+          onCrop={(blob) => uploadAvatar(blob)} />
+      )}
 
-      {/* ---- Mi perfil (ancho completo) ---- */}
-      <ProfileCard />
 
       {/* ---- Zona de administración (solo admin): AdminBar canónica ---- */}
       {isAdmin && (
       <>
-      {/* AdminBar horizontal: Actualizaciones → Respaldos → Usuarios → Modo demo (derecha) */}
-      <div className="admin-bar">
-        <div className="ab-row">
-          <div className="ab-title">
-            <IconShield size={18} />
-            <span>{t('s_admin_zone')}</span>
-            <ReleaseIcon version={version?.version} />
-          </div>
-          <span className="ab-sep" />
-
-          {/* 1. Comprobar actualizaciones (widget inline) */}
-          <UpdateCheckRow version={version?.version} />
-
-          {/* 2. Respaldos (desplegable) */}
-          <button
-            type="button"
-            aria-expanded={adminPanel === 'backup'}
-            onClick={() => setAdminPanel(adminPanel === 'backup' ? null : 'backup')}
-            className={`ab-btn${adminPanel === 'backup' ? ' on' : ''}`}
-          >
-            <IconData size={15} />
-            <span className="hidden-sm">{t('bk_title')}</span>
-            <IconChev className="chev" />
-          </button>
-
-          {/* 3. Usuarios (desplegable) */}
-          <button
-            type="button"
-            aria-expanded={adminPanel === 'users'}
-            onClick={() => setAdminPanel(adminPanel === 'users' ? null : 'users')}
-            className={`ab-btn${adminPanel === 'users' ? ' on' : ''}`}
-          >
-            <IconUser size={15} />
-            <span className="hidden-sm">{t('s_users')}</span>
-            <IconChev className="chev" />
-          </button>
-
-          {/* 4. Modo demo a la derecha */}
-          <div className="ab-right">
-            <span>{t('s_demo_enable')}</span>
-            <Switch checked={settings.demo_enabled} ariaLabel={t('s_demo_enable')}
-              onChange={(v) => { void saveSettings({ demo_enabled: v }); }} />
-          </div>
-        </div>
-
-        {/* Paneles desplegables */}
-        {adminPanel === 'backup' && (
-          <div className="ab-panel">
-            <BackupCard settings={settings} onSave={saveSettings} />
-          </div>
-        )}
-        {adminPanel === 'users' && (
-          <div className="ab-panel">
-            <div className="card pad admin-card">
-              <h3 className="cardtitle">{t('s_users')}
-                <span className="actions" style={{ float: 'right' }}>
-                  <button className="btn sm primary" onClick={() => openModal('newuser')}>+ {t('s_newuser')}</button>
-                </span>
-              </h3>
+      {/* AdminBar horizontal (asset canónico): Actualizaciones → Respaldos →
+          Usuarios → Modo demo (derecha) */}
+      <AdminBar
+        title={t('s_admin_zone')}
+        sections={[
+          { id: 'release', content: <ReleaseIcon version={version?.version} /> },
+          { id: 'update', content: <UpdateCheckRow version={version?.version} /> },
+          {
+            id: 'backup',
+            label: t('bk_title'),
+            icon: <IconData size={16} />,
+            panel: <BackupCard settings={settings} onSave={saveSettings} />,
+          },
+          {
+            id: 'users',
+            label: t('s_users'),
+            icon: <IconUser size={16} />,
+            panel: (
               <div>
-                {(users ?? []).map((u) => (
-                  <div className="rowitem" key={u.user}>
-                    <div className="grow">
-                      <div className="t1" style={{ fontSize: 14 }}>
-                        {u.display_name || u.user}
-                        {u.user === user?.user && <span style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>{t('you')}</span>}
-                        <span className={`rolebadge ${u.role}`}>{u.role === 'admin' ? t('mu_r_admin') : t('mu_r_user')}</span>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="cardtitle" style={{ margin: 0 }}>{t('s_users')}</h3>
+                  <button className="btn sm primary" onClick={() => openModal('newuser')}>+ {t('s_newuser')}</button>
+                </div>
+                <div>
+                  {(users ?? []).map((u) => (
+                    <div className="rowitem" key={u.user}>
+                      <div className="grow">
+                        <div className="t1" style={{ fontSize: 14 }}>
+                          {u.display_name || u.user}
+                          {u.user === user?.user && <span style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 500 }}>{t('you')}</span>}
+                          <span className={`rolebadge ${u.role}`}>{u.role === 'admin' ? t('mu_r_admin') : t('mu_r_user')}</span>
+                        </div>
+                        <div className="t2">
+                          {u.user} · {t('s_last_login')}: {timeAgo(u.last_login, t)} · {u.sessions}{' '}
+                          {u.sessions === 1 ? t('s_session_one') : t('s_sessions')}
+                        </div>
                       </div>
-                      <div className="t2">
-                        {u.user} · {t('s_last_login')}: {timeAgo(u.last_login, t)} · {u.sessions}{' '}
-                        {u.sessions === 1 ? t('s_session_one') : t('s_sessions')}
-                      </div>
+                      <Select value={u.language ?? 'auto'} ariaLabel={t('s_lang')}
+                        options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: '🇪🇸 Español' }, { v: 'en', label: '🇬🇧 English' }]}
+                        onChange={(v) => {
+                          const lang = v as 'auto' | 'es' | 'en';
+                          setUsers((cur) => cur?.map((x) => (x.user === u.user ? { ...x, language: lang } : x)) ?? cur);
+                          getProvider().setUserLanguage(u.user, lang).catch(() => {});
+                        }} />
+                      <button className="btn sm" onClick={() => openModal('passwd', { user: u.user })}>{t('s_passwd')}</button>
+                      {u.user !== user?.user && (
+                        <button className="btn sm danger" onClick={() => openModal('deluser', { user: u.user })}>{t('s_delete_user')}</button>
+                      )}
                     </div>
-                    <Select value={u.language ?? 'auto'} ariaLabel={t('s_lang')}
-                      options={[{ v: 'auto', label: t('s_lang_auto') }, { v: 'es', label: '🇪🇸 Español' }, { v: 'en', label: '🇬🇧 English' }]}
-                      onChange={(v) => {
-                        const lang = v as 'auto' | 'es' | 'en';
-                        setUsers((cur) => cur?.map((x) => (x.user === u.user ? { ...x, language: lang } : x)) ?? cur);
-                        getProvider().setUserLanguage(u.user, lang).catch(() => {});
-                      }} />
-                    <button className="btn sm" onClick={() => openModal('passwd', { user: u.user })}>{t('s_passwd')}</button>
-                    {u.user !== user?.user && (
-                      <button className="btn sm danger" onClick={() => openModal('deluser', { user: u.user })}>{t('s_delete_user')}</button>
-                    )}
-                  </div>
-                ))}
-                {users && users.length === 0 && <div className="empty">{t('empty')}</div>}
+                  ))}
+                  {users && users.length === 0 && <div className="empty">{t('empty')}</div>}
+                </div>
+                <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>{t('s_roles_d')}</p>
               </div>
-              <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>{t('s_roles_d')}</p>
-            </div>
-          </div>
-        )}
-      </div>
+            ),
+          },
+          {
+            id: 'demo',
+            align: 'right',
+            content: (
+              <div className="flex items-center gap-2 h-9">
+                <span className="text-[13px] font-medium text-text-secondary">{t('s_demo_enable')}</span>
+                <Switch checked={settings.demo_enabled} ariaLabel={t('s_demo_enable')}
+                  onChange={(v) => { void saveSettings({ demo_enabled: v }); }} />
+              </div>
+            ),
+          },
+        ]}
+      />
 
       {/* ---- Notificaciones webhook (ancho completo) ---- */}
       <div className="card pad admin-card">

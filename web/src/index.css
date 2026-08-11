@@ -2,12 +2,41 @@
    validado (variables CSS por tema). Todo el styling es CSS a mano. */
 @import "tailwindcss";
 
+/* Tokens Tailwind para los assets de la skill webapp-shell (settings-cards,
+   admin-bar): mapean las utilidades (bg-surface, text-accent, border-border…)
+   a las variables CSS reales de EasyZFS. No rompe el resto (utilidades nuevas). */
+@theme {
+  --color-canvas: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface2);
+  --color-elevated: var(--surface2);
+  --color-hover: var(--surface2);
+  --color-border: var(--border);
+  --color-text-primary: var(--text);
+  --color-text-secondary: var(--text2);
+  --color-text-muted: var(--text3, #8a8f8a);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-brand: var(--accent);
+  --color-brandfg: var(--on-accent);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--err);
+  --color-info: var(--info);
+  --font-display: var(--font-sans);
+  --shadow-soft: var(--shadow);
+  --text-h2: 1.125rem;
+  --text-body: 0.875rem;
+  --text-label: 0.75rem;
+  --text-caption: 0.6875rem;
+}
+
 :root{
   color-scheme:light;
   --font-sans:'Space Grotesk',system-ui,-apple-system,'Segoe UI',sans-serif;
   --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   --bg:#f6f6f3; --surface:#ffffff; --surface2:#efefea; --border:#e3e3dc;
-  --text:#1c1e1c; --text2:#6b6f6a; --accent:#2f7d5f; --accent-soft:#e3f0e9;
+  --text:#1c1e1c; --text2:#6b6f6a; --text3:#8a8f8a; --accent:#2f7d5f; --accent-soft:#e3f0e9;
   --ok:#2f7d5f; --warn:#b07d2b; --warn-soft:#f6ecd9; --err:#b3452e; --err-soft:#f7e3de;
   --info:#4a6d8c; --info-soft:#e5edf3;
   --on-accent:#fff;
@@ -16,7 +45,7 @@
 [data-theme="dark"]{
   color-scheme:dark;
   --bg:#0e1210; --surface:#161b18; --surface2:#1e2521; --border:#2a332d;
-  --text:#e8ebe7; --text2:#9aa39b; --accent:#5cb893; --accent-soft:#1d2f27;
+  --text:#e8ebe7; --text2:#9aa39b; --text3:#707a72; --accent:#5cb893; --accent-soft:#1d2f27;
   --ok:#5cb893; --warn:#d9a84e; --warn-soft:#33291a; --err:#e0705a; --err-soft:#38211c;
   --info:#7fa3c2; --info-soft:#1d2831;
   --on-accent:#0c1512;
@@ -27,7 +56,7 @@
 [data-theme="light"]{
   color-scheme:light;
   --bg:#f6f6f3; --surface:#ffffff; --surface2:#efefea; --border:#e3e3dc;
-  --text:#1c1e1c; --text2:#6b6f6a; --accent:#2f7d5f; --accent-soft:#e3f0e9;
+  --text:#1c1e1c; --text2:#6b6f6a; --text3:#8a8f8a; --accent:#2f7d5f; --accent-soft:#e3f0e9;
   --ok:#2f7d5f; --warn:#b07d2b; --warn-soft:#f6ecd9; --err:#b3452e; --err-soft:#f7e3de;
   --info:#4a6d8c; --info-soft:#e5edf3;
   --on-accent:#fff;
@@ -157,28 +186,6 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
   border-radius:calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
 }
 
-/* AdminBar horizontal canónica (skill webapp-shell): borde izquierdo de
-   acento, fondo tintado sutil, secciones en fila y paneles desplegables. */
-.admin-bar{
-  margin-top:16px;padding:16px;border:1px solid var(--border);
-  border-left:4px solid var(--accent);border-radius:var(--radius);
-  background:var(--accent-soft);
-}
-.admin-bar > .ab-row{display:flex;flex-wrap:wrap;align-items:flex-start;gap:14px}
-.admin-bar .ab-title{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:800;letter-spacing:-.01em}
-.admin-bar .ab-title svg{color:var(--accent)}
-.admin-bar .ab-sep{width:1px;height:24px;background:var(--border)}
-.admin-bar .ab-btn{
-  display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;
-  border:1px solid var(--border);border-radius:10px;background:var(--surface);
-  font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;transition:.15s;
-}
-.admin-bar .ab-btn:hover{background:var(--hover);color:var(--text1)}
-.admin-bar .ab-btn.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
-.admin-bar .ab-btn .chev{transition:transform .15s}
-.admin-bar .ab-btn.on .chev{transform:rotate(180deg)}
-.admin-bar .ab-right{margin-left:auto;display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:600}
-.admin-bar .ab-panel{margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
 .hidden-sm{display:inline}
 @media (max-width:640px){.hidden-sm{display:none}}
 
@@ -450,59 +457,13 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
 }
 .avatar-lg:hover .cam,.avatar-lg:focus-visible .cam{opacity:1}
 
-/* Mi perfil — barra horizontal compacta (patrón Deltos). En escritorio todo
-   en una línea; en móvil envuelve (flex-wrap) y los textos se ocultan. */
-.prow{display:flex;flex-wrap:wrap;align-items:center;gap:12px 16px;min-width:0}
-.pname{display:flex;flex-direction:column;min-width:0;flex:1;gap:2px}
-.pname .pname-btn{
-  display:flex;align-items:center;gap:7px;padding:2px 4px;border-radius:8px;
-  color:inherit;font:inherit;text-align:left;cursor:pointer;max-width:100%;
+/* Mi perfil (asset canónico): avatar con overlay de cámara y botón de quitar
+   foto (esquina inferior derecha). El resto del perfil lo pinta Tailwind. */
+.cam-del{
+  position:absolute;right:0;bottom:0;width:24px;height:24px;border-radius:50%;
+  display:grid;place-items:center;background:var(--err);color:#fff;
 }
-.pname .pname-btn:hover{background:var(--surface2)}
-.pname .pname-btn b{font-size:16px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pname .pname-btn svg{color:var(--text3);flex-shrink:0}
-.pname .pname-btn:hover svg{color:var(--accent)}
-.pname .pname-role{font-size:12px;color:var(--text2)}
-.pacts{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}
-.pact-btn,.pact-ico,.plogout{
-  display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 12px;
-  border:1px solid var(--border);border-radius:10px;background:var(--surface);
-  color:var(--text2);font:inherit;font-size:13px;font-weight:600;cursor:pointer;transition:.15s;
-}
-.pact-btn:hover{background:var(--surface2);color:var(--text)}
-.pact-btn[aria-expanded="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
-.pact-ico{width:36px;padding:0;justify-content:center;border-radius:50%}
-.pact-ico.has{background:color-mix(in srgb, var(--accent) 12%, transparent);border-color:var(--accent);color:var(--accent)}
-.pact-ico:hover{color:var(--accent);border-color:var(--accent)}
-.plang{
-  height:36px;border-radius:10px;border:1px solid var(--border);background:var(--surface2);
-  color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;
-}
-.plang:focus{outline:2px solid var(--accent);outline-offset:-1px}
-.plogout{
-  margin-left:auto;border-color:color-mix(in srgb, var(--err) 35%, transparent);
-  background:color-mix(in srgb, var(--err) 10%, transparent);color:var(--err);
-}
-.plogout:hover{background:color-mix(in srgb, var(--err) 18%, transparent)}
-.p-edit{display:flex;align-items:center;gap:6px}
-.p-edit input{width:200px;padding:7px 10px;border-radius:8px}
-.p-edit .p-ok,.p-edit .p-x{
-  width:30px;height:30px;border-radius:8px;display:grid;place-items:center;cursor:pointer;flex-shrink:0;
-}
-.p-edit .p-ok{background:var(--accent);color:var(--on-accent)}
-.p-edit .p-ok:hover{filter:brightness(1.1)}
-.p-edit .p-x{border:1px solid var(--border);color:var(--text2);background:var(--surface2)}
-.p-edit .p-x:hover{color:var(--text)}
-.profile-grid{display:grid;gap:14px 18px}
-@media(min-width:720px){.profile-grid{grid-template-columns:1fr 1fr}}
-.profile-grid > .full{grid-column:1/-1}
-.notif-row{
-  display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;
-  border:1px solid var(--border);border-radius:10px;background:var(--surface2);
-  color:inherit;font:inherit;cursor:pointer;text-align:left;
-}
-.notif-row:hover{border-color:var(--accent)}
-.notif-row .nr-lbl{flex:1;font-size:13.5px;font-weight:600}
+.cam-del:hover{filter:brightness(1.1)}
 .seg{display:flex;background:var(--surface2);border-radius:10px;padding:3px;gap:3px}
 .seg button{flex:1;padding:8px 6px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text2)}
 .seg button.on{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(10,14,10,.10)}
@@ -612,48 +573,6 @@ a.abouttile:hover,button.abouttile:hover{background:var(--surface2)}
 .installstrip .grow{flex:1;min-width:0}
 .installstrip .d{font-size:11.5px;color:var(--text2);margin-top:1px}
 .aboutfoot{margin-top:16px;text-align:center;font-size:11.5px;color:var(--text2)}
-
-/* apariencia: tarjetas de tema con mini-preview estilo NetPulse.
-   Los previews usan las VARIABLES REALES de cada tema scopeadas con
-   [data-theme] en el propio contenedor — cero valores duplicados. */
-/* apariencia: layout horizontal (patrón Deltos) — tiles de tema a la
-   izquierda (~50%), controles a la derecha (flex-1). En móvil apila. */
-.aprow{display:flex;flex-direction:column;gap:18px}
-@media(min-width:700px){.aprow{flex-direction:row;gap:28px}}
-.ap-theme{flex-shrink:0}
-@media(min-width:700px){.ap-theme{width:50%}}
-.ap-controls{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
-.ap-accent-row{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
-
-.themegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-.themecard{
-  position:relative;border:1.5px solid var(--border);border-radius:12px;padding:8px;background:var(--surface);
-  cursor:pointer;text-align:left;
-}
-.themecard:hover{border-color:var(--text2)}
-.themecard.sel{border-color:var(--accent);background:var(--accent-soft)}
-.themecard .lbl{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;font-weight:600;margin-top:7px}
-.themecard .check{
-  position:absolute;top:6px;right:6px;width:16px;height:16px;border-radius:50%;
-  background:var(--accent);color:var(--on-accent);display:grid;place-items:center;
-  animation:pop .18s ease-out;
-}
-@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
-.tpv{display:flex;height:64px;width:100%;overflow:hidden;border-radius:9px;border:1px solid var(--border)}
-.tpv-scope{flex:1;display:flex;background:var(--bg)}
-.tpv-half{flex:1;display:flex;flex-direction:column;gap:4px;background:var(--bg);padding:6px}
-.tpv-top{height:6px;width:75%;border-radius:3px;background:var(--surface2)}
-.tpv-row{flex:1;display:flex;gap:4px}
-.tpv-side{width:25%;border-radius:3px;background:var(--surface);border:1px solid var(--border)}
-.tpv-main{flex:1;display:flex;flex-direction:column;gap:4px}
-.tpv-accent{height:8px;border-radius:3px;background:var(--accent);opacity:.6}
-.tpv-block{flex:1;border-radius:3px;background:var(--surface);border:1px solid var(--border)}
-
-/* apariencia: muestras de acento */
-.swatches{display:flex;gap:10px;flex-wrap:wrap}
-.swatch{width:34px;height:34px;border-radius:50%;padding:3px;border:2px solid transparent;cursor:pointer}
-.swatch>span{display:block;width:100%;height:100%;border-radius:50%}
-.swatch.sel{outline:2px solid var(--accent);outline-offset:2px}
 
 /* Panel: en pantalla ancha las secciones apiladas (alertas + actividad)
    pasan a 2 columnas para no dejar media pantalla vacía */
