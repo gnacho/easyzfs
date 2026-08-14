@@ -433,7 +433,7 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 - **Fix TOCTOU en replicación**: un slot atómico (`TryAcquire`/`Release`) evita la doble ejecución de jobs de replicación. Antes, un tick concurrente o un `RunNow` manual durante la ventana del snapshot podía lanzar un segundo pipeline `zfs send | zfs recv` contra el mismo destino.
 - **Cancelar mata el pipeline completo**: la cancelación de replicación ahora mata el grupo de procesos entero (`Setpgid` + `Kill(-pgid)`), no solo el líder `bash`. Los hijos del pipeline (`zfs send`, `ssh`) ya no quedan huérfanos consumiendo I/O.
-- **Option injection bloqueada**: los regex de pool, dataset, snapshot, dispositivo y host SSH ahora anclan a `^[a-zA-Z0-9]`. Los nombres que empiezan por `-` o `.` se rechazan — se interpretaban como flags de `zpool`/`zfs`/`ssh`. No explotable como inyección de shell, pero la whitelist era incorrecta.
+- **Option injection bloqueada**: los regex de pool, dataset, snapshot, dispositivo y host SSH ahora anclan a `^[a-zA-Z0-9]`. Los nombres que empiezan por `-` o `.` se rechazan, porque se interpretaban como flags de `zpool`/`zfs`/`ssh`. No explotable como inyección de shell, pero la whitelist era incorrecta.
 - **Dos nuevos tests de concurrencia** en el paquete de replicación, ejecutados bajo `go test -race`.
 - Auditoría externa de seguridad, 7-Ago-2026.
 
