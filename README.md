@@ -353,6 +353,18 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.8
+
+- **Binary theme toggle on mobile (#58)**: on screens below 640px the header theme control is now a single sun/moon button that flips light/dark, replacing the three icon-only buttons (system, light, dark). Wider screens keep the labeled three-option pill.
+
+### v2.9.7
+
+- **PWA orientation (#56, #57)**: the manifest now sets `orientation: any`, so the app rotates freely on tablets.
+
+### v2.9.6
+
+- **Tab title (#53)**: browser tab title and PWA name use a plain hyphen instead of an em dash.
+
 ### v2.9.5
 
 - **About card links (#50)**: the four tiles now link to their destination (GitHub, the project website, Ko-fi and the Cloudless Club) instead of being static boxes.

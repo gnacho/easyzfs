@@ -361,6 +361,18 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.8
+
+- **Toggle binario de tema en móvil (#58)**: en pantallas de menos de 640px el control de tema del header pasa a ser un único botón sol/luna que alterna claro/oscuro, en sustitución de los tres botones con solo icono (sistema, claro, oscuro). En pantallas anchas se mantiene el selector de tres opciones con etiquetas.
+
+### v2.9.7
+
+- **Orientación PWA (#56, #57)**: el manifest declara `orientation: any`, así que la app rota con libertad en tablets.
+
+### v2.9.6
+
+- **Título de pestaña (#53)**: el título de la pestaña y el nombre de la PWA usan un guión simple en vez de una raya larga.
+
 ### v2.9.5
 
 - **Enlaces en "Acerca de" (#50)**: los cuatro tiles enlazan ahora a su destino (GitHub, la web del proyecto, Ko-fi y el Club Cloudless) en vez de ser cajas estáticas.
