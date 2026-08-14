@@ -116,7 +116,7 @@ function AlertsPanel({ onClose }: { onClose: () => void }) {
 }
 
 function Shell() {
-  const { t, route, navigate, demo, exitDemo, user, isAdmin, ready, themeMode, setTheme } = useApp();
+  const { t, route, navigate, demo, exitDemo, user, isAdmin, ready, themeMode, themeEff, setTheme } = useApp();
   const [showAlerts, setShowAlerts] = useState(false);
   const [hasPending, setHasPending] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
@@ -303,6 +303,12 @@ function Shell() {
                 style={{ position: 'relative' }} onClick={() => { setShowAlerts((v) => !v); setHasPending(false); }}>
                 <IconBell />
                 {hasPending && <span className="ping" />}
+              </button>
+              <button type="button" className="iconbtn theme-toggle-mobile"
+                aria-label={themeEff === 'dark' ? t('s_theme_toLight') : t('s_theme_toDark')}
+                title={themeEff === 'dark' ? t('s_theme_toLight') : t('s_theme_toDark')}
+                onClick={() => setTheme(themeEff === 'dark' ? 'light' : 'dark')}>
+                {themeEff === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
               </button>
               <div className="theme-pill" role="radiogroup" aria-label={t('s_theme')}>
                 {([['auto', IconMonitor], ['light', IconSun], ['dark', IconMoon]] as const).map(([m, Icon]) => (
