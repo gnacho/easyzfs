@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.9
+
+- **Transición de deslizamiento móvil entre vistas (#60)**: al cambiar de vista con la navegación inferior en móvil, el contenido se desliza en la dirección de avance (adelante/atrás) mientras la barra inferior permanece fija, mediante la View Transitions API con respaldo a la navegación normal donde no está disponible. Respeta `prefers-reduced-motion` y el ajuste de reducir animaciones.
+
 ### v2.9.8
 
 - **Toggle binario de tema en móvil (#58)**: en pantallas de menos de 640px el control de tema del header pasa a ser un único botón sol/luna que alterna claro/oscuro, en sustitución de los tres botones con solo icono (sistema, claro, oscuro). En pantallas anchas se mantiene el selector de tres opciones con etiquetas.
