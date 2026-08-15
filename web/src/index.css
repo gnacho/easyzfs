@@ -785,3 +785,65 @@ svg{flex-shrink:0}
   *{transition:none!important;animation:none!important}
 }
 html.reduce-motion *{transition:none!important;animation:none!important}
+
+/* Transición móvil entre vistas: el contenido (<main>) se desliza y el shell
+ * (bottom nav) permanece estático. El bottom nav se captura como grupo de
+ * view-transition PROPIO (easyzfs-nav) para no depender de cómo el navegador
+ * capture el grupo root con position:fixed (falla en dispositivos). */
+@media (max-width: 859px) {
+  main.main {
+    view-transition-name: easyzfs-content;
+  }
+  nav.bottomnav {
+    view-transition-name: easyzfs-nav;
+  }
+  /* El shell queda estático: anulamos las 4 animaciones UA de cada grupo
+   * (group/image-pair arrancan en opacity 0 en la hoja UA del navegador). */
+  ::view-transition-group(root),
+  ::view-transition-image-pair(root),
+  ::view-transition-old(root),
+  ::view-transition-new(root),
+  ::view-transition-group(easyzfs-nav),
+  ::view-transition-image-pair(easyzfs-nav),
+  ::view-transition-old(easyzfs-nav),
+  ::view-transition-new(easyzfs-nav) {
+    animation: none;
+  }
+  html[data-nav-dir='forward']::view-transition-old(easyzfs-content) {
+    animation: easyzfs-vt-out-left 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='forward']::view-transition-new(easyzfs-content) {
+    animation: easyzfs-vt-in-right 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='back']::view-transition-old(easyzfs-content) {
+    animation: easyzfs-vt-out-right 0.3s ease-in-out both;
+  }
+  html[data-nav-dir='back']::view-transition-new(easyzfs-content) {
+    animation: easyzfs-vt-in-left 0.3s ease-in-out both;
+  }
+}
+
+@keyframes easyzfs-vt-out-left {
+  to {
+    transform: translateX(-24%);
+    opacity: 0.7;
+  }
+}
+@keyframes easyzfs-vt-in-right {
+  from {
+    transform: translateX(24%);
+    opacity: 0.7;
+  }
+}
+@keyframes easyzfs-vt-out-right {
+  to {
+    transform: translateX(24%);
+    opacity: 0.7;
+  }
+}
+@keyframes easyzfs-vt-in-left {
+  from {
+    transform: translateX(-24%);
+    opacity: 0.7;
+  }
+}

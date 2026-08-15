@@ -1,6 +1,7 @@
 // Estado global de la app: sesión, ruta, modo demo, idioma y tema.
 // Router ligero basado en hash (#/vista).
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import type { ReactNode } from 'react';
 import type { Capabilities, SessionUser } from '../data/types';
 import { getProvider, initProvider, enterDemoSession, exitDemoSession } from '../data';
@@ -55,6 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [demo, setDemo] = useState(false);
   const [user, setUser] = useState<SessionUser | null>(null);
   const [route, setRoute] = useState<ViewId>(parseHash());
+  const routeRef = useRef<ViewId>(parseHash());
   const [langMode, setLangModeState] = useState<LangMode>(getLangMode());
   const [themeMode, setThemeModeState] = useState<ThemeMode>(getThemeMode());
   const [themeEff, setThemeEff] = useState<'light' | 'dark'>(effectiveTheme());
@@ -108,8 +110,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // Router por hash
   useEffect(() => {
     const onHash = () => {
-      setRoute(parseHash());
-      window.scrollTo({ top: 0 });
+      const next = parseHash();
+      const prev = routeRef.current;
+      routeRef.current = next;
+      if (prev !== next) {
+        try {
+          document.documentElement.dataset.navDir =
+            VIEWS.indexOf(next) > VIEWS.indexOf(prev) ? 'forward' : 'back';
+        } catch {
+          /* sin dataset */
+        }
+        const apply = () => {
+          setRoute(next);
+          window.scrollTo({ top: 0 });
+        };
+        if (typeof document.startViewTransition === 'function') {
+          document.startViewTransition(() => flushSync(apply));
+        } else {
+          apply();
+        }
+      } else {
+        setRoute(next);
+      }
     };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
