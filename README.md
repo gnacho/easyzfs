@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.9
+
+- **Mobile slide transition between views (#60)**: switching views through the bottom navigation on mobile now slides the content in the direction of travel (forward/back) while the bottom nav stays fixed, via the View Transitions API with a fallback to plain navigation where unsupported. Respects `prefers-reduced-motion` and the in-app reduce-motion toggle.
+
 ### v2.9.8
 
 - **Binary theme toggle on mobile (#58)**: on screens below 640px the header theme control is now a single sun/moon button that flips light/dark, replacing the three icon-only buttons (system, light, dark). Wider screens keep the labeled three-option pill.
