@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.10
+
+- **In-app update detects missing systemd restart units (#66)**: `GET /api/update/status` now reports `restartConfigured`, and `GET /api/update/plan` includes a `restart_ready` readiness check. If the host was deployed before the auto-update systemd units existed, the UI disables the Update button and shows a clear message instead of silently downloading the new binary and stalling.
+
 ### v2.9.9
 
 - **Mobile slide transition between views (#60)**: switching views through the bottom navigation on mobile now slides the content in the direction of travel (forward/back) while the bottom nav stays fixed, via the View Transitions API with a fallback to plain navigation where unsupported. Respects `prefers-reduced-motion` and the in-app reduce-motion toggle.

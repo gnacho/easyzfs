@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.10
+
+- **La actualización desde la app detecta units de reinicio ausentes (#66)**: `GET /api/update/status` ahora devuelve `restartConfigured`, y `GET /api/update/plan` incluye la comprobación `restart_ready`. Si el host se desplegó antes de que existieran las units systemd de auto-update, la UI deshabilita el botón Actualizar y muestra un aviso claro en vez de descargar el binario nuevo en silencio y quedarse bloqueada.
+
 ### v2.9.9
 
 - **Transición de deslizamiento móvil entre vistas (#60)**: al cambiar de vista con la navegación inferior en móvil, el contenido se desliza en la dirección de avance (adelante/atrás) mientras la barra inferior permanece fija, mediante la View Transitions API con respaldo a la navegación normal donde no está disponible. Respeta `prefers-reduced-motion` y el ajuste de reducir animaciones.
