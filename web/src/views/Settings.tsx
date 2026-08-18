@@ -116,6 +116,7 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
   const [checks, setChecks] = useState<{id:string;status:string;title:string;summary:string}[]>([]);
   const [canApply, setCanApply] = useState(true);
   const [progress, setProgress] = useState<{step:string;percentage:number}|null>(null);
+  const [restartConfigured, setRestartConfigured] = useState(true);
 
   const check = async () => {
     setState('checking');
@@ -124,6 +125,7 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
       const [st, plan] = await Promise.all([getProvider().getUpdateStatus(), getProvider().getUpdatePlan()]);
       setChecks(plan.checks);
       setCanApply(plan.canApply);
+      setRestartConfigured(st.restartConfigured ?? true);
       if (st.available) {
         setLatest(st.latest);
         setState('available');
@@ -196,6 +198,12 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
               {c.status === 'fail' ? '✗ ' : c.status === 'warn' ? '⚠ ' : '✓ '}{c.summary}
             </div>
           ))}
+        </div>
+      )}
+      {!restartConfigured && (
+        <div className="form-err" role="alert" style={{ marginTop: 8, fontSize: 12.5 }}>
+          <b>{t('ab_upd_norestart')}</b><br />
+          {t('ab_upd_norestart_d')}
         </div>
       )}
     </div>
