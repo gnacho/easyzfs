@@ -240,21 +240,22 @@ h3 { font-size: 1.1rem; font-weight: 600; line-height: 1.35; }
 .about-body p { font-size: 1.05rem; color: rgb(var(--text-secondary)); line-height: 1.65; margin-bottom: 1rem; }
 .about-body p:last-child { margin-bottom: 0; }
 
-/* ============ FUNCIONALIDADES (filas horizontales) ============ */
-.features { display: flex; flex-direction: column; }
+/* ============ FUNCIONALIDADES (grid 2 col) ============ */
+.features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem; }
 .featrow {
   display: grid;
   grid-template-columns: 44px 1fr;
   gap: 1.1rem;
   align-items: start;
-  padding: 1.05rem 0.5rem;
-  border-bottom: 1px solid rgb(var(--border));
+  padding: 1.25rem;
+  border: 1px solid rgb(var(--border));
+  border-radius: var(--radius);
+  background: rgb(var(--elevated));
 }
-.featrow:last-child { border-bottom: 0; }
-.featrow:hover { background: rgb(var(--surface)); border-radius: var(--radius-sm); }
+.featrow:hover { background: rgb(var(--surface)); }
 .featrow svg { width: 22px; height: 22px; margin-top: 0.2rem; }
 .featrow h3 { margin-bottom: 0.25rem; }
-.featrow p { font-size: 0.94rem; color: rgb(var(--text-secondary)); max-width: 62rem; }
+.featrow p { font-size: 0.94rem; color: rgb(var(--text-secondary)); }
 
 /* ============ CAPTURAS (slider) ============ */
 .slider { user-select: none; }
