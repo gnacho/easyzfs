@@ -11,7 +11,7 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor, IconLanguages } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { usePush } from '../data/push';
@@ -590,14 +590,17 @@ function ProfileCard() {
     <>
       <label className="pact-ico lang-mobile" aria-label={t('s_lang')} title={t('s_lang')}
         onClick={(e) => { e.preventDefault(); const s = document.getElementById('mp-lang'); if (s) { (s as HTMLSelectElement).focus(); (s as HTMLSelectElement).click(); } }}>
-        <IconMonitor size={16} />
+        <IconLanguages size={16} />
       </label>
-      <select id="mp-lang" className="plang lang-desktop" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
-        aria-label={t('s_lang')} title={t('s_lang')}>
-        <option value="auto">{t('s_lang_auto')}</option>
-        <option value="es">Español</option>
-        <option value="en">English</option>
-      </select>
+      <span className="lang-desktop">
+        <IconLanguages size={16} aria-hidden="true" />
+        <select id="mp-lang" className="plang" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
+          aria-label={t('s_lang')} title={t('s_lang')}>
+          <option value="auto">{t('s_lang_auto')}</option>
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+      </span>
     </>
   );
 
