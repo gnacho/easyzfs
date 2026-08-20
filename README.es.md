@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.10
+
+- **Sustitución de discos segura con rutas by-id estables (#65)**: el disco destino de un replace se resuelve ahora a su ruta estable `/dev/disk/by-id/` siempre que exista, ya que las letras sdX del kernel pueden cambiar entre arranques o movimientos de bahía. El diálogo de sustitución muestra un resumen de origen y destino con modelo y número de serie de ambos discos más la ruta estable que se usará, y avisa con fuerza cuando el origen elegido es un miembro ONLINE y sano, porque sustituirlo dispara un resiliver innecesario. Las guardas del servidor (mismo disco, disco ya presente en un pool, destino más pequeño) comparan el dispositivo resuelto y detectan también formas mezcladas base/by-id.
+
 ### v2.9.9
 
 - **Transición de deslizamiento móvil entre vistas (#60)**: al cambiar de vista con la navegación inferior en móvil, el contenido se desliza en la dirección de avance (adelante/atrás) mientras la barra inferior permanece fija, mediante la View Transitions API con respaldo a la navegación normal donde no está disponible. Respeta `prefers-reduced-motion` y el ajuste de reducir animaciones.

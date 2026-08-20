@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.10
+
+- **Safe disk replacement with stable by-id paths (#65)**: the target disk of a replace is now resolved to its stable `/dev/disk/by-id/` path whenever one exists, since kernel sdX names can shift across boots or bay moves. The replace dialog shows an origin/destination summary with model and serial for both disks plus the stable path that will be used, and warns loudly when the selected origin is an ONLINE and healthy member, because replacing it triggers an unnecessary resilver. Server-side guards (same disk, disk already in a pool, undersized target) now compare the resolved device and also catch mixed base/by-id forms.
+
 ### v2.9.9
 
 - **Mobile slide transition between views (#60)**: switching views through the bottom navigation on mobile now slides the content in the direction of travel (forward/back) while the bottom nav stays fixed, via the View Transitions API with a fallback to plain navigation where unsupported. Respects `prefers-reduced-motion` and the in-app reduce-motion toggle.
