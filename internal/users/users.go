@@ -17,8 +17,8 @@ import (
 // User — vista pública de un usuario (contrato GET /api/users).
 type User struct {
 	Name        string     `json:"user"`
-	Role        string     `json:"role"`    // "admin" | "user"
-	Language    string     `json:"language"` // "auto" | "es" | "en"
+	Role        string     `json:"role"`         // "admin" | "user"
+	Language    string     `json:"language"`     // "auto" | "es" | "en"
 	DisplayName string     `json:"display_name"` // nombre visible (saludos); vacío = username
 	Email       string     `json:"email"`        // opcional
 	Avatar      string     `json:"avatar"`       // nombre del fichero en <datadir>/avatars/; vacío = sin foto
@@ -285,6 +285,118 @@ func (s *Store) SetLanguage(ctx context.Context, name, lang string) error {
 		return ErrNotFound
 	}
 	return nil
+}
+
+// TOTPSecret devuelve el secreto TOTP actual del usuario ("" si no tiene).
+func (s *Store) TOTPSecret(ctx context.Context, name string) (string, error) {
+	var secret string
+	err := s.db.QueryRowContext(ctx,
+		"SELECT totp_secret FROM users WHERE user=?", name).Scan(&secret)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	return secret, err
+}
+
+// SetTOTPSecret guarda un secreto TOTP (provisional durante el setup; el
+// usuario queda sin activar hasta TOTPEnabled).
+func (s *Store) SetTOTPSecret(ctx context.Context, name, secret string) error {
+	res, err := s.db.ExecContext(ctx,
+		"UPDATE users SET totp_secret=?, totp_enabled=0 WHERE user=?", secret, name)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// TOTPEnabled devuelve si el usuario tiene 2FA activo.
+func (s *Store) TOTPEnabled(ctx context.Context, name string) (bool, error) {
+	var enabled int
+	err := s.db.QueryRowContext(ctx,
+		"SELECT totp_enabled FROM users WHERE user=?", name).Scan(&enabled)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, ErrNotFound
+	}
+	return enabled == 1, err
+}
+
+// TOTPActivate marca el 2FA como activo (tras confirmar el primer código).
+func (s *Store) TOTPActivate(ctx context.Context, name string) error {
+	res, err := s.db.ExecContext(ctx,
+		"UPDATE users SET totp_enabled=1 WHERE user=?", name)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// TOTPDisable desactiva el 2FA y borra el secreto.
+func (s *Store) TOTPDisable(ctx context.Context, name string) error {
+	if _, err := s.db.ExecContext(ctx,
+		"DELETE FROM totp_recovery WHERE user=?", name); err != nil {
+		return err
+	}
+	res, err := s.db.ExecContext(ctx,
+		"UPDATE users SET totp_secret='', totp_enabled=0 WHERE user=?", name)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// AddRecoveryCode guarda un recovery code hasheado para un usuario.
+func (s *Store) AddRecoveryCode(ctx context.Context, name, codeHash string) error {
+	_, err := s.db.ExecContext(ctx,
+		"INSERT OR REPLACE INTO totp_recovery(user, code_hash) VALUES (?,?)", name, codeHash)
+	return err
+}
+
+// ListRecoveryCodes devuelve los hashes de recovery codes (sin gastar) de un usuario.
+func (s *Store) ListRecoveryCodes(ctx context.Context, name string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx,
+		"SELECT code_hash FROM totp_recovery WHERE user=? AND used=0 ORDER BY code_hash", name)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var h string
+		if err := rows.Scan(&h); err != nil {
+			return nil, err
+		}
+		out = append(out, h)
+	}
+	return out, rows.Err()
+}
+
+// UseRecoveryCode marca un recovery code como gastado. Devuelve true si existía.
+func (s *Store) UseRecoveryCode(ctx context.Context, name, codeHash string) (bool, error) {
+	res, err := s.db.ExecContext(ctx,
+		"UPDATE totp_recovery SET used=1 WHERE user=? AND code_hash=? AND used=0", name, codeHash)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
+}
+
+// ClearRecoveryCodes borra los recovery codes de un usuario.
+func (s *Store) ClearRecoveryCodes(ctx context.Context, name string) error {
+	_, err := s.db.ExecContext(ctx, "DELETE FROM totp_recovery WHERE user=?", name)
+	return err
 }
 
 // randomPassword genera una contraseña aleatoria legible (18 chars base64url).

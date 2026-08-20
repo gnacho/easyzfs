@@ -27,7 +27,8 @@ interface AppCtx {
   user: SessionUser | null;
   route: ViewId;
   navigate: (v: ViewId) => void;
-  login: (u: string, p: string) => Promise<void>;
+  login: (u: string, p: string) => Promise<'ok' | { pending: string }>;
+  login2FA: (pending: string, code: string) => Promise<void>;
   logout: () => Promise<void>;
   enterDemo: () => Promise<void>;
   exitDemo: () => void;
@@ -141,16 +142,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
     location.hash = `/${v}`;
   }, []);
 
-  const login = useCallback(async (u: string, p: string) => {
-    const s = await getProvider().login(u, p);
-    setUser(s);
+  const login = useCallback(async (u: string, p: string): Promise<'ok' | { pending: string }> => {
+    const res = await getProvider().login(u, p);
+    if (res.twofa_required) return { pending: res.pending };
+    setUser(res);
     // Re-fetch de capabilities con la sesión recién creada (sin sesión el
     // backend da 401 y los botones gateados no aparecerían hasta recargar)
     fetchCaps();
     // El idioma de la BD manda sobre el caché local del navegador
-    if (s.language && s.language !== getLangMode()) setLangMode(s.language);
+    if (res.language && res.language !== getLangMode()) setLangMode(res.language);
     connectSSE(); // reabre el stream con la sesión recién creada
     void syncPushSubscription(); // re-sincroniza la suscripción push (silencioso)
+    return 'ok';
+  }, [fetchCaps]);
+
+  // Segundo factor: completa el login iniciado (requiere el token 'pending'
+  // que el backend devolvió en el paso 1 y un código TOTP válido).
+  const login2FA = useCallback(async (pending: string, code: string) => {
+    const s = await getProvider().login2FA(pending, code);
+    setUser(s);
+    fetchCaps();
+    if (s.language && s.language !== getLangMode()) setLangMode(s.language);
+    connectSSE();
+    void syncPushSubscription();
   }, [fetchCaps]);
 
   const logout = useCallback(async () => {
@@ -213,12 +227,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AppCtx>(() => ({
-    ready, demo, user, route, navigate, login, logout, enterDemo, exitDemo,
+    ready, demo, user, route, navigate, login, login2FA, logout, enterDemo, exitDemo,
     t, langMode, setLang, themeMode, themeEff, setTheme,
     isAdmin: user?.role === 'admin',
     caps,
     refresh, dataVersion, reloadUser,
-  }), [ready, demo, user, route, navigate, login, logout, enterDemo, exitDemo, t, langMode, setLang, themeMode, themeEff, setTheme, caps, refresh, dataVersion, reloadUser]);
+  }), [ready, demo, user, route, navigate, login, login2FA, logout, enterDemo, exitDemo, t, langMode, setLang, themeMode, themeEff, setTheme, caps, refresh, dataVersion, reloadUser]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

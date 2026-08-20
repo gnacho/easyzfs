@@ -1,9 +1,9 @@
 // Interfaz DataProvider: abstrae el origen de datos (HTTP real o mock demo).
 import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON, SeriesResp,
+  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON, SeriesResp,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
-  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
+  SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
 
 export interface DataProvider {
@@ -29,7 +29,8 @@ export interface DataProvider {
   importBackup(file: File): Promise<void>;
 
   // Auth y sesión
-  login(user: string, password: string): Promise<SessionUser>;
+  login(user: string, password: string): Promise<LoginResult>;
+  login2FA(pending: string, code: string): Promise<SessionUser>;
   logout(): Promise<void>;
   me(): Promise<SessionUser>;
   setMyPassword(current: string, next: string): Promise<void>;
@@ -38,6 +39,13 @@ export interface DataProvider {
   setMyAvatar(blob: Blob): Promise<void>;
   deleteMyAvatar(): Promise<void>;
   avatarUrl(name: string): string;
+
+  // 2FA (TOTP) del propio usuario
+  get2FAStatus(): Promise<TwoFAStatus>;
+  setup2FA(): Promise<TwoFASetup>;
+  confirm2FA(code: string): Promise<TwoFARecovery>;
+  disable2FA(code: string): Promise<void>;
+  regenerateRecoveryCodes(): Promise<TwoFARecovery>;
 
   // Usuarios (admin)
   getUsers(): Promise<UserInfo[]>;

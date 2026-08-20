@@ -127,6 +127,40 @@ func (m *Manager) sign(token string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
+// pendingTTL — ventana del segundo paso de login 2FA.
+const pendingTTL = 5 * time.Minute
+
+// SignPending emite un token firmado que prueba que la contraseña ya se
+// verificó (paso 1 del login 2FA). Formato: <user>|<expiryRFC3339>|<sig>.
+// Se re-firma con la misma clave HMAC de sesiones; la expiración va dentro.
+func (m *Manager) SignPending(user string) (string, error) {
+	expires := time.Now().Add(pendingTTL).UTC().Format(time.RFC3339)
+	payload := user + "|" + expires
+	return payload + "|" + m.sign("pending:"+payload), nil
+}
+
+// VerifyPending valida un token firmado y devuelve el usuario. Rechaza tokens
+// caducados o con firma inválida (no filtra si el usuario existe).
+func (m *Manager) VerifyPending(token string) (string, bool) {
+	user, rest, ok := strings.Cut(token, "|")
+	if !ok {
+		return "", false
+	}
+	expires, sig, ok := strings.Cut(rest, "|")
+	if !ok {
+		return "", false
+	}
+	expected := m.sign("pending:" + user + "|" + expires)
+	if subtle.ConstantTimeCompare([]byte(sig), []byte(expected)) != 1 {
+		return "", false
+	}
+	exp, err := time.Parse(time.RFC3339, expires)
+	if err != nil || time.Now().After(exp) {
+		return "", false
+	}
+	return user, true
+}
+
 // Middleware exige sesión válida en todo lo que envuelve; inyecta user+role en ctx.
 // Las rutas públicas (login) se registran FUERA de este middleware.
 func (m *Manager) Middleware(next http.Handler) http.Handler {

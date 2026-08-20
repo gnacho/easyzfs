@@ -13,6 +13,26 @@ export interface SessionUser {
   avatar?: string; // nombre del fichero de avatar; vacío = sin foto
 }
 
+// Respuesta de POST /api/login: o bien una sesión, o bien el requerimiento del
+// segundo factor (2FA activo) con el token 'pending' para completar el login.
+export type LoginResult =
+  | (SessionUser & { twofa_required?: false; pending?: never })
+  | { twofa_required: true; pending: string };
+
+export interface TwoFASetup {
+  secret: string;
+  otpauth: string;
+  qr: string; // data:image/png;base64
+}
+
+export interface TwoFARecovery {
+  codes: string[];
+}
+
+export interface TwoFAStatus {
+  enabled: boolean;
+}
+
 export interface UserInfo {
   user: string;
   role: Role;
