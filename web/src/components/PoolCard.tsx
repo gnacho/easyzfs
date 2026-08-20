@@ -47,7 +47,7 @@ const fmtEta = (sec: number): string => {
 };
 
 export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => void }) {
-  const { t, isAdmin, caps } = useApp();
+  const { t, isAdmin, caps, notify } = useApp();
   const { openModal } = useModal();
   const [err, setErr] = useState('');
   const [disks, setDisks] = useState<Disk[]>([]);
@@ -83,7 +83,8 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
     try {
       await getProvider().scrubAction(pool.name, action);
       onChanged();
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_action_done'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   const vdevAct = async (dev: string, action: 'offline' | 'online') => {
@@ -91,7 +92,8 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
     try {
       await getProvider().vdevAction(pool.name, dev, action);
       onChanged();
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_action_done'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   const toggleAutotrim = async () => {
@@ -105,7 +107,7 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
     try {
       await getProvider().setAutotrim(pool.name, next);
       onChanged();
-    } catch (e) { setTrimOverride(null); setErr(errorMessage(e, t)); }
+    } catch (e) { setTrimOverride(null); const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   const faulted = pool.vdevs.find((v) => v.status !== 'ONLINE' && !v.replacing);
@@ -275,7 +277,7 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
           {t('pool_export')}
         </button>
         <button className="btn sm" disabled={!isAdmin} title={t('pool_clear_hint')}
-          onClick={() => getProvider().clearPool(pool.name).then(onChanged).catch((e: Error) => setErr(e.message))}>
+          onClick={() => getProvider().clearPool(pool.name).then(() => { onChanged(); notify(t('toast_action_done'), 'ok'); }).catch((e: Error) => { setErr(e.message); notify(e.message, 'err'); })}>
           {t('pool_clear')}
         </button>
       </div>

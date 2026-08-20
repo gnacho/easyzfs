@@ -8,7 +8,7 @@ import type { APIKeyInfo } from '../data/types';
 import { IconTrash, IconX } from './icons';
 
 export function APIKeysPanel() {
-  const { t } = useApp();
+  const { t, notify } = useApp();
   const [keys, setKeys] = useState<APIKeyInfo[] | null>(null);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -31,7 +31,8 @@ export function APIKeysPanel() {
       setNewKey(r.key); // se muestra una sola vez
       setName('');
       load();
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_apikey_created'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -41,7 +42,8 @@ export function APIKeysPanel() {
     try {
       await getProvider().deleteAPIKey(id);
       setKeys((cur) => (cur ?? []).filter((k) => k.id !== id));
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_apikey_deleted'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 

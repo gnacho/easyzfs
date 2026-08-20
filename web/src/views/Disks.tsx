@@ -55,7 +55,7 @@ function smartParts(d: Disk, t: (k: string, v?: Record<string, string | number>)
 }
 
 export default function Disks() {
-  const { t, isAdmin } = useApp();
+  const { t, isAdmin, notify } = useApp();
   const { openModal } = useModal();
   const { data, loading, setData } = useData((p) => p.getDisks());
   const recs = useData((p) => p.getRecommendations());
@@ -85,7 +85,8 @@ export default function Disks() {
     try {
       await getProvider().smartTest(dev, type);
       setMsg(`${t('dk_test_started')}: ${dev} (${type})`);
-    } catch (e) { setMsg(errorMessage(e, t)); }
+      notify(t('toast_smart_started'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setMsg(m); notify(m, 'err'); }
   };
 
   // Apagar disco: doble clic (1º arma "¿Confirmar?", 2º ejecuta). Se desarma a los 3 s.
@@ -102,7 +103,8 @@ export default function Disks() {
     try {
       await getProvider().poweroffDisk(dev);
       setMsg(`${t('dk_powered')}: ${dev}`);
-    } catch (e) { setMsg(errorMessage(e, t)); }
+      notify(t('toast_disk_off'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setMsg(m); notify(m, 'err'); }
   };
 
   return (

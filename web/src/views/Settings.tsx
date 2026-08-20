@@ -211,7 +211,7 @@ function BackupCard({ settings, onSave }: {
   settings: SettingsData;
   onSave: (patch: Partial<SettingsData>) => Promise<void>;
 }) {
-  const { t } = useApp();
+  const { t, notify } = useApp();
   const [st, setSt] = useState<BackupStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -234,7 +234,8 @@ function BackupCard({ settings, onSave }: {
       const f = await getProvider().runBackup();
       setMsg(t('bk_done', { f: f.file }));
       load();
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('bk_done', { f: f.file }), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -246,9 +247,11 @@ function BackupCard({ settings, onSave }: {
       // El server hace swap y reinicia el proceso; recargamos al cabo de unos
       // segundos para volver al login con la BD importada.
       setMsg(t('bk_import_restarting'));
+      notify(t('toast_backup_imported'), 'ok');
       setTimeout(() => location.reload(), 4000);
     } catch (e) {
-      setErr(errorMessage(e, t));
+      const m = errorMessage(e, t);
+      setErr(m); notify(m, 'err');
       setBusy(false);
       setImportFile(null);
     }
@@ -510,7 +513,7 @@ function PushPanel() {
 // sin título, avatar + nombre editable + rol; a la derecha email, idioma,
 // contraseña y notificaciones (despliegan inline); cerrar sesión rojo.
 function ProfileCard() {
-  const { t, user, langMode, setLang, logout, reloadUser, isAdmin } = useApp();
+  const { t, user, langMode, setLang, logout, reloadUser, isAdmin, notify } = useApp();
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
@@ -538,7 +541,8 @@ function ProfileCard() {
       await getProvider().setMyAvatar(blob);
       reloadUser();
       setMsg(t('saved_ok'));
-    } catch (e) { setErr(errorMessage(e, t)); throw e; }
+      notify(t('toast_avatar_updated'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); throw e; }
   };
 
   const removeAvatar = async () => {
@@ -547,7 +551,8 @@ function ProfileCard() {
       await getProvider().deleteMyAvatar();
       reloadUser();
       setMsg(t('s_avatar_removed'));
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_avatar_deleted'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   const saveName = async () => {
@@ -559,7 +564,8 @@ function ProfileCard() {
       reloadUser();
       setMsg(t('saved_ok'));
       setEditingName(false);
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -572,7 +578,8 @@ function ProfileCard() {
       reloadUser();
       setMsg(t('saved_ok'));
       setEditingEmail(false);
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -584,7 +591,8 @@ function ProfileCard() {
       await getProvider().setMyPassword(cur, p1);
       setShowPass(false); setCur(''); setP1(''); setP2('');
       setMsg(t('saved_ok'));
-    } catch (ex) { setErr(errorMessage(ex, t)); }
+      notify(t('toast_pwd_changed'), 'ok');
+    } catch (ex) { const m = errorMessage(ex, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -740,7 +748,7 @@ function ProfileCard() {
 }
 
 export default function Settings() {
-  const { t, themeMode, themeEff, setTheme, isAdmin, user, refresh, reloadUser, logout, setLang } = useApp();
+  const { t, themeMode, themeEff, setTheme, isAdmin, user, refresh, reloadUser, logout, setLang, notify } = useApp();
   const { openModal } = useModal();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [users, setUsers] = useState<Awaited<ReturnType<ReturnType<typeof getProvider>['getUsers']>> | null>(null);
@@ -794,7 +802,8 @@ export default function Settings() {
     try {
       await getProvider().putSettings(next);
       setMsg(t('saved_ok'));
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   // Guardado de la tarjeta Datos y umbrales: feedback local (mensaje dentro de
@@ -806,7 +815,8 @@ export default function Settings() {
       await getProvider().putSettings(settings);
       setThreshSaved({ cap_warn_pct: settings.cap_warn_pct, cap_crit_pct: settings.cap_crit_pct, disk_temp_c: settings.disk_temp_c });
       setThreshMsg(t('saved_ok'));
-    } catch (e) { setThreshErr(errorMessage(e, t)); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setThreshErr(m); notify(m, 'err'); }
   };
 
   if (!settings) return <Spinner label={t('loading')} />;
