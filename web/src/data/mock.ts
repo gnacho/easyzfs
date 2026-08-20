@@ -158,7 +158,7 @@ export class MockProvider implements DataProvider {
   ];
 
   private alerts: Alert[] = [
-    { id: 1, ts: iso(daysAgo(2, 14)), level: 'warn', source: 'pool/tank', message: 'Fragmentación alta en tank (12%) · considera programar un scrub', acked: false, target: 'pools:tank' },
+    { id: 1, ts: iso(daysAgo(2, 14)), level: 'crit', source: 'pool/tank', message: 'Pool tank DEGRADED', acked: false, target: 'pools:tank' },
     { id: 2, ts: iso(new Date()), level: 'info', source: 'scrub/ssd', message: 'Scrub de ssd en curso (62%)', acked: false, target: 'pools:ssd' },
     { id: 4, ts: iso(daysAgo(1, 3)), level: 'warn', source: 'cron/backup', message: 'El backup nocturno terminó con avisos · revisa /var/log/backup.log', acked: false, target: 'tasks' },
     { id: 3, ts: iso(daysAgo(5, 9)), level: 'crit', source: 'smartd/nvme1n1', message: 'smartd: nvme1n1 a 48 °C de forma sostenida · revisar ventilación', acked: false, target: 'disks:nvme1n1' },
