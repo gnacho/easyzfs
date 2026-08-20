@@ -361,6 +361,11 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.14
+
+- **Avisos toast al completar acciones (#94)**: las acciones que modifican datos ahora se confirman con un pequeño aviso abajo a la derecha, por encima de cualquier modal abierto. Crear/borrar snapshots y datasets y el rollback muestran un aviso de éxito, y los fallos aparecen como aviso de error aunque ya hayas cambiado de vista. Cierre automático a los pocos segundos (los errores duran más), cierre manual, anuncio a lectores de pantalla y respeto del movimiento reducido. Sin dependencias nuevas. Portado del fork comunitario coruhoorhan/easyzfs-truenas (AGPL-3.0), gracias coruhoorhan.
+- **Fix: las acciones destructivas no pasaban la confirmación (#95)**: borrar un snapshot, hacer rollback y borrar una tarea desde la UI siempre fallaban contra un backend real con 400 confirm_required, porque la UI mandaba el nombre corto (o el id del job) y el backend exige la ruta completa del snapshot (o el target del job). El mock de la demo aceptaba los valores cortos y escondía el bug. La UI ahora envía el valor que el backend espera.
+
 ### v2.9.13
 
 - **Tendencias de capacidad a largo plazo (#85)**: nueva vista Tendencias en la navegación con selector de fuente (uso de pools en %, temperatura de discos), botones de rango de 7 días a 5 años y gráfica de área SVG sin dependencias. Las muestras crudas se agregan en resúmenes diarios (media/mín/máx por fuente y día) antes de salir de la retención, así los rangos largos siguen siendo rápidos sin guardar todo el detalle.

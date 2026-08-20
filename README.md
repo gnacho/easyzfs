@@ -353,6 +353,11 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.14
+
+- **Toast notifications for action feedback (#94)**: mutating actions now confirm themselves with a small toast bottom-right, above any open modal. Snapshot and dataset create/delete and rollback show a success toast, and failures surface as an error toast even if you already moved to another view. Auto-dismiss after a few seconds (errors stay longer), manual close, screen-reader announcements and reduce-motion support. No new dependencies. Ported from the community fork coruhoorhan/easyzfs-truenas (AGPL-3.0), thanks coruhoorhan.
+- **Fix: destructive actions could not pass the confirm gate (#95)**: deleting a snapshot, rolling back and deleting a task from the UI always failed against a real backend with 400 confirm_required, because the UI sent the short name (or the job id) while the backend requires the full snapshot path (or the job target). The demo mock accepted the short values, which hid the bug. The UI now sends the value the backend expects.
+
 ### v2.9.13
 
 - **Long-term capacity trends (#85)**: new Trends view in the navigation with a source picker (pool used %, disk temperature), range buttons from 7 days to 5 years and a dependency-free SVG area chart. Raw samples are rolled up into daily aggregates (avg/min/max per source and day) before they age out of retention, so long ranges stay fast without keeping all the detail.
