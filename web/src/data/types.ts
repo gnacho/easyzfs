@@ -308,6 +308,7 @@ export interface Disk {
   model: string;
   serial: string;
   size_bytes: number;
+  by_id?: string; // enlace estable /dev/disk/by-id/<by_id> (issue #65); vacío si no existe
   temp_c: number | null; // null = sensor no disponible (p. ej. eMMC)
   smart: 'ok' | 'warn' | 'crit' | 'unknown'; // unknown = SMART no disponible
   smart_detail: string;

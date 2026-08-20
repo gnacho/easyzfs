@@ -187,7 +187,7 @@ func (m *Mock) History(name string) []model.HistoryEntry {
 		}
 	case "ssd":
 		return []model.HistoryEntry{
-			{Ts: now.Add(-40 * time.Minute), Command: "zpool replace ssd 13501483247074580929 nvme1n1", DurationSec: 0.88},
+			{Ts: now.Add(-40 * time.Minute), Command: "zpool replace ssd 13501483247074580929 /dev/disk/by-id/nvme-Samsung_SSD_980_1TB_S649NL0R222222", DurationSec: 0.88},
 			{Ts: now.Add(-2 * time.Hour), Command: "zfs snapshot -r ssd@easyzfs-auto-20260801-0600", DurationSec: 0.91},
 			{Ts: now.Add(-20 * 24 * time.Hour), Command: "zpool set autotrim=on ssd", DurationSec: 0.03},
 			{Ts: now.Add(-60 * 24 * time.Hour), Command: "zpool create ssd mirror nvme0n1 nvme1n1", DurationSec: 1.74},
@@ -440,15 +440,15 @@ func (m *Mock) build() {
 		mkSnap("ssd/vm", "pre-upgrade", 7*24*time.Hour, 20*uint64(gib), "manual"),
 	}
 	m.disks = []model.Disk{
-		{Dev: "sda", Model: "CT500MX500SSD1", Serial: "2034E5A1B2C3", SizeBytes: 500 * uint64(gib), TempC: f64ptr(33), Smart: "ok", SmartDetail: "PASSED", Pool: "", Hours: 18200, SmartFull: mockSmartDetailATA(0)},
+		{Dev: "sda", ByID: "ata-CT500MX500SSD1_2034E5A1B2C3", Model: "CT500MX500SSD1", Serial: "2034E5A1B2C3", SizeBytes: 500 * uint64(gib), TempC: f64ptr(33), Smart: "ok", SmartDetail: "PASSED", Pool: "", Hours: 18200, SmartFull: mockSmartDetailATA(0)},
 		// Disco libre del mismo tamaño que los miembros de tank: candidato a
 		// RAID-Z expansion (lote D) o a sustituir el vdev FAULTED.
-		{Dev: "sde", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA04", SizeBytes: 4 * uint64(tib), TempC: f64ptr(31), Smart: "ok", SmartDetail: "PASSED", Pool: "", Hours: 1200, SmartFull: mockSmartDetailATA(0)},
-		{Dev: "sdb", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA01", SizeBytes: 4 * uint64(tib), TempC: f64ptr(34), Smart: "ok", SmartDetail: "PASSED", Pool: "tank", Hours: 41230, SmartFull: mockSmartDetailATA(0)},
-		{Dev: "sdc", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA02", SizeBytes: 4 * uint64(tib), TempC: f64ptr(35), Smart: "ok", SmartDetail: "PASSED", Pool: "tank", Hours: 41231, SmartFull: mockSmartDetailATA(0)},
-		{Dev: "sdd", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA03", SizeBytes: 4 * uint64(tib), TempC: f64ptr(36), Smart: "warn", SmartDetail: "PASSED (realloc=2 pending=0)", ReallocSectors: 2, Pool: "tank", Hours: 42010, SmartFull: mockSmartDetailATA(2)},
-		{Dev: "nvme0n1", Model: "Samsung SSD 980 1TB", Serial: "S649NL0R111111", SizeBytes: 1 * uint64(tib), TempC: f64ptr(41), Smart: "ok", SmartDetail: "PASSED", Pool: "ssd", Hours: 9800, SmartFull: mockSmartDetailNVMe()},
-		{Dev: "nvme1n1", Model: "Samsung SSD 980 1TB", Serial: "S649NL0R222222", SizeBytes: 1 * uint64(tib), TempC: f64ptr(42), Smart: "ok", SmartDetail: "PASSED", Pool: "ssd", Hours: 9812, SmartFull: mockSmartDetailNVMe()},
+		{Dev: "sde", ByID: "ata-WDC_WD40EFRX-68N_WD-WCC7K1AAAA04", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA04", SizeBytes: 4 * uint64(tib), TempC: f64ptr(31), Smart: "ok", SmartDetail: "PASSED", Pool: "", Hours: 1200, SmartFull: mockSmartDetailATA(0)},
+		{Dev: "sdb", ByID: "ata-WDC_WD40EFRX-68N_WD-WCC7K1AAAA01", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA01", SizeBytes: 4 * uint64(tib), TempC: f64ptr(34), Smart: "ok", SmartDetail: "PASSED", Pool: "tank", Hours: 41230, SmartFull: mockSmartDetailATA(0)},
+		{Dev: "sdc", ByID: "ata-WDC_WD40EFRX-68N_WD-WCC7K1AAAA02", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA02", SizeBytes: 4 * uint64(tib), TempC: f64ptr(35), Smart: "ok", SmartDetail: "PASSED", Pool: "tank", Hours: 41231, SmartFull: mockSmartDetailATA(0)},
+		{Dev: "sdd", ByID: "ata-WDC_WD40EFRX-68N_WD-WCC7K1AAAA03", Model: "WDC WD40EFRX-68N", Serial: "WD-WCC7K1AAAA03", SizeBytes: 4 * uint64(tib), TempC: f64ptr(36), Smart: "warn", SmartDetail: "PASSED (realloc=2 pending=0)", ReallocSectors: 2, Pool: "tank", Hours: 42010, SmartFull: mockSmartDetailATA(2)},
+		{Dev: "nvme0n1", ByID: "nvme-Samsung_SSD_980_1TB_S649NL0R111111", Model: "Samsung SSD 980 1TB", Serial: "S649NL0R111111", SizeBytes: 1 * uint64(tib), TempC: f64ptr(41), Smart: "ok", SmartDetail: "PASSED", Pool: "ssd", Hours: 9800, SmartFull: mockSmartDetailNVMe()},
+		{Dev: "nvme1n1", ByID: "nvme-Samsung_SSD_980_1TB_S649NL0R222222", Model: "Samsung SSD 980 1TB", Serial: "S649NL0R222222", SizeBytes: 1 * uint64(tib), TempC: f64ptr(42), Smart: "ok", SmartDetail: "PASSED", Pool: "ssd", Hours: 9812, SmartFull: mockSmartDetailNVMe()},
 		// Caso real: eMMC de placa (smartctl no la soporta → "unknown", sin
 		// lectura de temperatura → TempC nil, JSON null). En el sistema también
 		// había zd0 y mmcblk0boot0/boot1, pero el filtro de discos físicos los

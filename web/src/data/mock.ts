@@ -141,12 +141,12 @@ export class MockProvider implements DataProvider {
   // temperatura, un NVMe Samsung de sistema y tres ORICO de datos.
   private disks: Disk[] = [
     { dev: 'mmcblk0', model: 'eMMC 5.1 (64 GB)', serial: '—', size_bytes: Math.round(58.2 * GiB), temp_c: null, smart: 'unknown', smart_detail: '', pool: '—', hours: 0 },
-    { dev: 'nvme3n1', model: 'Samsung MZVLB256HAHQ', serial: 'S417NB0K402133', size_bytes: Math.round(238 * GiB), temp_c: 55, smart: 'ok', smart_detail: 'PASSED', pool: 'ssd', hours: 1577 },
-    { dev: 'nvme0n1', model: 'ORICO NVMe SSD', serial: 'ORC2024A01', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
-    { dev: 'nvme1n1', model: 'ORICO NVMe SSD', serial: 'ORC2024A02', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
-    { dev: 'nvme2n1', model: 'ORICO NVMe SSD', serial: 'ORC2024A03', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: '—', hours: 8725 },
+    { dev: 'nvme3n1', by_id: 'nvme-Samsung_MZVLB256HAHQ_S417NB0K402133', model: 'Samsung MZVLB256HAHQ', serial: 'S417NB0K402133', size_bytes: Math.round(238 * GiB), temp_c: 55, smart: 'ok', smart_detail: 'PASSED', pool: 'ssd', hours: 1577 },
+    { dev: 'nvme0n1', by_id: 'nvme-ORICO_NVMe_SSD_ORC2024A01', model: 'ORICO NVMe SSD', serial: 'ORC2024A01', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
+    { dev: 'nvme1n1', by_id: 'nvme-ORICO_NVMe_SSD_ORC2024A02', model: 'ORICO NVMe SSD', serial: 'ORC2024A02', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
+    { dev: 'nvme2n1', by_id: 'nvme-ORICO_NVMe_SSD_ORC2024A03', model: 'ORICO NVMe SSD', serial: 'ORC2024A03', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: '—', hours: 8725 },
     // Caso real: disco USB montado (en uso) — no debe ofrecerse como libre.
-    { dev: 'sda', model: 'Seagate Expansion 4TB', serial: 'NAABC123', size_bytes: Math.round(3.64 * TiB), temp_c: 38, smart: 'warn', smart_detail: 'PASSED (realloc=48 pending=0)', realloc_sectors: 48, pool: '—', in_use: true, hours: 22100 },
+    { dev: 'sda', by_id: 'usb-Seagate_Expansion_4TB_NAABC123-0:0', model: 'Seagate Expansion 4TB', serial: 'NAABC123', size_bytes: Math.round(3.64 * TiB), temp_c: 38, smart: 'warn', smart_detail: 'PASSED (realloc=48 pending=0)', realloc_sectors: 48, pool: '—', in_use: true, hours: 22100 },
   ];
 
   private systemTimers: SystemTimer[] = [

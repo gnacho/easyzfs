@@ -160,6 +160,8 @@ const es = {
   rp_btn: 'Sustituir disco',
   rp_small: 'pequeño', rp_small_hidden: '({n} oculto(s) por tamaño)',
   rp_show_all: 'Mostrar también los {n} disco(s) de tamaño insuficiente',
+  rp_byid: 'Ruta estable',
+  rp_warn_online: 'El disco de origen está ONLINE y sano. Sustituir un disco sano dispara un resilver innecesario: comprueba que es exactamente lo que quieres hacer.',
 
   // Retirar disco de un mirror
   dt_title: 'Retirar disco',
@@ -663,6 +665,8 @@ const en: Record<I18nKey, string> = {
   rp_btn: 'Replace disk',
   rp_small: 'too small', rp_small_hidden: '({n} hidden by size)',
   rp_show_all: 'Also show the {n} undersized disk(s)',
+  rp_byid: 'Stable path',
+  rp_warn_online: 'The origin disk is ONLINE and healthy. Replacing a healthy disk triggers an unnecessary resilver: double-check this is exactly what you want to do.',
 
   dt_title: 'Detach disk',
   dt_desc: '{dev} will be permanently detached from pool {pool}. Data stays safe on the rest of the mirror.',

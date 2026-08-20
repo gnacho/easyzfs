@@ -132,7 +132,39 @@ func (s *Server) addVdev(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// resolveNewDev — normaliza el disco destino de un replace. Acepta nombre
+// base ('sda'), '/dev/sda' o ruta by-id ('/dev/disk/by-id/ata-…') y lo
+// resuelve contra el inventario de discos: devuelve la forma canónica
+// preferida para zpool ('/dev/disk/by-id/<id>' si el disco tiene enlace,
+// si no el nombre base) y el nombre base (para las guardas). Si el disco
+// no está en el inventario, devuelve la entrada saneada y ok=false (la
+// guarda de tamaño no podrá aplicarse, como ocurría antes) — issue #65.
+func (s *Server) resolveNewDev(in string) (canonical, base string, ok bool) {
+	in = strings.TrimSpace(in)
+	if strings.HasPrefix(in, "/dev/disk/by-id/") {
+		id := strings.TrimPrefix(in, "/dev/disk/by-id/")
+		for _, d := range s.disks.Disks() {
+			if d.ByID != "" && d.ByID == id {
+				return "/dev/disk/by-id/" + d.ByID, d.Dev, true
+			}
+		}
+		return in, id, false
+	}
+	base = stripPart(strings.TrimPrefix(in, "/dev/"))
+	for _, d := range s.disks.Disks() {
+		if d.Dev == base {
+			if d.ByID != "" {
+				return "/dev/disk/by-id/" + d.ByID, base, true
+			}
+			return base, base, true
+		}
+	}
+	return base, base, false
+}
+
 // replaceDisk — POST /api/pools/{name}/replace {old_dev, new_dev, confirm} → 202.
+// new_dev admite nombre base, '/dev/sdX' o ruta by-id; se resuelve SIEMPRE a
+// '/dev/disk/by-id/…' cuando el disco tiene enlace estable (issue #65).
 func (s *Server) replaceDisk(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	var body struct {
@@ -146,13 +178,14 @@ func (s *Server) replaceDisk(w http.ResponseWriter, r *http.Request) {
 	if !requireConfirm(w, body.Confirm, name) {
 		return
 	}
-	if body.OldDev == body.NewDev {
+	newCanonical, newBase, _ := s.resolveNewDev(body.NewDev)
+	oldBase := stripPart(strings.TrimPrefix(body.OldDev, "/dev/"))
+	if body.OldDev == body.NewDev || oldBase == newBase {
 		writeErr(w, http.StatusConflict, "same_dev", "el disco nuevo no puede ser el mismo que el sustituido")
 		return
 	}
 	// Guarda: el disco nuevo no puede ser miembro de ningún pool (evita el
 	// error críptico de zpool 'is part of active pool').
-	newBase := stripPart(strings.TrimPrefix(body.NewDev, "/dev/"))
 	for _, p := range s.pools.Pools() {
 		for _, v := range p.Vdevs {
 			key := stripPart(strings.TrimPrefix(v.Path, "/dev/"))
@@ -176,7 +209,7 @@ func (s *Server) replaceDisk(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if err := s.act.Replace(r.Context(), actor(r), name, body.OldDev, body.NewDev, true); err != nil {
+	if err := s.act.Replace(r.Context(), actor(r), name, body.OldDev, newCanonical, true); err != nil {
 		actionErr(w, err)
 		return
 	}

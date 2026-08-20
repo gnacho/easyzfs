@@ -1092,7 +1092,9 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
   const [showAll, setShowAll] = useState(false);
   // tamaño del vdev a sustituir (si el disco viejo sigue visible): el nuevo debe ser >=
   const oldVdev = current.find((v) => v.dev === oldDev);
-  const oldSize = (disks ?? []).find((d) => oldVdev?.path && d.dev === devBase(oldVdev.path))?.size_bytes ?? 0;
+  const oldDisk = (disks ?? []).find((d) => oldVdev?.path ? d.dev === devBase(oldVdev.path) : d.dev === oldDev);
+  const newDisk = (disks ?? []).find((d) => d.dev === newDev);
+  const oldSize = oldDisk?.size_bytes ?? 0;
   const suitable = useMemo(() => free.filter((d) => oldSize === 0 || d.size_bytes >= oldSize), [free, oldSize]);
   const hidden = free.length - suitable.length;
   const toggle = (dev: string) => setSel((s) => {
@@ -1122,7 +1124,11 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
     setBusy(true); setErr('');
     try {
       if (mode === 'vdev') await getProvider().addVdev(pool, topo, [...sel], confirm.trim());
-      else await getProvider().replaceDisk(pool, oldDev, newDev, confirm.trim());
+      else {
+        // by-id si existe: las letras sdX son inestables entre arranques (#65)
+        const outDev = newDisk?.by_id ? '/dev/disk/by-id/' + newDisk.by_id : newDev;
+        await getProvider().replaceDisk(pool, oldDev, outDev, confirm.trim());
+      }
       refresh(); onClose();
     } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
   };
@@ -1196,8 +1202,36 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
                   {t('rp_show_all', { n: hidden })}
                 </label>
               )}
-            </>);
+             </>);
           })()}
+
+          {/* #65: resumen explícito origen/destino con modelo+serial antes de confirmar */}
+          <div className="rp-summary">
+            <div>
+              <span className="lbl">{t('rp_old')}</span>
+              <span className="mono">
+                {oldVdev?.path ? oldVdev.path.replace('/dev/', '') : oldDev}
+                {oldDisk ? ` · ${oldDisk.model} · S/N ${oldDisk.serial}` : ''}
+              </span>
+            </div>
+            <div>
+              <span className="lbl">{t('rp_new')}</span>
+              <span className="mono">
+                {newDev}
+                {newDisk ? ` · ${newDisk.model} · S/N ${newDisk.serial}` : ''}
+              </span>
+            </div>
+            {newDisk?.by_id && (
+              <div>
+                <span className="lbl">{t('rp_byid')}</span>
+                <span className="mono wrap">/dev/disk/by-id/{newDisk.by_id}</span>
+              </div>
+            )}
+          </div>
+          {/* #65: aviso fuerte si el origen es un miembro ONLINE sano */}
+          {oldVdev?.status === 'ONLINE' && (
+            <p className="rp-warn" role="alert">{t('rp_warn_online')}</p>
+          )}
         </>)}
 
         <label htmlFor="pd-confirm">{t('ex_confirm_lbl_pool')}</label>
