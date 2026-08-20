@@ -8,8 +8,9 @@ import (
 )
 
 // getSeries — GET /api/series?source=pool.tank.used_pct&days=7&points=800
-// Devuelve la serie muestreada (LTTB) del rango pedido. days 1-365, points
-// 50-2000. Rango sin datos → {points: []} con 200 (un hueco es estado normal).
+// Devuelve la serie muestreada (LTTB) del rango pedido. days 1-1825 (5 años;
+// los rangos largos usan agregados diarios de series_daily), points 50-2000.
+// Rango sin datos → {points: []} con 200 (un hueco es estado normal).
 func (s *Server) getSeries(w http.ResponseWriter, r *http.Request) {
 	src := r.URL.Query().Get("source")
 	if !series.ValidSource(src) {
@@ -32,7 +33,11 @@ func (s *Server) getSeries(w http.ResponseWriter, r *http.Request) {
 			points = n
 		}
 	}
-	pts, err := series.Range(r.Context(), s.db, src, from, to, points)
+	retention := s.cfg.RetentionDays
+	if retention <= 0 {
+		retention = 30
+	}
+	pts, err := series.Range(r.Context(), s.db, src, from, to, points, retention)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "db_error", err.Error())
 		return
