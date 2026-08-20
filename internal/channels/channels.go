@@ -11,6 +11,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -126,7 +127,7 @@ func (c *Client) sendSyslog(ctx context.Context, title, body string) {
 	pri := c.syslogFacility*8 + 1
 	msg := fmt.Sprintf("<%d>%s EasyZFS[%d]: %s: %s",
 		pri, time.Now().Format("Jan _2 15:04:05"), 0, title, body)
-	addr := fmt.Sprintf("%s:%d", c.syslogHost, c.syslogPort)
+	addr := net.JoinHostPort(c.syslogHost, strconv.Itoa(c.syslogPort))
 	if c.syslogProto == "tcp" {
 		var d net.Dialer
 		conn, err := d.DialContext(ctx, "tcp", addr)

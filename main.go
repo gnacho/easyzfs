@@ -23,6 +23,7 @@ import (
 
 	"easyzfs/internal/actions"
 	"easyzfs/internal/alerts"
+	"easyzfs/internal/apikeys"
 	"easyzfs/internal/auth"
 	"easyzfs/internal/backup"
 	"easyzfs/internal/channels"
@@ -167,9 +168,14 @@ func main() {
 		cancel()
 	}
 
+	// API keys de solo lectura (#87): el middleware de auth las valida.
+	keyStore := apikeys.NewStore(database)
+	authManager := auth.NewManager(database, cfg.SessionSecret, cfg.CookieSecure)
+	authManager.SetAPIKeys(keyStore)
+
 	srv := httpapi.NewServer(httpapi.Deps{
-		Cfg: cfg, DB: database, Auth: auth.NewManager(database, cfg.SessionSecret, cfg.CookieSecure),
-		Users: userStore, Alerter: alerter, Settings: stStore,
+		Cfg: cfg, DB: database, Auth: authManager,
+		Users: userStore, APIKeys: keyStore, Alerter: alerter, Settings: stStore,
 		Pools: providers.Pools, Disks: providers.Disks, SysTimers: providers.SysTimers,
 		Perf: providers.Perf, Caps: providers.Caps,
 		Actions: act, Sched: sched, Jobs: jobStore, Hub: h, Push: pushSender,

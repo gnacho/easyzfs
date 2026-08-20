@@ -33,6 +33,19 @@ export interface TwoFAStatus {
   enabled: boolean;
 }
 
+// API keys de solo lectura (#87)
+export interface APIKeyInfo {
+  id: number;
+  name: string;
+  created_at?: string;
+  last_used?: string;
+}
+
+export interface APIKeyCreated {
+  name: string;
+  key: string; // ez_… solo en la respuesta de creación
+}
+
 export interface UserInfo {
   user: string;
   role: Role;

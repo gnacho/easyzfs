@@ -9,6 +9,8 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
+
+	"easyzfs/internal/apikeys"
 	"encoding/hex"
 	"errors"
 	"net/http"
@@ -35,12 +37,17 @@ type Manager struct {
 	db     *sql.DB
 	secret []byte
 	secure bool
+	keys   *apikeys.Store // opcional: API keys de solo lectura (#87)
 }
 
 // NewManager crea el gestor de sesiones.
 func NewManager(d *sql.DB, secret []byte, secureCookies bool) *Manager {
 	return &Manager{db: d, secret: secret, secure: secureCookies}
 }
+
+// SetAPIKeys conecta el store de API keys de solo lectura (opcional; nil =
+// sin soporte de API keys).
+func (m *Manager) SetAPIKeys(s *apikeys.Store) { m.keys = s }
 
 // CreateSession crea una sesión para el usuario y devuelve la cookie lista.
 func (m *Manager) CreateSession(ctx context.Context, user string) (*http.Cookie, error) {
@@ -163,21 +170,41 @@ func (m *Manager) VerifyPending(token string) (string, bool) {
 
 // Middleware exige sesión válida en todo lo que envuelve; inyecta user+role en ctx.
 // Las rutas públicas (login) se registran FUERA de este middleware.
+// Además de la cookie de sesión, acepta una API key de solo lectura
+// (`Authorization: Bearer ez_…`): con ella solo pasan GET/HEAD y el rol es
+// 'user' (nunca admin, las mutaciones admin siguen protegidas).
 func (m *Manager) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie(CookieName)
-		if err != nil {
-			writeAuthErr(w, http.StatusUnauthorized, "unauthorized", "sesión requerida")
-			return
-		}
-		user, role, ok := m.Validate(r.Context(), c.Value)
-		if !ok {
+		// 1. Sesión por cookie (preferente).
+		if c, err := r.Cookie(CookieName); err == nil {
+			if user, role, ok := m.Validate(r.Context(), c.Value); ok {
+				ctx := context.WithValue(r.Context(), ctxUser, user)
+				ctx = context.WithValue(ctx, ctxRole, role)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				return
+			}
+			// Cookie presente pero inválida: no caer en la API key (sesión
+			// corrupta debe reautenticarse).
 			writeAuthErr(w, http.StatusUnauthorized, "unauthorized", "sesión inválida o expirada")
 			return
 		}
-		ctx := context.WithValue(r.Context(), ctxUser, user)
-		ctx = context.WithValue(ctx, ctxRole, role)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		// 2. API key de solo lectura.
+		if m.keys != nil {
+			authz := r.Header.Get("Authorization")
+			if strings.HasPrefix(authz, "Bearer ") && len(authz) > 7 {
+				if name, ok := m.keys.Validate(r.Context(), strings.TrimPrefix(authz, "Bearer ")); ok {
+					if r.Method != http.MethodGet && r.Method != http.MethodHead {
+						writeAuthErr(w, http.StatusForbidden, "readonly_key", "la API key es de solo lectura")
+						return
+					}
+					ctx := context.WithValue(r.Context(), ctxUser, "apikey:"+name)
+					ctx = context.WithValue(ctx, ctxRole, "user")
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
+		}
+		writeAuthErr(w, http.StatusUnauthorized, "unauthorized", "sesión requerida")
 	})
 }
 

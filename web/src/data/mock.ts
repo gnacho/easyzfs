@@ -8,6 +8,7 @@ import type {
   Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SeriesPoint, SeriesResp, SessionUser, Settings, Snapshot, SmartSelftest,
   SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UserInfo, VersionInfo,
+  APIKeyCreated, APIKeyInfo,
   CreateReplicationReq, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, UpdateReplicationReq,
 } from './types';
 
@@ -374,6 +375,20 @@ export class MockProvider implements DataProvider {
   setUserLanguage = async (name: string, language: Lang) => {
     await delay();
     this.users = this.users.map((u) => (u.user === name ? { ...u, language } : u));
+  };
+
+  // API keys read-only en demo (inertes)
+  private apiKeys: { id: number; name: string; created_at: string }[] = [];
+  getAPIKeys = async (): Promise<APIKeyInfo[]> => { await delay(); return this.apiKeys.map((k) => ({ ...k })); };
+  createAPIKey = async (name: string): Promise<APIKeyCreated> => {
+    await delay();
+    const id = this.apiKeys.length + 1;
+    this.apiKeys.push({ id, name, created_at: iso(new Date()) });
+    return { name, key: 'ez_' + 'a'.repeat(64) };
+  };
+  deleteAPIKey = async (id: number) => {
+    await delay();
+    this.apiKeys = this.apiKeys.filter((k) => k.id !== id);
   };
 
   // ---- Pools ----

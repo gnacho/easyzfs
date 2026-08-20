@@ -15,6 +15,7 @@ import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload,
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
+import { APIKeysPanel } from '../components/APIKeysPanel';
 import { usePush } from '../data/push';
 import { useReleaseCheck } from '../ui/releasecheck';
 import { ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion } from '../ui/theme';
@@ -751,7 +752,7 @@ export default function Settings() {
   const [reduceMotion, setReduceMotionState] = useState(getReduceMotion());
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone());
-  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | null>(null);
+  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | 'apikeys' | null>(null);
   // Snapshot de los umbrales guardados (para resaltar los campos modificados
   // y limpiar la marca al guardar) + mensaje de feedback local de la tarjeta.
   const [threshSaved, setThreshSaved] = useState<{ cap_warn_pct: number; cap_crit_pct: number; disk_temp_c: number } | null>(null);
@@ -952,6 +953,15 @@ export default function Settings() {
               <IconChev className="chev" />
             </button>
 
+            {/* 3b. API keys de solo lectura (desplegable) */}
+            <button type="button" aria-expanded={adminPanel === 'apikeys'}
+              onClick={() => setAdminPanel(adminPanel === 'apikeys' ? null : 'apikeys')}
+              className={`ab-btn${adminPanel === 'apikeys' ? ' on' : ''}`}>
+              <IconCode size={15} />
+              <span className="hidden-sm">{t('s_apikeys')}</span>
+              <IconChev className="chev" />
+            </button>
+
             {/* 4. Modo demo a la derecha */}
             <div className="ab-right">
               <span>{t('s_demo_enable')}</span>
@@ -1005,6 +1015,11 @@ export default function Settings() {
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>{t('s_roles_d')}</p>
               </div>
+            </div>
+          )}
+          {adminPanel === 'apikeys' && (
+            <div className="ab-panel">
+              <APIKeysPanel />
             </div>
           )}
         </div>
