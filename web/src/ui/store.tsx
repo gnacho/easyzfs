@@ -13,8 +13,8 @@ import type { LangMode, I18nKey } from './i18n';
 import { applyTheme, applyDensity, applyReduceMotion, onThemeChange, startThemeWatcher, effectiveTheme, setThemeMode, getThemeMode } from './theme';
 import type { ThemeMode } from './theme';
 
-export type ViewId = 'dash' | 'pools' | 'data' | 'snaps' | 'tasks' | 'disks' | 'settings';
-export const VIEWS: ViewId[] = ['dash', 'pools', 'data', 'snaps', 'tasks', 'disks', 'settings'];
+export type ViewId = 'dash' | 'pools' | 'data' | 'snaps' | 'tasks' | 'disks' | 'trends' | 'settings';
+export const VIEWS: ViewId[] = ['dash', 'pools', 'data', 'snaps', 'tasks', 'disks', 'trends', 'settings'];
 
 function parseHash(): ViewId {
   const h = location.hash.replace(/^#\/?/, '') as ViewId;

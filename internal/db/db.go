@@ -7,6 +7,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"strconv"
 
 	_ "modernc.org/sqlite"
 )
@@ -148,6 +149,20 @@ var migrations = []string{
 	  created_at TEXT NOT NULL DEFAULT (datetime('now')),
 	  PRIMARY KEY (user, code_hash)
 	);`,
+	// v20: tendencia de capacidad larga (#85). series_daily agrega por día
+	// (AVG/MIN/MAX) las muestras crudas que van a purgarse, permitiendo rangos
+	// de hasta 5 años sin guardar todo el detalle. El mantenimiento rellena
+	// esta tabla ANTES de borrar las crudas; Range() la usa para from < hoy-30d.
+	`CREATE TABLE IF NOT EXISTS series_daily (
+	  source TEXT NOT NULL,
+	  day    TEXT NOT NULL,
+	  avg    REAL NOT NULL,
+	  min    REAL NOT NULL,
+	  max    REAL NOT NULL,
+	  count  INTEGER NOT NULL,
+	  PRIMARY KEY (source, day)
+	);
+	CREATE INDEX IF NOT EXISTS idx_series_daily_source_day ON series_daily(source, day);`,
 	// v21: API keys de solo lectura (#87). key_hash es SHA-256 hex; la clave
 	// en claro (ez_...) se muestra UNA vez al crearla y nunca se guarda.
 	`CREATE TABLE IF NOT EXISTS api_keys (
@@ -225,6 +240,45 @@ func SizeBytes(path string) int64 {
 func PurgeSeries(ctx context.Context, d *sql.DB, retentionDays int) (int64, error) {
 	res, err := d.ExecContext(ctx,
 		"DELETE FROM series WHERE ts < datetime('now', '-' || ? || ' days')", retentionDays)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// RollupSeriesToDaily agrega a series_daily (AVG/MIN/MAX por source y día)
+// todas las muestras crudas más viejas que retentionDays, y luego las borra.
+// UPSERT: re-agregar un día ya presente lo recalcula (idempotente).
+func RollupSeriesToDaily(ctx context.Context, d *sql.DB, retentionDays int) (int64, error) {
+	cutoff := "datetime('now', '-' || " + strconv.Itoa(retentionDays) + " || ' days')"
+	// 1. Agregar crudas viejas → series_daily (por source y día).
+	if _, err := d.ExecContext(ctx, `
+		INSERT INTO series_daily (source, day, avg, min, max, count)
+		SELECT source, substr(ts, 1, 10) AS day,
+		       AVG(value), MIN(value), MAX(value), COUNT(*)
+		FROM series
+		WHERE ts < `+cutoff+`
+		GROUP BY source, day
+		ON CONFLICT(source, day) DO UPDATE SET
+		  avg = (avg * count + excluded.avg * excluded.count) / (count + excluded.count),
+		  min = MIN(min, excluded.min),
+		  max = MAX(max, excluded.max),
+		  count = count + excluded.count`); err != nil {
+		return 0, err
+	}
+	// 2. Borrar las crudas ya agregadas.
+	res, err := d.ExecContext(ctx, "DELETE FROM series WHERE ts < "+cutoff)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// PurgeSeriesDaily borra agregados diarios más viejos que days (retención
+// larga: 5 años por defecto para la tendencia de capacidad).
+func PurgeSeriesDaily(ctx context.Context, d *sql.DB, days int) (int64, error) {
+	res, err := d.ExecContext(ctx,
+		"DELETE FROM series_daily WHERE day < date('now', '-' || ? || ' days')", days)
 	if err != nil {
 		return 0, err
 	}

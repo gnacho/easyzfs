@@ -69,7 +69,7 @@ func TestRaise_DedupeLegado(t *testing.T) {
 	ctx := context.Background()
 
 	a.Raise(ctx, "info", "test.legado", "", "mensaje fijo")
-	a.Raise(ctx, "info", "test.legado", "", "mensaje fijo")   // duplicada: se ignora
+	a.Raise(ctx, "info", "test.legado", "", "mensaje fijo")     // duplicada: se ignora
 	a.Raise(ctx, "info", "test.legado", "", "mensaje distinto") // nueva: entra
 
 	var n int

@@ -6,7 +6,7 @@ import type { ComponentType } from 'react';
 import { AppProvider, useApp, alertTargetView } from './ui/store';
 import type { ViewId } from './ui/store';
 import { ModalProvider, ModalHost } from './components/ModalHost';
-import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconMonitor, IconChev, IconFoldLeft, IconFoldRight, IconUser } from './components/icons';
+import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconMonitor, IconChev, IconFoldLeft, IconFoldRight, IconUser, IconList } from './components/icons';
 import { Spinner } from './components/ui';
 import ErrorBoundary from './components/ErrorBoundary';
 import PullToRefresh from './components/PullToRefresh';
@@ -27,6 +27,7 @@ const Datasets = lazyRetry(() => import('./views/Datasets'));
 const Snapshots = lazyRetry(() => import('./views/Snapshots'));
 const Tasks = lazyRetry(() => import('./views/Tasks'));
 const Disks = lazyRetry(() => import('./views/Disks'));
+const Trends = lazyRetry(() => import('./views/Trends'));
 const Settings = lazyRetry(() => import('./views/Settings'));
 
 // Nav principal (Ajustes NO va aquí: vive al pie del sidebar, patrón
@@ -38,6 +39,7 @@ const NAV: { id: ViewId; icon: ComponentType<{ size?: number }> }[] = [
   { id: 'disks', icon: IconDisk },
   { id: 'tasks', icon: IconTask },
   { id: 'snaps', icon: IconSnap },
+  { id: 'trends', icon: IconList },
 ];
 
 const COLLAPSED_KEY = 'easyzfs-sidebar-collapsed';
@@ -196,6 +198,7 @@ function Shell() {
       case 'snaps': return <Snapshots />;
       case 'tasks': return <Tasks />;
       case 'disks': return <Disks />;
+      case 'trends': return <Trends />;
       case 'settings': return <Settings />;
     }
   })();

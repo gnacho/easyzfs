@@ -31,14 +31,24 @@ type Config struct {
 	WebhookRetries int           // WEBHOOK_RETRIES (def 3)
 
 	// Email/SMTP (canal de alertas S5). Vacio = email desactivado.
-	SMTPHost       string // SMTP_HOST
-	SMTPPort       int    // SMTP_PORT (def 587)
-	SMTPUser       string // SMTP_USER (vacío = SMTP sin autenticación)
-	SMTPPass       string // SMTP_PASS (solo servidor; nunca en logs ni BD)
-	SMTPFrom       string // SMTP_FROM ("EasyZFS <easyzfs@example.com>")
-	SMTPEncryption string // SMTP_ENCRYPTION: none | starttls | tls (def starttls)
+	SMTPHost       string        // SMTP_HOST
+	SMTPPort       int           // SMTP_PORT (def 587)
+	SMTPUser       string        // SMTP_USER (vacío = SMTP sin autenticación)
+	SMTPPass       string        // SMTP_PASS (solo servidor; nunca en logs ni BD)
+	SMTPFrom       string        // SMTP_FROM ("EasyZFS <easyzfs@example.com>")
+	SMTPEncryption string        // SMTP_ENCRYPTION: none | starttls | tls (def starttls)
 	SMTPTimeout    time.Duration // SMTP_TIMEOUT (def 10s)
-	SMTPTestTo     string // SMTP_TEST_TO: fuerza destino de prueba en todos los envíos
+	SMTPTestTo     string        // SMTP_TEST_TO: fuerza destino de prueba en todos los envíos
+
+	// Canales de alerta adicionales (#86). Vacio = canal desactivado.
+	NtfyURL        string // NTFY_URL (p.ej. https://ntfy.sh/mi-topic)
+	NtfyToken      string // NTFY_TOKEN (opcional; vacío = sin auth)
+	GotifyURL      string // GOTIFY_URL (p.ej. https://gotify.example.com)
+	GotifyToken    string // GOTIFY_TOKEN (app token de Gotify)
+	SyslogHost     string // SYSLOG_HOST (p.ej. 127.0.0.1)
+	SyslogPort     int    // SYSLOG_PORT (def 514)
+	SyslogProto    string // SYSLOG_PROTO: udp | tcp (def udp)
+	SyslogFacility int    // SYSLOG_FACILITY (def 1 = user)
 }
 
 // DataDir — directorio de datos del daemon (deriva de DB_PATH): ahí viven la
@@ -82,6 +92,15 @@ func Load() *Config {
 		SMTPEncryption: env("SMTP_ENCRYPTION", "starttls"),
 		SMTPTimeout:    time.Duration(envInt("SMTP_TIMEOUT", 10)) * time.Second,
 		SMTPTestTo:     os.Getenv("SMTP_TEST_TO"),
+
+		NtfyURL:        os.Getenv("NTFY_URL"),
+		NtfyToken:      os.Getenv("NTFY_TOKEN"),
+		GotifyURL:      os.Getenv("GOTIFY_URL"),
+		GotifyToken:    os.Getenv("GOTIFY_TOKEN"),
+		SyslogHost:     os.Getenv("SYSLOG_HOST"),
+		SyslogPort:     envInt("SYSLOG_PORT", 514),
+		SyslogProto:    env("SYSLOG_PROTO", "udp"),
+		SyslogFacility: envInt("SYSLOG_FACILITY", 1),
 	}
 	if cfg.Demo {
 		cfg.Mock = true // demo implica colectores mock
