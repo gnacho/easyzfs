@@ -361,6 +361,13 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.11
+
+- **Demo pública en inglés por defecto (#73)**: la demo alojada resuelve ahora el idioma automático a inglés antes del primer render, así los visitantes ven la interfaz en inglés sea cual sea el idioma de su navegador. La elección explícita de idioma y las instalaciones normales mantienen su comportamiento.
+- **Corregida una alerta de la demo que daba mal consejo ZFS (#74)**: el panel de la demo mostraba una alerta de ejemplo que decía que un 12% de fragmentación es alto y sugería un scrub. Un 12% de fragmentación del espacio libre es sano, y los scrubs verifican checksums sin reescribir datos, así que nunca reducen la fragmentación. La alerta pasa a ser el mensaje crítico "Pool tank DEGRADED" que la app emite de verdad, coherente con el estado real del pool de la demo.
+- **CTA del hero de la landing renombrado (#75)**: el botón principal pasa de "Instalar en tu NAS" a "Instalar EasyZFS" en ambos idiomas, ya que la app funciona en cualquier host Linux.
+- **Icono de idioma en Ajustes (#76)**: el selector de idioma de Ajustes lleva ahora el icono "languages" de lucide; sustituye al icono genérico de monitor en el disparador móvil y aparece junto al select en escritorio.
+
 ### v2.9.10
 
 - **Sustitución de discos segura con rutas by-id estables (#65)**: el disco destino de un replace se resuelve ahora a su ruta estable `/dev/disk/by-id/` siempre que exista, ya que las letras sdX del kernel pueden cambiar entre arranques o movimientos de bahía. El diálogo de sustitución muestra un resumen de origen y destino con modelo y número de serie de ambos discos más la ruta estable que se usará, y avisa con fuerza cuando el origen elegido es un miembro ONLINE y sano, porque sustituirlo dispara un resiliver innecesario. Las guardas del servidor (mismo disco, disco ya presente en un pool, destino más pequeño) comparan el dispositivo resuelto y detectan también formas mezcladas base/by-id.

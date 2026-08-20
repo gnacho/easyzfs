@@ -353,6 +353,13 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.11
+
+- **Public demo in English by default (#73)**: the hosted demo now resolves the automatic language to English before the first render, so visitors see the UI in English regardless of their browser language. Explicit language choices and regular installs keep their behaviour.
+- **Corrected a demo alert that gave wrong ZFS advice (#74)**: the demo dashboard used to show a mock alert claiming 12% fragmentation is high and suggesting a scrub. 12% free-space fragmentation is healthy, and scrubs verify checksums without rewriting data, so they never reduce fragmentation. The alert is now the critical "Pool tank DEGRADED" message the app really emits, matching the actual state of the demo pool.
+- **Landing hero CTA renamed (#75)**: the main button now reads "Install EasyZFS" instead of "Install on your NAS" in both languages, since the app runs on any Linux host.
+- **Language icon in Settings (#76)**: the language selector in Settings now carries the lucide languages icon, replacing the generic monitor icon on the mobile trigger and appearing beside the select on desktop.
+
 ### v2.9.10
 
 - **Safe disk replacement with stable by-id paths (#65)**: the target disk of a replace is now resolved to its stable `/dev/disk/by-id/` path whenever one exists, since kernel sdX names can shift across boots or bay moves. The replace dialog shows an origin/destination summary with model and serial for both disks plus the stable path that will be used, and warns loudly when the selected origin is an ONLINE and healthy member, because replacing it triggers an unnecessary resilver. Server-side guards (same disk, disk already in a pool, undersized target) now compare the resolved device and also catch mixed base/by-id forms.
