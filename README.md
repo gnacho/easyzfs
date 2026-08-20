@@ -353,6 +353,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.12
+
+- **Optional TOTP two-factor authentication (#84)**: any account can now enable 2FA from Settings → My profile. Activation shows a QR code and secret key for any authenticator app (Google Authenticator, Aegis, 1Password…); confirming with a valid code generates 10 one-time recovery codes (stored hashed, never in plaintext). When 2FA is active, login becomes two-step: password first, then a 6-digit code (or a recovery code). Admins can reset another user's 2FA from the user management panel, and the login rate limit also applies to the second factor.
+
 ### v2.9.11
 
 - **Public demo in English by default (#73)**: the hosted demo now resolves the automatic language to English before the first render, so visitors see the UI in English regardless of their browser language. Explicit language choices and regular installs keep their behaviour.

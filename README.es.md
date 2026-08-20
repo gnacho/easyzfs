@@ -361,6 +361,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.12
+
+- **Verificación en dos pasos TOTP opcional (#84)**: cualquier cuenta puede activar el 2FA desde Ajustes → Mi perfil. La activación muestra un código QR y la clave secreta para cualquier app de autenticación (Google Authenticator, Aegis, 1Password…); al confirmar con un código válido se generan 10 códigos de recuperación de un solo uso (almacenados con hash, nunca en claro). Con el 2FA activo, el login pasa a ser de dos pasos: primero la contraseña y luego un código de 6 dígitos (o un código de recuperación). Los administradores pueden resetear el 2FA de otro usuario desde la gestión de usuarios, y el límite de intentos de login también aplica al segundo factor.
+
 ### v2.9.11
 
 - **Demo pública en inglés por defecto (#73)**: la demo alojada resuelve ahora el idioma automático a inglés antes del primer render, así los visitantes ven la interfaz en inglés sea cual sea el idioma de su navegador. La elección explícita de idioma y las instalaciones normales mantienen su comportamiento.
