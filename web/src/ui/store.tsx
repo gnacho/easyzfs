@@ -21,6 +21,13 @@ function parseHash(): ViewId {
   return VIEWS.includes(h) ? h : 'dash';
 }
 
+// --- Toasts (avisos ligeros de acciones) ---------------------------
+// Port refactorizado del fork comunitario coruhoorhan/easyzfs-truenas (AGPL-3.0).
+export type ToastKind = 'ok' | 'err' | 'warn' | 'info';
+export interface Toast { id: number; msg: string; kind: ToastKind }
+let nextToastId = 1;
+const MAX_TOASTS = 4;
+
 interface AppCtx {
   ready: boolean;            // provider inicializado
   demo: boolean;
@@ -48,6 +55,10 @@ interface AppCtx {
   dataVersion: number;
   // Re-lee /api/me (tras guardar perfil: nombre visible, email…)
   reloadUser: () => void;
+  // Toasts: notify() encola (auto-cierre solo), dismissToast() descarta
+  toasts: Toast[];
+  notify: (msg: string, kind?: ToastKind) => void;
+  dismissToast: (id: number) => void;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
@@ -226,13 +237,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getProvider().me().then(setUser).catch(() => {});
   }, []);
 
+  const [toasts, setToasts] = useState<Toast[]>([]);
+  // Encola un aviso; se cierra solo (los errores duran más). Si la cola se
+  // llena, se descartan los más antiguos.
+  const notify = useCallback((msg: string, kind: ToastKind = 'info') => {
+    const id = nextToastId++;
+    setToasts((cur) => [...cur, { id, msg, kind }].slice(-MAX_TOASTS));
+    setTimeout(() => setToasts((cur) => cur.filter((x) => x.id !== id)), kind === 'err' ? 6000 : 3500);
+  }, []);
+  const dismissToast = useCallback((id: number) => {
+    setToasts((cur) => cur.filter((x) => x.id !== id));
+  }, []);
+
   const value = useMemo<AppCtx>(() => ({
     ready, demo, user, route, navigate, login, login2FA, logout, enterDemo, exitDemo,
     t, langMode, setLang, themeMode, themeEff, setTheme,
     isAdmin: user?.role === 'admin',
     caps,
     refresh, dataVersion, reloadUser,
-  }), [ready, demo, user, route, navigate, login, login2FA, logout, enterDemo, exitDemo, t, langMode, setLang, themeMode, themeEff, setTheme, caps, refresh, dataVersion, reloadUser]);
+    toasts, notify, dismissToast,
+  }), [ready, demo, user, route, navigate, login, login2FA, logout, enterDemo, exitDemo, t, langMode, setLang, themeMode, themeEff, setTheme, caps, refresh, dataVersion, reloadUser, toasts, notify, dismissToast]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
