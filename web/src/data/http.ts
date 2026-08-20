@@ -3,7 +3,7 @@ import type { DataProvider } from './provider';
 import { ApiError } from './types';
 import { notifyAuthExpired } from './events';
 import type {
-  ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
+  ActivityItem, Alert, APIKeyCreated, APIKeyInfo, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings, SeriesResp,
   SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
@@ -140,6 +140,10 @@ export class HttpProvider implements DataProvider {
     post<void>(`/users/${enc(name)}/password`, { new: next, close_sessions: closeSessions });
   setUserLanguage = (name: string, language: Lang) =>
     put<void>(`/users/${enc(name)}/language`, { language });
+
+  getAPIKeys = () => get<{ keys: APIKeyInfo[] }>('/keys').then((r) => r.keys);
+  createAPIKey = (name: string) => post<APIKeyCreated>('/keys', { name });
+  deleteAPIKey = (id: number) => del<void>(`/keys/${id}`);
 
   getPools = () => get<Pool[]>('/pools');
   createPool = (r: CreatePoolReq) => post<void>('/pools', r);

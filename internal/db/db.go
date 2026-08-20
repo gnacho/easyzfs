@@ -148,6 +148,15 @@ var migrations = []string{
 	  created_at TEXT NOT NULL DEFAULT (datetime('now')),
 	  PRIMARY KEY (user, code_hash)
 	);`,
+	// v21: API keys de solo lectura (#87). key_hash es SHA-256 hex; la clave
+	// en claro (ez_...) se muestra UNA vez al crearla y nunca se guarda.
+	`CREATE TABLE IF NOT EXISTS api_keys (
+	  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+	  name       TEXT NOT NULL,
+	  key_hash   TEXT NOT NULL UNIQUE,
+	  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+	  last_used  TEXT
+	);`,
 }
 
 // Open abre la BD con WAL, busy_timeout y una sola conexión escritora.

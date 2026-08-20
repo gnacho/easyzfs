@@ -16,6 +16,7 @@ import (
 
 	"easyzfs/internal/actions"
 	"easyzfs/internal/alerts"
+	"easyzfs/internal/apikeys"
 	"easyzfs/internal/auth"
 	"easyzfs/internal/backup"
 	"easyzfs/internal/collectors"
@@ -36,6 +37,7 @@ type Server struct {
 	db         *sql.DB
 	auth       *auth.Manager
 	users      *users.Store
+	apiKeys    *apikeys.Store
 	alerter    *alerts.Alerter
 	settings   *settings.Store
 	pools      collectors.PoolProvider
@@ -66,6 +68,7 @@ type Deps struct {
 	DB         *sql.DB
 	Auth       *auth.Manager
 	Users      *users.Store
+	APIKeys    *apikeys.Store
 	Alerter    *alerts.Alerter
 	Settings   *settings.Store
 	Pools      collectors.PoolProvider
@@ -90,7 +93,7 @@ type Deps struct {
 // NewServer crea el servidor del API.
 func NewServer(d Deps) *Server {
 	return &Server{
-		cfg: d.Cfg, db: d.DB, auth: d.Auth, users: d.Users,
+		cfg: d.Cfg, db: d.DB, auth: d.Auth, users: d.Users, apiKeys: d.APIKeys,
 		alerter: d.Alerter, settings: d.Settings,
 		pools: d.Pools, disks: d.Disks, sysTimers: d.SysTimers,
 		perf: d.Perf, caps: d.Caps,
@@ -134,6 +137,10 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("POST /api/users/{name}/password", s.auth.RequireAdmin(s.setUserPassword))
 	a.HandleFunc("PUT /api/users/{name}/language", s.auth.RequireAdmin(s.setUserLanguage))
 	a.HandleFunc("DELETE /api/users/{name}/2fa", s.auth.RequireAdmin(s.admin2FADisable))
+	// API keys de solo lectura (admin, #87)
+	a.HandleFunc("GET /api/keys", s.auth.RequireAdmin(s.listAPIKeys))
+	a.HandleFunc("POST /api/keys", s.auth.RequireAdmin(s.createAPIKey))
+	a.HandleFunc("DELETE /api/keys/{id}", s.auth.RequireAdmin(s.deleteAPIKey))
 	// sistema
 	a.HandleFunc("GET /api/version", s.getVersion)
 	a.HandleFunc("GET /api/settings", s.getSettings)
