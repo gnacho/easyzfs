@@ -31,6 +31,8 @@ jobs:
       - name: Prepara dist/ para go:embed
         run: mkdir -p dist && echo "<!doctype html><html><body></body></html>" > dist/index.html
       - uses: dominikh/staticcheck-action@v1.3.1
+        with:
+          go-version: '1.25'
 
   frontend:
     runs-on: ubuntu-latest
