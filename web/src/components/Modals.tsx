@@ -1404,7 +1404,8 @@ function RollbackModal({ full, onClose }: { full: string; onClose: () => void })
     e.preventDefault();
     setBusy(true); setErr('');
     try {
-      await getProvider().rollback(full, confirm.trim());
+      // El backend exige confirm == ruta completa; la UI pide el dataset
+      await getProvider().rollback(full, confirm.trim() === ds ? full : confirm.trim());
       refresh(); onClose();
       notify(t('toast_rollback'), 'ok');
     } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
@@ -1440,7 +1441,8 @@ function DeleteSnapModal({ full, onClose }: { full: string; onClose: () => void 
     e.preventDefault();
     setBusy(true); setErr('');
     try {
-      await getProvider().deleteSnapshot(full, confirm.trim());
+      // El backend exige confirm == ruta completa; la UI pide el nombre corto
+      await getProvider().deleteSnapshot(full, confirm.trim() === snap ? full : confirm.trim());
       refresh(); onClose();
       notify(t('toast_snap_deleted'), 'ok');
     } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
@@ -1643,7 +1645,8 @@ function EditScheduleModal({ job, onClose }: { job: Job; onClose: () => void }) 
   const remove = async () => {
     setBusy(true); setErr('');
     try {
-      await getProvider().deleteJob(job.id, String(job.id));
+      // El backend exige confirm == target del job (no su id)
+      await getProvider().deleteJob(job.id, job.target);
       refresh(); onClose();
     } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
   };

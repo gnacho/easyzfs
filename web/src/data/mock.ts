@@ -791,7 +791,7 @@ export class MockProvider implements DataProvider {
   rollback = async (full: string, confirm: string) => {
     await delay(300);
     const [ds] = full.split('@');
-    if (confirm !== ds) throw new ApiError(400, 'confirm_required', `Escribe "${ds}" para confirmar`);
+    if (confirm !== ds && confirm !== full) throw new ApiError(400, 'confirm_required', `Escribe "${ds}" para confirmar`);
     this.activity.unshift({ ts: iso(new Date()), text: 'Rollback ejecutado', detail: full });
   };
 
