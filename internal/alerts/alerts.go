@@ -12,6 +12,7 @@ import (
 	"log"
 	"time"
 
+	"easyzfs/internal/channels"
 	"easyzfs/internal/hub"
 	"easyzfs/internal/model"
 	"easyzfs/internal/notifier"
@@ -25,9 +26,10 @@ type Alerter struct {
 	db   *sql.DB
 	hub  *hub.Hub
 	st   *settings.Store
-	push *push.Sender // puede ser nil (push no configurado)
+	push *push.Sender      // puede ser nil (push no configurado)
 	wh   *webhook.Notifier // puede ser nil (webhook desactivado)
 	mail *notifier.Mailer  // puede ser nil (email desactivado)
+	ch   *channels.Client  // puede ser nil (ntfy/gotify/syslog desactivados)
 }
 
 // New crea el Alerter.
@@ -44,6 +46,9 @@ func (a *Alerter) SetWebhook(w *webhook.Notifier) { a.wh = w }
 
 // SetEmail conecta el canal de email (opcional; nil = sin email).
 func (a *Alerter) SetEmail(m *notifier.Mailer) { a.mail = m }
+
+// SetChannels conecta los canales ntfy/gotify/syslog (opcional; nil = sin ellos).
+func (a *Alerter) SetChannels(c *channels.Client) { a.ch = c }
 
 // Raise inserta una alerta sin metadatos estructurados (kind "").
 func (a *Alerter) Raise(ctx context.Context, level, source, target, message string) {
@@ -115,6 +120,11 @@ func (a *Alerter) RaiseKind(ctx context.Context, level, source, target, message,
 	if a.mail != nil && kind != "" {
 		go a.notifyEmail(level, source, target, kind, params, now)
 	}
+	// Canales ntfy/gotify/syslog: un solo destino configurado por env, texto
+	// compuesto en el idioma por defecto (es_ES). Best-effort async.
+	if a.ch != nil && a.ch.Enabled() && kind != "" {
+		go a.notifyChannels(level, source, target, kind, params, now)
+	}
 	// Push (app cerrada): fire-and-forget; el sender decide a quién y nunca falla.
 	if a.push != nil && kind != "" {
 		go a.push.Notify(context.Background(),
@@ -163,6 +173,25 @@ func (a *Alerter) notifyEmail(level, source, target, kind string, params map[str
 			log.Printf("alerts: email a usuario %s: %v", d.user, err)
 		}
 	}
+}
+
+// notifyChannels envía la alerta a los canales genéricos (ntfy/gotify/syslog).
+// Texto compuesto con el catálogo i18n del push en español por defecto; los
+// canales son de infraestructura (un destino), no por usuario.
+func (a *Alerter) notifyChannels(level, source, target, kind string, params map[string]any, ts time.Time) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	title, body := push.Compose("es", kind, params)
+	prefix := ""
+	switch level {
+	case "crit":
+		prefix = "🔴 "
+	case "warn":
+		prefix = "🟠 "
+	default:
+		prefix = "🔵 "
+	}
+	a.ch.Send(ctx, prefix+title, fmt.Sprintf("[%s] %s", level, body))
 }
 
 // emailTypeEnabled — ¿el usuario tiene habilitado este tipo de alerta por
