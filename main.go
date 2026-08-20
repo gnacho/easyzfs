@@ -25,6 +25,7 @@ import (
 	"easyzfs/internal/alerts"
 	"easyzfs/internal/auth"
 	"easyzfs/internal/backup"
+	"easyzfs/internal/channels"
 	"easyzfs/internal/collectors"
 	"easyzfs/internal/config"
 	"easyzfs/internal/db"
@@ -125,6 +126,18 @@ func main() {
 	// Ticker de la cola de quiet hours (60 s): entrega diferida al terminar
 	// la ventana de silencio. En demo o sin VAPID queda inerte.
 	go pushSender.RunQueue(ctx)
+
+	// Canales ntfy/gotify/syslog (#86): inerte si no hay ninguna configurada.
+	channelsClient := channels.New(
+		cfg.NtfyURL, cfg.NtfyToken,
+		cfg.GotifyURL, cfg.GotifyToken,
+		cfg.SyslogHost, cfg.SyslogPort, cfg.SyslogProto, cfg.SyslogFacility,
+	)
+	if channelsClient.Enabled() {
+		alerter.SetChannels(channelsClient)
+		log.Printf("canales de alerta configurados (ntfy=%v gotify=%v syslog=%v)",
+			cfg.NtfyURL != "", cfg.GotifyURL != "", cfg.SyslogHost != "")
+	}
 
 	// Colectores (reales o mock) + providers para los handlers.
 	providers, cols := collectors.Build(cfg, database, h, alerter)
