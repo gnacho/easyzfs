@@ -14,6 +14,7 @@ import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
 import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor, IconLanguages } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
+import { TwoFAPanel } from '../components/TwoFA';
 import { usePush } from '../data/push';
 import { useReleaseCheck } from '../ui/releasecheck';
 import { ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion } from '../ui/theme';
@@ -514,6 +515,7 @@ function ProfileCard() {
   const [busy, setBusy] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [show2FA, setShow2FA] = useState(false);
   const [cur, setCur] = useState('');
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
@@ -681,6 +683,12 @@ function ProfileCard() {
             <IconBell size={16} aria-hidden="true" />
             <span className="hidden-sm">{t('s_notifs')}</span>
           </button>
+
+          <button type="button" className="pact-btn" aria-expanded={show2FA}
+            onClick={() => setShow2FA((v) => !v)} title={t('s_2fa')}>
+            <IconShield size={16} aria-hidden="true" />
+            <span className="hidden-sm">{t('s_2fa')}</span>
+          </button>
         </div>
 
         {/* Cerrar sesión — siempre a la derecha, rojo */}
@@ -714,6 +722,13 @@ function ProfileCard() {
       {showNotifs && (
         <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
           <PushPanel />
+        </div>
+      )}
+
+      {/* Verificación en dos pasos INLINE */}
+      {show2FA && (
+        <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+          <TwoFAPanel />
         </div>
       )}
 

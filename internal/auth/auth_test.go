@@ -193,3 +193,55 @@ func TestTokenRandomness(t *testing.T) {
 		t.Errorf("token esperado 64 hex chars, got %d", len(t1))
 	}
 }
+
+func TestSignPendingRoundTrip(t *testing.T) {
+	m := nuevoManager(t)
+	pending, err := m.SignPending("admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	user, ok := m.VerifyPending(pending)
+	if !ok || user != "admin" {
+		t.Fatalf("pending válido rechazado: user=%q ok=%v", user, ok)
+	}
+}
+
+func TestVerifyPendingRejectsTampered(t *testing.T) {
+	m := nuevoManager(t)
+	pending, err := m.SignPending("admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Cambia un carácter del payload: la firma no cuadra.
+	bad := "usuario" + pending[len("admin"):]
+	if _, ok := m.VerifyPending(bad); ok {
+		t.Error("pending manipulado aceptado")
+	}
+}
+
+func TestVerifyPendingRejectsExpired(t *testing.T) {
+	m := nuevoManager(t)
+	pending, err := m.SignPending("admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Verificar con el tiempo congelado tras la expiración: recomponer el
+	// token con una expiración pasada usando la misma firma.
+	_, rest, _ := strings.Cut(pending, "|")
+	_, sig, _ := strings.Cut(rest, "|")
+	expired := time.Now().Add(-time.Minute).UTC().Format(time.RFC3339)
+	bad := "admin|" + expired + "|" + sig
+	if _, ok := m.VerifyPending(bad); ok {
+		t.Error("pending caducado aceptado")
+	}
+}
+
+func TestVerifyPendingRejectsBogus(t *testing.T) {
+	m := nuevoManager(t)
+	if _, ok := m.VerifyPending(""); ok {
+		t.Error("pending vacío aceptado")
+	}
+	if _, ok := m.VerifyPending("solo-un-campo"); ok {
+		t.Error("pending malformado aceptado")
+	}
+}

@@ -11,12 +11,15 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/creativeprojects/go-selfupdate v1.6.0
+	github.com/pquerna/otp v1.5.0
+	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/wneessen/go-mail v0.8.1
 )
 
 require (
 	code.gitea.io/sdk/gitea v0.23.2 // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
+	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect

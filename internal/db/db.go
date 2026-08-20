@@ -135,6 +135,19 @@ var migrations = []string{
 	  notes        TEXT
 	);
 	CREATE INDEX IF NOT EXISTS idx_update_hist_ts ON update_history(timestamp);`,
+	// v19: TOTP 2FA (#84). totp_secret es base32 del servidor (inicialmente el
+	// secreto provisional al hacer setup, promovido a activo al confirmar);
+	// totp_enabled=1 tras confirmar el primer código. Los recovery codes se
+	// guardan hasheados (RecoveryHash), nunca en claro.
+	`ALTER TABLE users ADD COLUMN totp_secret TEXT NOT NULL DEFAULT '';
+	ALTER TABLE users ADD COLUMN totp_enabled INTEGER NOT NULL DEFAULT 0;
+	CREATE TABLE IF NOT EXISTS totp_recovery (
+	  user       TEXT NOT NULL REFERENCES users(user) ON DELETE CASCADE,
+	  code_hash  TEXT NOT NULL,
+	  used       INTEGER NOT NULL DEFAULT 0,
+	  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+	  PRIMARY KEY (user, code_hash)
+	);`,
 }
 
 // Open abre la BD con WAL, busy_timeout y una sola conexión escritora.

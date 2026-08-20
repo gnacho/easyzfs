@@ -4,9 +4,9 @@ import { ApiError } from './types';
 import { notifyAuthExpired } from './events';
 import type {
   ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
+  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings, SeriesResp,
-  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
+  SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
 
 const BASE = '/api';
@@ -99,7 +99,8 @@ export class HttpProvider implements DataProvider {
     }
   };
 
-  login = (user: string, password: string) => post<SessionUser>('/login', { user, password });
+  login = (user: string, password: string) => post<LoginResult>('/login', { user, password });
+  login2FA = (pending: string, code: string) => post<SessionUser>('/login/2fa', { pending, code });
   logout = () => post<void>('/logout');
   me = () => get<SessionUser>('/me');
   setMyPassword = (current: string, next: string) => post<void>('/me/password', { current, new: next });
@@ -107,6 +108,12 @@ export class HttpProvider implements DataProvider {
 
   updateMyProfile = (display_name: string, email: string) =>
     put<void>('/me/profile', { display_name, email });
+
+  get2FAStatus = () => get<TwoFAStatus>('/me/2fa');
+  setup2FA = () => post<TwoFASetup>('/me/2fa/setup');
+  confirm2FA = (code: string) => post<TwoFARecovery>('/me/2fa/confirm', { code });
+  disable2FA = (code: string) => post<void>('/me/2fa/disable', { code });
+  regenerateRecoveryCodes = () => get<TwoFARecovery>('/me/2fa/recovery');
 
   // Avatar: el blob ya viene recortado y re-codificado (webp/jpeg) del
   // diálogo de recorte; se manda crudo como importBackup.

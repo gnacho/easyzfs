@@ -6,8 +6,8 @@ import { ApiError } from './types';
 import { computeRecommendations } from './recs';
 import type {
   Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SeriesPoint, SeriesResp, SessionUser, Settings, Snapshot, SmartSelftest,
-  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UserInfo, VersionInfo,
+  Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SeriesPoint, SeriesResp, SessionUser, Settings, Snapshot, SmartSelftest,
+  SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UserInfo, VersionInfo,
   CreateReplicationReq, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, UpdateReplicationReq,
 } from './types';
 
@@ -299,11 +299,16 @@ export class MockProvider implements DataProvider {
   };
 
   // ---- Auth ----
-  login = async (user: string, _password: string): Promise<SessionUser> => {
+  login = async (user: string, _password: string): Promise<LoginResult> => {
     await delay(300);
     // En modo demo entra cualquier credencial; rol según el usuario conocido
     const known = this.users.find((u) => u.user === user);
     this.session = { user: user || 'admin', role: known?.role ?? 'admin' };
+    return { ...this.session };
+  };
+  login2FA = async (_pending: string, _code: string): Promise<SessionUser> => {
+    await delay(200);
+    if (!this.session) throw new ApiError(401, 'unauthorized', 'Sesión no iniciada');
     return { ...this.session };
   };
   logout = async () => { await delay(80); this.session = null; };
@@ -318,6 +323,17 @@ export class MockProvider implements DataProvider {
     await delay();
     if (this.session) this.session = { ...this.session, display_name: d, email: e };
   };
+
+  // 2FA en demo: inerte (no se puede activar sobre el mock; devuelve no activo).
+  get2FAStatus = async (): Promise<TwoFAStatus> => { await delay(); return { enabled: false }; };
+  setup2FA = async (): Promise<TwoFASetup> => {
+    await delay();
+    const secret = 'JBSWY3DPEHPK3PXP';
+    return { secret, otpauth: `otpauth://totp/EasyZFS:demo?secret=${secret}&issuer=EasyZFS`, qr: '' };
+  };
+  confirm2FA = async (): Promise<TwoFARecovery> => { await delay(); throw new ApiError(400, 'demo_disabled', 'En modo demo la verificación en dos pasos no está disponible'); };
+  disable2FA = async () => { await delay(); };
+  regenerateRecoveryCodes = async (): Promise<TwoFARecovery> => { await delay(); throw new ApiError(400, 'demo_disabled', 'En modo demo la verificación en dos pasos no está disponible'); };
 
   // Avatares en memoria (object URLs): demo sin backend.
   private avatars = new Map<string, string>();
