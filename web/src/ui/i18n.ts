@@ -1015,9 +1015,23 @@ const LANG_KEY_LEGACY = 'zfc-lang';
 
 let currentLang: 'es' | 'en' = 'es';
 const subs = new Set<() => void>();
+// true solo en el despliegue demo (DEMO=1, flag público del backend): el modo
+// auto se resuelve a inglés, la elección explícita del usuario sigue mandando.
+let demoServer = false;
+
+export function setDemoServer(v: boolean): void {
+  if (demoServer === v) return;
+  demoServer = v;
+  if (getLangMode() === 'auto') {
+    currentLang = resolveLang('auto');
+    document.documentElement.lang = currentLang;
+    subs.forEach((f) => f());
+  }
+}
 
 export function resolveLang(mode: LangMode): 'es' | 'en' {
   if (mode === 'auto') {
+    if (demoServer) return 'en';
     return (navigator.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
   }
   return mode;

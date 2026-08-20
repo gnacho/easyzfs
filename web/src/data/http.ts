@@ -11,18 +11,31 @@ import type {
 
 const BASE = '/api';
 
-// Modo demo habilitado (GET /api/public/demo, sin sesión): lo consulta el
-// login para mostrar u ocultar el botón "Entrar como demo". Fuera del
-// provider porque se llama ANTES de autenticarse.
-export async function fetchDemoEnabled(): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE}/public/demo`, { credentials: 'same-origin' });
-    if (!res.ok) return true; // sin respuesta: por defecto se ofrece (como antes)
-    const j = await res.json();
-    return j?.demo_enabled !== false;
-  } catch {
-    return true; // sin red: se ofrece el botón igualmente
+// Estado público del demo (GET /api/public/demo, sin sesión): lo consulta el
+// login para mostrar u ocultar el botón "Entrar como demo" y main.tsx para
+// resolver el idioma por defecto. Fuera del provider porque se llama ANTES de
+// autenticarse. Single-flight: main.tsx y Login comparten la misma petición.
+export interface PublicDemo {
+  enabled: boolean; // ajuste del admin: se ofrece el botón de demo
+  server: boolean;  // este servidor ES el despliegue demo (DEMO=1)
+}
+
+let publicDemoPromise: Promise<PublicDemo> | null = null;
+
+export function fetchPublicDemo(): Promise<PublicDemo> {
+  if (!publicDemoPromise) {
+    publicDemoPromise = (async () => {
+      try {
+        const res = await fetch(`${BASE}/public/demo`, { credentials: 'same-origin' });
+        if (!res.ok) return { enabled: true, server: false }; // sin respuesta: botón visible, servidor no-demo
+        const j = await res.json();
+        return { enabled: j?.demo_enabled !== false, server: j?.demo_server === true };
+      } catch {
+        return { enabled: true, server: false }; // sin red: botón visible, servidor no-demo
+      }
+    })();
   }
+  return publicDemoPromise;
 }
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {

@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '../ui/store';
 import { ApiError } from '../data/types';
-import { fetchDemoEnabled } from '../data/http';
+import { fetchPublicDemo } from '../data/http';
 import { Logo } from '../components/icons';
 
 export default function Login() {
@@ -22,7 +22,7 @@ export default function Login() {
 
   useEffect(() => {
     let alive = true;
-    void fetchDemoEnabled().then((ok) => { if (alive) setDemoOk(ok); });
+    void fetchPublicDemo().then((d) => { if (alive) setDemoOk(d.enabled); });
     return () => { alive = false; };
   }, []);
 
