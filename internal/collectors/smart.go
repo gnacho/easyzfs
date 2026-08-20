@@ -220,6 +220,8 @@ func (c *SmartCollector) collectOnce(ctx context.Context) error {
 	}
 	disks := []model.Disk{}
 	crcSeen := map[string]bool{}
+	// Enlaces estables by-id (una pasada por colecta, no por disco).
+	byIDs := byIDMap("/dev/disk/by-id")
 	for _, bd := range inv.BlockDevices {
 		if bd.Type != "disk" || !isPhysicalDisk(bd.Name) {
 			continue
@@ -229,6 +231,7 @@ func (c *SmartCollector) collectOnce(ctx context.Context) error {
 			Model:     strings.TrimSpace(bd.Model),
 			Serial:    bd.Serial,
 			SizeBytes: bd.Size,
+			ByID:      byIDs[bd.Name],
 			// Por defecto "unknown": eMMC / USB sin SAT no hablan smartctl
 			// y no deben aparecer como error ni como "ok".
 			Smart:       "unknown",

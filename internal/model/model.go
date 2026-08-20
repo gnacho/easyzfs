@@ -132,6 +132,11 @@ type Disk struct {
 	Model     string `json:"model"`
 	Serial    string `json:"serial"`
 	SizeBytes uint64 `json:"size_bytes"`
+	// ByID — nombre del enlace estable /dev/disk/by-id/<ByID> (modelo+serial
+	// o WWN). Vacío si el disco no tiene enlace by-id (p.ej. algunas eMMC).
+	// Las operaciones destructivas (replace) deben usarlo en vez de Dev:
+	// las letras sdX son inestables entre arranques (issue #65).
+	ByID string `json:"by_id,omitempty"`
 	// TempC es nil (JSON null) cuando no hay lectura (eMMC, USB sin SAT,
 	// smartctl no disponible): "sin dato" no es lo mismo que 0 °C.
 	TempC       *float64 `json:"temp_c"`
