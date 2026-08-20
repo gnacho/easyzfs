@@ -353,6 +353,13 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.13
+
+- **Long-term capacity trends (#85)**: new Trends view in the navigation with a source picker (pool used %, disk temperature), range buttons from 7 days to 5 years and a dependency-free SVG area chart. Raw samples are rolled up into daily aggregates (avg/min/max per source and day) before they age out of retention, so long ranges stay fast without keeping all the detail.
+- **ntfy, Gotify and syslog alert channels (#86)**: besides Web Push, email and webhook, alerts can now reach ntfy, Gotify and a local syslog sink. Each channel is optional and inert unless configured via environment (`NTFY_URL`, `GOTIFY_URL`, `SYSLOG_HOST`…), following the same pattern as SMTP.
+- **Read-only API keys (#87)**: admins can generate revocable API keys for external integrations (monitoring, scripts) from Settings. Keys are shown once at creation and stored hashed; they authenticate with `Authorization: Bearer ez_…` and can only read (GET/HEAD), never mutate. An admin reset endpoint is not needed: any admin can revoke a key at any time.
+- **Landing: deep SMART health detection (#88)**: the landing and the comparison table now call out that EasyZFS flags disks from sector-level counters (reallocated, pending, offline-uncorrectable) and CRC error history, not just the drive's own self-assessment.
+
 ### v2.9.12
 
 - **Optional TOTP two-factor authentication (#84)**: any account can now enable 2FA from Settings → My profile. Activation shows a QR code and secret key for any authenticator app (Google Authenticator, Aegis, 1Password…); confirming with a valid code generates 10 one-time recovery codes (stored hashed, never in plaintext). When 2FA is active, login becomes two-step: password first, then a 6-digit code (or a recovery code). Admins can reset another user's 2FA from the user management panel, and the login rate limit also applies to the second factor.

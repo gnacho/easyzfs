@@ -361,6 +361,13 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.13
+
+- **Tendencias de capacidad a largo plazo (#85)**: nueva vista Tendencias en la navegación con selector de fuente (uso de pools en %, temperatura de discos), botones de rango de 7 días a 5 años y gráfica de área SVG sin dependencias. Las muestras crudas se agregan en resúmenes diarios (media/mín/máx por fuente y día) antes de salir de la retención, así los rangos largos siguen siendo rápidos sin guardar todo el detalle.
+- **Canales de alerta ntfy, Gotify y syslog (#86)**: además de Web Push, email y webhook, las alertas pueden llegar a ntfy, Gotify y un syslog local. Cada canal es opcional e inerte salvo que se configure por entorno (`NTFY_URL`, `GOTIFY_URL`, `SYSLOG_HOST`…), siguiendo el mismo patrón que SMTP.
+- **API keys de solo lectura (#87)**: los administradores pueden generar claves revocables para integraciones externas (monitorización, scripts) desde Ajustes. La clave se muestra una sola vez al crearla y se guarda con hash; autentica con `Authorization: Bearer ez_…` y solo puede leer (GET/HEAD), nunca mutar. Cualquier admin puede revocar una clave en cualquier momento.
+- **Landing: detección SMART profunda (#88)**: la landing y la tabla comparativa destacan ahora que EasyZFS marca los discos desde contadores de sector (reasignados, pendientes, incorregibles) y el historial de errores CRC, no solo el autodiagnóstico del propio disco.
+
 ### v2.9.12
 
 - **Verificación en dos pasos TOTP opcional (#84)**: cualquier cuenta puede activar el 2FA desde Ajustes → Mi perfil. La activación muestra un código QR y la clave secreta para cualquier app de autenticación (Google Authenticator, Aegis, 1Password…); al confirmar con un código válido se generan 10 códigos de recuperación de un solo uso (almacenados con hash, nunca en claro). Con el 2FA activo, el login pasa a ser de dos pasos: primero la contraseña y luego un código de 6 dígitos (o un código de recuperación). Los administradores pueden resetear el 2FA de otro usuario desde la gestión de usuarios, y el límite de intentos de login también aplica al segundo factor.
