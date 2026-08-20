@@ -560,6 +560,12 @@ const es = {
   // Accesibilidad
   a11y_close_modal: 'Cerrar ventana', a11y_theme: 'Cambiar tema', a11y_alerts: 'Alertas',
   a11y_mainnav: 'Navegación principal',
+
+  // Toasts (avisos de acciones)
+  toast_dismiss: 'Descartar aviso',
+  toast_snap_created: 'Snapshot creado', toast_snap_deleted: 'Snapshot eliminado',
+  toast_rollback: 'Rollback en curso', toast_ds_created: 'Dataset creado',
+  toast_ds_deleted: 'Dataset eliminado',
 };
 
 export type I18nKey = keyof typeof es;
@@ -1104,6 +1110,11 @@ const en: Record<I18nKey, string> = {
 
   a11y_close_modal: 'Close dialog', a11y_theme: 'Toggle theme', a11y_alerts: 'Alerts',
   a11y_mainnav: 'Main navigation',
+
+  toast_dismiss: 'Dismiss',
+  toast_snap_created: 'Snapshot created', toast_snap_deleted: 'Snapshot deleted',
+  toast_rollback: 'Rollback started', toast_ds_created: 'Dataset created',
+  toast_ds_deleted: 'Dataset deleted',
 };
 
 const DICTS: Record<'es' | 'en', Record<I18nKey, string>> = { es, en };

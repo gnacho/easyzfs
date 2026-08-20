@@ -6,6 +6,7 @@ import type { ComponentType } from 'react';
 import { AppProvider, useApp, alertTargetView } from './ui/store';
 import type { ViewId } from './ui/store';
 import { ModalProvider, ModalHost } from './components/ModalHost';
+import { ToastHost } from './components/Toast';
 import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconMonitor, IconChev, IconFoldLeft, IconFoldRight, IconUser, IconList } from './components/icons';
 import { Spinner } from './components/ui';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -362,6 +363,7 @@ function Shell() {
       </nav>
 
       <ModalHost />
+      <ToastHost />
     </>
   );
 }

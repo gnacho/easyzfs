@@ -93,7 +93,7 @@ export function ModalHost() {
 
 // ---------- crear snapshot ----------
 function SnapshotModal({ preset, onClose }: { preset?: string; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const datasets = useLoad(() => getProvider().getDatasets());
   const pools = useLoad(() => getProvider().getPools());
   const [target, setTarget] = useState(preset ?? '');
@@ -113,7 +113,8 @@ function SnapshotModal({ preset, onClose }: { preset?: string; onClose: () => vo
     try {
       await getProvider().createSnapshot({ dataset: target, name, recursive: isPoolTarget });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_snap_created'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -327,7 +328,7 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
 
 // ---------- nuevo dataset / zvol ----------
 function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const pools = useLoad(() => getProvider().getPools());
   const [pool, setPool] = useState('');
   const [name, setName] = useState('');
@@ -353,7 +354,8 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
         encryption: enc || undefined, passphrase: enc ? pass1 : undefined,
       });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_ds_created'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -763,7 +765,7 @@ function DiskDetailModal({ disk, onClose }: { disk: Disk; onClose: () => void })
 
 // ---------- eliminar dataset (confirmación escrita) ----------
 function DeleteDatasetModal({ name, onClose }: { name: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [recursive, setRecursive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -775,7 +777,8 @@ function DeleteDatasetModal({ name, onClose }: { name: string; onClose: () => vo
     try {
       await getProvider().deleteDataset(name, confirm.trim(), recursive);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_ds_deleted'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1391,7 +1394,7 @@ function DetachModal({ pool, dev, path, onClose }: { pool: string; dev: string; 
 
 // ---------- rollback de snapshot ----------
 function RollbackModal({ full, onClose }: { full: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -1403,7 +1406,8 @@ function RollbackModal({ full, onClose }: { full: string; onClose: () => void })
     try {
       await getProvider().rollback(full, confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_rollback'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1426,7 +1430,7 @@ function RollbackModal({ full, onClose }: { full: string; onClose: () => void })
 
 // ---------- eliminar snapshot ----------
 function DeleteSnapModal({ full, onClose }: { full: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -1438,7 +1442,8 @@ function DeleteSnapModal({ full, onClose }: { full: string; onClose: () => void 
     try {
       await getProvider().deleteSnapshot(full, confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_snap_deleted'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
