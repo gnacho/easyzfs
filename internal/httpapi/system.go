@@ -64,13 +64,18 @@ func (s *Server) getSettings(w http.ResponseWriter, r *http.Request) {
 
 // publicDemo — GET /api/public/demo (sin auth): el login lo consulta para
 // mostrar u ocultar el botón "Entrar como demo" según el ajuste del admin.
+// demo_server indica que ESTE servidor es el despliegue demo (DEMO=1); el
+// frontend lo usa para resolver el idioma por defecto (auto → inglés).
 func (s *Server) publicDemo(w http.ResponseWriter, r *http.Request) {
 	st, err := s.settings.Load(r.Context())
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "db_error", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]bool{"demo_enabled": st.DemoEnabled})
+	writeJSON(w, http.StatusOK, map[string]bool{
+		"demo_enabled": st.DemoEnabled,
+		"demo_server":  s.cfg.Demo,
+	})
 }
 
 // putSettings — PUT /api/settings (admin) → 204. 400 si los rangos no valen.
