@@ -19,33 +19,105 @@ type Point struct {
 
 // Range consulta una fuente entre from y to (epoch segundos) y devuelve hasta
 // threshold puntos muestreados con LTTB. Rango vacío → slice vacío (200).
-func Range(ctx context.Context, db *sql.DB, source string, from, to int64, threshold int) ([]Point, error) {
+// Usa series_daily (agregados diarios) para la parte del rango más vieja que
+// rawRetentionDays; combina ambas consultas y ordena por ts.
+func Range(ctx context.Context, db *sql.DB, source string, from, to int64, threshold int, rawRetentionDays int) ([]Point, error) {
 	if to <= from {
 		return []Point{}, nil
 	}
+	cutoff := time.Now().UTC().Add(-time.Duration(rawRetentionDays) * 24 * time.Hour).Unix()
+	raw := []Point{}
+	if to > cutoff {
+		rawStart := from
+		if rawStart < cutoff {
+			rawStart = cutoff
+		}
+		var err error
+		raw, err = rangeTable(ctx, db, source, rawStart, to)
+		if err != nil {
+			return nil, err
+		}
+	}
+	daily := []Point{}
+	if from < cutoff {
+		dailyEnd := to
+		if dailyEnd > cutoff {
+			dailyEnd = cutoff
+		}
+		var err error
+		daily, err = rangeDaily(ctx, db, source, from, dailyEnd)
+		if err != nil {
+			return nil, err
+		}
+	}
+	merged := mergePoints(daily, raw)
+	if len(merged) <= threshold {
+		return merged, nil
+	}
+	return LTTB(merged, threshold), nil
+}
+
+// rangeTable consulta las muestras crudas de series.
+func rangeTable(ctx context.Context, db *sql.DB, source string, from, to int64) ([]Point, error) {
 	rows, err := db.QueryContext(ctx,
 		`SELECT CAST(strftime('%s', ts) AS INTEGER), value FROM series
-		 WHERE source = ? AND ts >= datetime(?, 'unixepoch') AND ts <= datetime(?, 'unixepoch')
+		 WHERE source = ? AND ts >= datetime(?, 'unixepoch') AND ts < datetime(?, 'unixepoch')
 		 ORDER BY ts`, source, from, to)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	raw := make([]Point, 0, 256)
+	out := []Point{}
 	for rows.Next() {
 		var p Point
 		if err := rows.Scan(&p.Ts, &p.Value); err != nil {
 			return nil, err
 		}
-		raw = append(raw, p)
+		out = append(out, p)
 	}
-	if err := rows.Err(); err != nil {
+	return out, rows.Err()
+}
+
+// rangeDaily consulta los agregados diarios (series_daily). El punto diario se
+// sitúa a mediodía UTC del día (timestamp representativo de la media).
+func rangeDaily(ctx context.Context, db *sql.DB, source string, from, to int64) ([]Point, error) {
+	rows, err := db.QueryContext(ctx,
+		`SELECT CAST(strftime('%s', day || 'T12:00:00Z') AS INTEGER), avg FROM series_daily
+		 WHERE source = ? AND day >= date(?, 'unixepoch') AND day < date(?, 'unixepoch')
+		 ORDER BY day`, source, from, to)
+	if err != nil {
 		return nil, err
 	}
-	if len(raw) <= int(threshold) {
-		return raw, nil
+	defer rows.Close()
+	out := []Point{}
+	for rows.Next() {
+		var p Point
+		if err := rows.Scan(&p.Ts, &p.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
 	}
-	return LTTB(raw, threshold), nil}
+	return out, rows.Err()
+}
+
+// mergePoints fusiona dos series ya ordenadas por ts (daily primero, luego
+// raw), evitando duplicados en la frontera del cutoff.
+func mergePoints(a, b []Point) []Point {
+	out := make([]Point, 0, len(a)+len(b))
+	i, j := 0, 0
+	for i < len(a) && j < len(b) {
+		if a[i].Ts <= b[j].Ts {
+			out = append(out, a[i])
+			i++
+		} else {
+			out = append(out, b[j])
+			j++
+		}
+	}
+	out = append(out, a[i:]...)
+	out = append(out, b[j:]...)
+	return out
+}
 
 // LTTB — Largest-Triangle-Three-Buckets: conserva la forma visual (picos y
 // valles) reduciendo la serie a `threshold` puntos. Adaptado del asset Go de
@@ -109,10 +181,11 @@ func ValidSource(src string) bool {
 	return false
 }
 
-// ParseDays convierte el parámetro ?days= a rango epoch. Acepta 1-365.
+// ParseDays convierte el parámetro ?days= a rango epoch. Acepta 1-1825
+// (5 años de tendencia diaria; la retención larga la garantiza series_daily).
 func ParseDays(days int) (from, to int64, err error) {
-	if days < 1 || days > 365 {
-		return 0, 0, fmt.Errorf("days fuera de rango (1-365): %d", days)
+	if days < 1 || days > 1825 {
+		return 0, 0, fmt.Errorf("days fuera de rango (1-1825): %d", days)
 	}
 	now := time.Now().UTC()
 	to = now.Unix()

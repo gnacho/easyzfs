@@ -81,6 +81,19 @@ const es = {
   dash_alerts: 'Alertas recientes', dash_activity: 'Actividad',
   dash_no_alerts: 'Sin alertas. Todo en orden.',
 
+  // Tendencias (#85)
+  tr_title: 'Tendencias',
+  tr_sub: 'Evolución histórica de la capacidad de tus pools y la temperatura de tus discos. Los rangos largos usan agregados diarios.',
+  tr_source: 'Fuente',
+  tr_select: 'Elige una fuente…',
+  tr_range: 'Rango',
+  tr_pools: 'pools',
+  tr_disks: 'discos',
+  tr_error: 'No se pudieron cargar los datos',
+  tr_empty: 'Sin datos en este rango. Se irán acumulando con el tiempo.',
+  tr_chart: 'Gráfica de tendencia',
+  tr_last: 'Último valor',
+
   // Pools
   pools_all: 'Todos', pools_ok: 'Sanos', pools_warn: 'Con avisos',
   pool_create: '+ Crear pool', pool_import: 'Importar pool existente',
@@ -616,6 +629,19 @@ const en: Record<I18nKey, string> = {
   dash_pools: 'Pools', dash_see_all: 'View all',
   dash_alerts: 'Recent alerts', dash_activity: 'Activity',
   dash_no_alerts: 'No alerts. Everything is fine.',
+
+  // Trends (#85)
+  tr_title: 'Trends',
+  tr_sub: 'Historical evolution of your pool capacity and disk temperatures. Long ranges use daily aggregates.',
+  tr_source: 'Source',
+  tr_select: 'Pick a source…',
+  tr_range: 'Range',
+  tr_pools: 'pools',
+  tr_disks: 'disks',
+  tr_error: 'Could not load the data',
+  tr_empty: 'No data in this range. It will accumulate over time.',
+  tr_chart: 'Trend chart',
+  tr_last: 'Last value',
 
   pools_all: 'All', pools_ok: 'Healthy', pools_warn: 'With warnings',
   pool_create: '+ Create pool', pool_import: 'Import existing pool',
