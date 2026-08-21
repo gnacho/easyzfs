@@ -361,6 +361,12 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.15
+
+- **Toasts en todas las acciones mutantes restantes (#97)**: checkpoint/export/scrub/acciones vdev de pools, crear/editar/renombrar/cifrar/rewrite de datasets, crear/editar/ejecutar/cancelar tareas, jobs de replicación, crear/borrar usuarios, cambios de contraseña, backups, claves API, tests SMART y apagado de discos, y guardados de ajustes muestran ahora un toast de éxito o de error. Los interruptores solo muestran error; el propio control es el feedback de éxito.
+- **Aceptar la ruta completa en la confirmación de borrar/rollback de snapshots (#99)**: los modales de confirmación muestran la ruta completa `dataset@snapshot`, así que copiar esa ruta en el campo de confirmación activa el botón en vez de dejarlo deshabilitado. El nombre corto (tras la `@`) sigue funcionando.
+- **Error claro y refresco de caché cuando un snapshot ya no existe (#100)**: si un proceso externo (por ejemplo, una poda automática de snapshots) elimina un snapshot entre la actualización de la caché de la UI y el click de borrar/rollback, ZFS devuelve el críptico mensaje en inglés "could not find any snapshots to destroy". La UI ahora muestra "El snapshot no existe; refresca la lista" y refresca la caché de snapshots inmediatamente tras cualquier mutación, incluidos los borrados fallidos, para que las entradas obsoletas desaparezcan enseguida.
+
 ### v2.9.14
 
 - **Avisos toast al completar acciones (#94)**: las acciones que modifican datos ahora se confirman con un pequeño aviso abajo a la derecha, por encima de cualquier modal abierto. Crear/borrar snapshots y datasets y el rollback muestran un aviso de éxito, y los fallos aparecen como aviso de error aunque ya hayas cambiado de vista. Cierre automático a los pocos segundos (los errores duran más), cierre manual, anuncio a lectores de pantalla y respeto del movimiento reducido. Sin dependencias nuevas. Portado del fork comunitario coruhoorhan/easyzfs-truenas (AGPL-3.0), gracias coruhoorhan.
