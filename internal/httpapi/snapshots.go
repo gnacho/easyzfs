@@ -6,6 +6,14 @@ import (
 	"strings"
 )
 
+type snapshotRefresher interface{ RefreshSoon() }
+
+func refreshSnapshots(pools any) {
+	if r, ok := pools.(snapshotRefresher); ok {
+		r.RefreshSoon()
+	}
+}
+
 // listSnapshots — GET /api/snapshots?dataset= (agrupado por dataset).
 func (s *Server) listSnapshots(w http.ResponseWriter, r *http.Request) {
 	groups := s.pools.SnapshotGroups()
@@ -56,6 +64,7 @@ func (s *Server) createSnapshot(w http.ResponseWriter, r *http.Request) {
 		actionErr(w, err)
 		return
 	}
+	refreshSnapshots(s.pools)
 	writeJSON(w, http.StatusCreated, map[string]string{"full": body.Dataset + "@" + body.Name})
 }
 
@@ -77,9 +86,11 @@ func (s *Server) deleteSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.act.SnapshotDelete(r.Context(), actor(r), full); err != nil {
+		refreshSnapshots(s.pools)
 		actionErr(w, err)
 		return
 	}
+	refreshSnapshots(s.pools)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -112,6 +123,7 @@ func (s *Server) cloneSnapshot(w http.ResponseWriter, r *http.Request) {
 		actionErr(w, err)
 		return
 	}
+	refreshSnapshots(s.pools)
 	writeJSON(w, http.StatusCreated, map[string]string{"name": body.Target})
 }
 
@@ -128,8 +140,10 @@ func (s *Server) rollbackSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := s.act.SnapshotRollback(r.Context(), actor(r), full); err != nil {
+		refreshSnapshots(s.pools)
 		actionErr(w, err)
 		return
 	}
+	refreshSnapshots(s.pools)
 	w.WriteHeader(http.StatusAccepted)
 }
