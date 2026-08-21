@@ -28,6 +28,7 @@ var (
 	ErrInvalidTopo   = errors.New("topología inválida")
 	ErrInvalidAction = errors.New("acción inválida")
 	ErrInvalidInput  = errors.New("entrada inválida")
+	ErrSnapshotNotFound = errors.New("el snapshot no existe; refresca la lista")
 )
 
 // Whitelists de nombres (lección 6 + ejecución segura del skill).
@@ -649,6 +650,9 @@ func (s *Service) SnapshotDelete(ctx context.Context, actor, full string) error 
 	}
 	s.audit(ctx, actor, "snapshot.delete", full, nil, true)
 	if _, err := executil.Run(ctx, 30*time.Second, "zfs", "destroy", full); err != nil {
+		if strings.Contains(err.Error(), "could not find any snapshots to destroy") {
+			return ErrSnapshotNotFound
+		}
 		return fmt.Errorf("borrar snapshot: %w", err)
 	}
 	return nil
@@ -662,6 +666,9 @@ func (s *Service) SnapshotRollback(ctx context.Context, actor, full string) erro
 	}
 	s.audit(ctx, actor, "snapshot.rollback", full, nil, true)
 	if _, err := executil.Run(ctx, 60*time.Second, "zfs", "rollback", "-r", full); err != nil {
+		if strings.Contains(err.Error(), "dataset does not exist") {
+			return ErrSnapshotNotFound
+		}
 		return fmt.Errorf("rollback: %w", err)
 	}
 	return nil

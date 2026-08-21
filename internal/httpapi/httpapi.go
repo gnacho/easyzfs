@@ -6,6 +6,7 @@ package httpapi
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -397,6 +398,8 @@ func actionErr(w http.ResponseWriter, err error) {
 	switch {
 	case err == nil:
 		return
+	case errors.Is(err, actions.ErrSnapshotNotFound):
+		writeErr(w, http.StatusNotFound, "not_found", err.Error())
 	case strings.Contains(err.Error(), "inválid"):
 		writeErr(w, http.StatusBadRequest, "invalid_input", err.Error())
 	default:

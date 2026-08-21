@@ -353,6 +353,12 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.15
+
+- **Toast feedback on every remaining mutating action (#97)**: pool checkpoint/export/scrub/vdev actions, dataset create/edit/rename/encrypt/rewrite, task create/edit/run/cancel, replication jobs, user create/delete, password changes, backups, API keys, disk SMART tests and power-off, and settings saves all now surface a success or error toast. Toggles only show errors; the control itself is the success feedback.
+- **Accept the full snapshot path in delete and rollback confirms (#99)**: the confirmation modals display the full `dataset@snapshot` path, so copying that path into the confirm field now enables the button instead of leaving it disabled. The short name (after the `@`) keeps working too.
+- **Clearer error and cache refresh when a snapshot no longer exists (#100)**: if an external process (for example, an automatic snapshot prune) removes a snapshot between the UI cache update and the delete/rollback click, ZFS returns a cryptic English "could not find any snapshots to destroy" message. The UI now shows "El snapshot no existe; refresca la lista" and refreshes the snapshot cache immediately after any snapshot mutation, including failed deletes, so stale entries disappear right away.
+
 ### v2.9.14
 
 - **Toast notifications for action feedback (#94)**: mutating actions now confirm themselves with a small toast bottom-right, above any open modal. Snapshot and dataset create/delete and rollback show a success toast, and failures surface as an error toast even if you already moved to another view. Auto-dismiss after a few seconds (errors stay longer), manual close, screen-reader announcements and reduce-motion support. No new dependencies. Ported from the community fork coruhoorhan/easyzfs-truenas (AGPL-3.0), thanks coruhoorhan.

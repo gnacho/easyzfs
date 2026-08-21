@@ -10,7 +10,7 @@ import { subscribeEvents } from '../data/events';
 import { getProvider } from '../data';
 
 export default function Snapshots() {
-  const { t, isAdmin } = useApp();
+  const { t, isAdmin, notify } = useApp();
   const { openModal } = useModal();
   const pools = useData((p) => p.getPools());
   const [poolFilter, setPoolFilter] = useState<string>('');
@@ -41,7 +41,8 @@ export default function Snapshots() {
       const mount = prompt(t('clone_mount_ph'));
       await getProvider().cloneSnapshot(full, target, mount || undefined);
       reload();
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_clone_created'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   return (
