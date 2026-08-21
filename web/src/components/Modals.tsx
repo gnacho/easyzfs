@@ -1414,6 +1414,8 @@ function RollbackModal({ full, onClose }: { full: string; onClose: () => void })
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ds, snap] = full.split('@');
+  // Se acepta el nombre corto (dataset) o la ruta completa que muestra el modal
+  const rbConfirmOk = [ds, full].includes(confirm.trim());
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1437,7 +1439,7 @@ function RollbackModal({ full, onClose }: { full: string; onClose: () => void })
         {err && <p className="form-err" role="alert">{err}</p>}
         <div className="m-actions">
           <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
-          <SubmitBtn label={t('rb_btn')} busy={busy} danger disabled={!isAdmin || confirm.trim() !== ds} />
+          <SubmitBtn label={t('rb_btn')} busy={busy} danger disabled={!isAdmin || !rbConfirmOk} />
         </div>
       </form>
     </ModalBox>
@@ -1451,6 +1453,8 @@ function DeleteSnapModal({ full, onClose }: { full: string; onClose: () => void 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [, snap] = full.split('@');
+  // Se acepta el nombre corto (tras la @) o la ruta completa que muestra el modal
+  const dsnConfirmOk = [snap, full].includes(confirm.trim());
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1474,7 +1478,7 @@ function DeleteSnapModal({ full, onClose }: { full: string; onClose: () => void 
         {err && <p className="form-err" role="alert">{err}</p>}
         <div className="m-actions">
           <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
-          <SubmitBtn label={t('delete')} busy={busy} danger disabled={!isAdmin || confirm.trim() !== snap} />
+          <SubmitBtn label={t('delete')} busy={busy} danger disabled={!isAdmin || !dsnConfirmOk} />
         </div>
       </form>
     </ModalBox>
