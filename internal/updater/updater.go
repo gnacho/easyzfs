@@ -39,6 +39,14 @@ const (
 	notesMax     = 600
 )
 
+// Rutas de las units systemd que aplican el update tras tocar el flag
+// .restart-me. Si no existen, el updater puede descargar el binario nuevo
+// pero no reiniciar el servicio.
+const (
+	restartPathUnit    = "/etc/systemd/system/easyzfs-update.path"
+	restartServiceUnit = "/etc/systemd/system/easyzfs-update.service"
+)
+
 var (
 	rxHeading = regexp.MustCompile(`(?m)^#{1,4}\s+.*$`)
 	rxBold    = regexp.MustCompile(`\*\*`)
@@ -46,13 +54,14 @@ var (
 
 // Status — respuesta de GET /api/update/status.
 type Status struct {
-	Current      string `json:"current"`
-	Latest       string `json:"latest"`
-	Available    bool   `json:"available"`
-	InProgress   bool   `json:"inProgress,omitempty"`
-	Progress     *Progress `json:"progress,omitempty"`
-	ReleaseNotes string `json:"releaseNotes,omitempty"`
-	ReleaseURL   string `json:"releaseUrl,omitempty"`
+	Current           string `json:"current"`
+	Latest            string `json:"latest"`
+	Available         bool   `json:"available"`
+	InProgress        bool   `json:"inProgress,omitempty"`
+	Progress          *Progress `json:"progress,omitempty"`
+	ReleaseNotes      string `json:"releaseNotes,omitempty"`
+	ReleaseURL        string `json:"releaseUrl,omitempty"`
+	RestartConfigured bool   `json:"restartConfigured"`
 }
 
 // Progress — paso actual durante un apply.
@@ -66,6 +75,10 @@ type Updater struct {
 	current string   // versión local (inyectada por ldflags), sin 'v'
 	dataDir string   // DATA_DIR; el binario nuevo y el flag viven en dataDir/update/
 
+	// Rutas de las units systemd de reinicio. Inyectables para tests.
+	restartPathUnit    string
+	restartServiceUnit string
+
 	mu               sync.Mutex
 	currentLatest    string // última versión detectada (cache del último Check)
 	currentNotes     string
@@ -77,7 +90,12 @@ type Updater struct {
 
 // New crea el updater. current es la versión del binario (main.version).
 func New(current, dataDir string) *Updater {
-	return &Updater{current: stripV(current), dataDir: dataDir}
+	return &Updater{
+		current:            stripV(current),
+		dataDir:            dataDir,
+		restartPathUnit:    restartPathUnit,
+		restartServiceUnit: restartServiceUnit,
+	}
 }
 
 func stripV(v string) string {
@@ -162,11 +180,26 @@ func (u *Updater) ClearPendingApply() {
 // NewBinary — ruta donde el updater deja el binario nuevo descargado y validado.
 func (u *Updater) NewBinary() string { return filepath.Join(u.updateDir(), "easyzfs.new") }
 
+// IsRestartConfigured indica si las units systemd que reinician el servicio
+// tras un update están instaladas. Sin ellas el updater puede descargar el
+// binario nuevo pero no aplicarlo.
+func (u *Updater) IsRestartConfigured() bool {
+	if _, err := os.Stat(u.restartPathUnit); err != nil {
+		return false
+	}
+	if _, err := os.Stat(u.restartServiceUnit); err != nil {
+		return false
+	}
+	return true
+}
+
+func (u *Updater) isRestartConfigured() bool { return u.IsRestartConfigured() }
+
 // Status devuelve el estado actual (último resultado del Check; sin red).
 func (u *Updater) Status() Status {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	s := Status{Current: u.current, Latest: u.currentLatest, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL}
+	s := Status{Current: u.current, Latest: u.currentLatest, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL, RestartConfigured: u.isRestartConfigured()}
 	if u.inProgress && u.progressStep != "" {
 		s.Progress = &Progress{Step: u.progressStep, Percentage: u.progressPct}
 	}
@@ -350,6 +383,7 @@ func (u *Updater) Plan() Plan {
 		{ID: "disk_space", Status: "pass", Title: "Disk space", Summary: "Enough space for download and backup."},
 		{ID: "write_perms", Status: "pass", Title: "Write permissions", Summary: "Data directory is writable."},
 		{ID: "no_concurrent", Status: "pass", Title: "No update in progress", Summary: "No other update is running."},
+		{ID: "restart_ready", Status: "pass", Title: "Restart mechanism", Summary: "systemd path unit is installed and will apply the update."},
 	}
 
 	var st syscall.Statfs_t
@@ -369,6 +403,11 @@ func (u *Updater) Plan() Plan {
 	if inProgress {
 		checks[2].Status = "fail"
 		checks[2].Summary = "An update is already in progress."
+	}
+
+	if !u.IsRestartConfigured() {
+		checks[3].Status = "fail"
+		checks[3].Summary = "The systemd restart unit is missing; install easyzfs-update.path/service or restart manually."
 	}
 
 	canApply := true

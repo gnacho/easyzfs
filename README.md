@@ -353,6 +353,9 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.16
+
+- **In-app update detects missing systemd restart units (#66)**: `GET /api/update/status` now reports `restartConfigured`, and `GET /api/update/plan` includes a `restart_ready` readiness check. If the host was deployed before the auto-update systemd units existed, the UI disables the Update button and shows a clear message instead of silently downloading the new binary and stalling.
 ### v2.9.15
 
 - **Toast feedback on every remaining mutating action (#97)**: pool checkpoint/export/scrub/vdev actions, dataset create/edit/rename/encrypt/rewrite, task create/edit/run/cancel, replication jobs, user create/delete, password changes, backups, API keys, disk SMART tests and power-off, and settings saves all now surface a success or error toast. Toggles only show errors; the control itself is the success feedback.
@@ -385,6 +388,7 @@ Go dependencies (kept to 2 on purpose):
 ### v2.9.10
 
 - **Safe disk replacement with stable by-id paths (#65)**: the target disk of a replace is now resolved to its stable `/dev/disk/by-id/` path whenever one exists, since kernel sdX names can shift across boots or bay moves. The replace dialog shows an origin/destination summary with model and serial for both disks plus the stable path that will be used, and warns loudly when the selected origin is an ONLINE and healthy member, because replacing it triggers an unnecessary resilver. Server-side guards (same disk, disk already in a pool, undersized target) now compare the resolved device and also catch mixed base/by-id forms.
+
 
 ### v2.9.9
 

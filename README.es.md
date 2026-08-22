@@ -361,6 +361,9 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.16
+
+- **La actualización desde la app detecta units de reinicio ausentes (#66)**: `GET /api/update/status` ahora devuelve `restartConfigured`, y `GET /api/update/plan` incluye la comprobación `restart_ready`. Si el host se desplegó antes de que existieran las units systemd de auto-update, la UI deshabilita el botón Actualizar y muestra un aviso claro en vez de descargar el binario nuevo en silencio y quedarse bloqueada.
 ### v2.9.15
 
 - **Toasts en todas las acciones mutantes restantes (#97)**: checkpoint/export/scrub/acciones vdev de pools, crear/editar/renombrar/cifrar/rewrite de datasets, crear/editar/ejecutar/cancelar tareas, jobs de replicación, crear/borrar usuarios, cambios de contraseña, backups, claves API, tests SMART y apagado de discos, y guardados de ajustes muestran ahora un toast de éxito o de error. Los interruptores solo muestran error; el propio control es el feedback de éxito.
@@ -393,6 +396,7 @@ Dependencias Go (mantenidas a 2 a propósito):
 ### v2.9.10
 
 - **Sustitución de discos segura con rutas by-id estables (#65)**: el disco destino de un replace se resuelve ahora a su ruta estable `/dev/disk/by-id/` siempre que exista, ya que las letras sdX del kernel pueden cambiar entre arranques o movimientos de bahía. El diálogo de sustitución muestra un resumen de origen y destino con modelo y número de serie de ambos discos más la ruta estable que se usará, y avisa con fuerza cuando el origen elegido es un miembro ONLINE y sano, porque sustituirlo dispara un resiliver innecesario. Las guardas del servidor (mismo disco, disco ya presente en un pool, destino más pequeño) comparan el dispositivo resuelto y detectan también formas mezcladas base/by-id.
+
 
 ### v2.9.9
 
