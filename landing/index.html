@@ -28,7 +28,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=6" />
+  <link rel="stylesheet" href="styles.css?v=7" />
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -84,6 +84,7 @@
     ]
   }
   </script>
+<script data-goatcounter="https://stats.easyzfs.cloudless.club/count" async src="//stats.easyzfs.cloudless.club/count.js"></script>
 </head>
 <body>
   <a class="skip-link" href="#main" data-i18n="misc.skip">Saltar al contenido</a>
@@ -326,9 +327,9 @@
               <table class="cmp">
                 <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
                 <tbody>
-                  <tr><th data-i18n="compare.rRam">RAM mínima realista</th><td class="hl">~30 MB</td><td>stack Python</td><td>+ Cockpit</td><td>8 GB</td><td>~1 GB</td></tr>
-                  <tr><th data-i18n="compare.rInst">Instalación</th><td class="hl">one-liner</td><td>one-liner / Docker priv.</td><td>paquetes + módulo</td><td>ISO appliance</td><td>Debian + plugin</td></tr>
-                  <tr><th data-i18n="compare.rRun">Dónde corre</th><td class="hl">cualquier Linux, en el host del pool</td><td>Linux (mac/BSD exp.)</td><td>Linux con Cockpit</td><td>su appliance</td><td>Debian dedicada</td></tr>
+                  <tr><th data-i18n="compare.rRam">RAM mínima realista</th><td class="hl" data-i18n="compare.cRam">~30 MB</td><td data-i18n="compare.cPy">stack Python</td><td data-i18n="compare.cCockpit">+ Cockpit</td><td data-i18n="compare.c8gb">8 GB</td><td data-i18n="compare.c1gb">~1 GB</td></tr>
+                  <tr><th data-i18n="compare.rInst">Instalación</th><td class="hl" data-i18n="compare.cOne">one-liner</td><td data-i18n="compare.cOneDocker">one-liner / Docker priv.</td><td data-i18n="compare.cPkg">paquetes + módulo</td><td data-i18n="compare.cIso">ISO appliance</td><td data-i18n="compare.cDeb">Debian + plugin</td></tr>
+                  <tr><th data-i18n="compare.rRun">Dónde corre</th><td class="hl" data-i18n="compare.cAny">cualquier Linux, en el host del pool</td><td data-i18n="compare.cBsd">Linux (mac/BSD exp.)</td><td data-i18n="compare.cLinCockpit">Linux con Cockpit</td><td data-i18n="compare.cOwn">su appliance</td><td data-i18n="compare.cDebDed">Debian dedicada</td></tr>
                   <tr><th data-i18n="compare.rBin">Binario único estático</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
                   <tr><th data-i18n="compare.rLic">Licencia</th><td class="hl">AGPL-3.0</td><td>GPL-3.0</td><td>GPL-3.0</td><td>BSD</td><td>GPL</td></tr>
                 </tbody>
@@ -376,8 +377,8 @@
               <table class="cmp">
                 <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
                 <tbody>
-                  <tr><th data-i18n="compare.rRewrite">zfs rewrite (defrag real) con UI</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>CLI</td><td>✗</td></tr>
-                  <tr><th data-i18n="compare.rCheck">Checkpoint de pool con UI</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>CLI</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rRewrite">zfs rewrite (defrag real) con UI</th><td class="hl">✓</td><td>✗</td><td>✗</td><td data-i18n="compare.cCli">CLI</td><td>✗</td></tr>
+                  <tr><th data-i18n="compare.rCheck">Checkpoint de pool con UI</th><td class="hl">✓</td><td>✗</td><td>✗</td><td data-i18n="compare.cCli">CLI</td><td>✗</td></tr>
                   <tr><th data-i18n="compare.rExpand">Expansión RAID-Z online con progreso</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✓</td><td>✗</td></tr>
                   <tr><th data-i18n="compare.rGate">Feature-gating por versión de OpenZFS</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>—</td><td>✗</td></tr>
                 </tbody>
@@ -409,7 +410,7 @@
                 <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
                 <tbody>
                   <tr><th data-i18n="compare.rAlert">Alertas por umbrales configurables</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>◐</td><td>◐</td></tr>
-                  <tr><th data-i18n="compare.rPush">Push al móvil con la app cerrada (sin terceros)</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>email</td><td>email</td></tr>
+                  <tr><th data-i18n="compare.rPush">Push al móvil con la app cerrada (sin terceros)</th><td class="hl">✓</td><td>✗</td><td>✗</td><td data-i18n="compare.cEmail">email</td><td data-i18n="compare.cEmail">email</td></tr>
                   <tr><th data-i18n="compare.rQuiet">Horas de silencio / severidades</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>◐</td><td>✗</td></tr>
                 </tbody>
               </table>
@@ -422,7 +423,7 @@
               <table class="cmp">
                 <thead><tr><th></th><th>EasyZFS</th><th>zfdash</th><th>Cockpit ZFS</th><th>TrueNAS CE</th><th>OMV 8</th></tr></thead>
                 <tbody>
-                  <tr><th data-i18n="compare.rUsers">Multiusuario con roles</th><td class="hl">✓</td><td>login único</td><td>PAM</td><td>✓</td><td>✓</td></tr>
+                  <tr><th data-i18n="compare.rUsers">Multiusuario con roles</th><td class="hl">✓</td><td data-i18n="compare.cLogin">login único</td><td data-i18n="compare.cPam">PAM</td><td>✓</td><td>✓</td></tr>
                   <tr><th data-i18n="compare.rAudit">Auditoría de mutaciones</th><td class="hl">✓</td><td>◐</td><td>—</td><td>✓</td><td>—</td></tr>
                   <tr><th data-i18n="compare.rConfirm">Confirmación en operaciones destructivas</th><td class="hl">✓</td><td>◐</td><td>—</td><td>✓</td><td>—</td></tr>
                   <tr><th data-i18n="compare.rCrypt">Encriptación nativa con UI</th><td class="hl">✓</td><td>✓</td><td>✗</td><td>✓</td><td>✓</td></tr>
@@ -440,7 +441,7 @@
                 <tbody>
                   <tr><th data-i18n="compare.rDemo">Modo demo sin tocar discos</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
                   <tr><th data-i18n="compare.rPwa">PWA instalable</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>✗</td><td>✗</td></tr>
-                  <tr><th data-i18n="compare.rI18n">i18n ES/EN</th><td class="hl">✓</td><td>✗</td><td>✗</td><td>multi</td><td>—</td></tr>
+                  <tr><th data-i18n="compare.rI18n">i18n ES/EN</th><td class="hl">✓</td><td>✗</td><td>✗</td><td data-i18n="compare.cMulti">multi</td><td>—</td></tr>
                   <tr><th data-i18n="compare.rGui">GUI de escritorio</th><td class="hl">✗</td><td>✓</td><td>✗</td><td>✗</td><td>✗</td></tr>
                 </tbody>
               </table>
@@ -564,7 +565,7 @@
     <p class="lightbox-caption" id="lightboxCaption"></p>
   </div>
 
-  <script src="i18n.js?v=6"></script>
+  <script src="i18n.js?v=8"></script>
   <script src="app.js?v=6"></script>
 </body>
 </html>

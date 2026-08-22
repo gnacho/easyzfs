@@ -353,9 +353,42 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
-### v2.9.10
+### v2.9.16
 
 - **In-app update detects missing systemd restart units (#66)**: `GET /api/update/status` now reports `restartConfigured`, and `GET /api/update/plan` includes a `restart_ready` readiness check. If the host was deployed before the auto-update systemd units existed, the UI disables the Update button and shows a clear message instead of silently downloading the new binary and stalling.
+### v2.9.15
+
+- **Toast feedback on every remaining mutating action (#97)**: pool checkpoint/export/scrub/vdev actions, dataset create/edit/rename/encrypt/rewrite, task create/edit/run/cancel, replication jobs, user create/delete, password changes, backups, API keys, disk SMART tests and power-off, and settings saves all now surface a success or error toast. Toggles only show errors; the control itself is the success feedback.
+- **Accept the full snapshot path in delete and rollback confirms (#99)**: the confirmation modals display the full `dataset@snapshot` path, so copying that path into the confirm field now enables the button instead of leaving it disabled. The short name (after the `@`) keeps working too.
+- **Clearer error and cache refresh when a snapshot no longer exists (#100)**: if an external process (for example, an automatic snapshot prune) removes a snapshot between the UI cache update and the delete/rollback click, ZFS returns a cryptic English "could not find any snapshots to destroy" message. The UI now shows "El snapshot no existe; refresca la lista" and refreshes the snapshot cache immediately after any snapshot mutation, including failed deletes, so stale entries disappear right away.
+
+### v2.9.14
+
+- **Toast notifications for action feedback (#94)**: mutating actions now confirm themselves with a small toast bottom-right, above any open modal. Snapshot and dataset create/delete and rollback show a success toast, and failures surface as an error toast even if you already moved to another view. Auto-dismiss after a few seconds (errors stay longer), manual close, screen-reader announcements and reduce-motion support. No new dependencies. Ported from the community fork coruhoorhan/easyzfs-truenas (AGPL-3.0), thanks coruhoorhan.
+- **Fix: destructive actions could not pass the confirm gate (#95)**: deleting a snapshot, rolling back and deleting a task from the UI always failed against a real backend with 400 confirm_required, because the UI sent the short name (or the job id) while the backend requires the full snapshot path (or the job target). The demo mock accepted the short values, which hid the bug. The UI now sends the value the backend expects.
+
+### v2.9.13
+
+- **Long-term capacity trends (#85)**: new Trends view in the navigation with a source picker (pool used %, disk temperature), range buttons from 7 days to 5 years and a dependency-free SVG area chart. Raw samples are rolled up into daily aggregates (avg/min/max per source and day) before they age out of retention, so long ranges stay fast without keeping all the detail.
+- **ntfy, Gotify and syslog alert channels (#86)**: besides Web Push, email and webhook, alerts can now reach ntfy, Gotify and a local syslog sink. Each channel is optional and inert unless configured via environment (`NTFY_URL`, `GOTIFY_URL`, `SYSLOG_HOST`…), following the same pattern as SMTP.
+- **Read-only API keys (#87)**: admins can generate revocable API keys for external integrations (monitoring, scripts) from Settings. Keys are shown once at creation and stored hashed; they authenticate with `Authorization: Bearer ez_…` and can only read (GET/HEAD), never mutate. An admin reset endpoint is not needed: any admin can revoke a key at any time.
+- **Landing: deep SMART health detection (#88)**: the landing and the comparison table now call out that EasyZFS flags disks from sector-level counters (reallocated, pending, offline-uncorrectable) and CRC error history, not just the drive's own self-assessment.
+
+### v2.9.12
+
+- **Optional TOTP two-factor authentication (#84)**: any account can now enable 2FA from Settings → My profile. Activation shows a QR code and secret key for any authenticator app (Google Authenticator, Aegis, 1Password…); confirming with a valid code generates 10 one-time recovery codes (stored hashed, never in plaintext). When 2FA is active, login becomes two-step: password first, then a 6-digit code (or a recovery code). Admins can reset another user's 2FA from the user management panel, and the login rate limit also applies to the second factor.
+
+### v2.9.11
+
+- **Public demo in English by default (#73)**: the hosted demo now resolves the automatic language to English before the first render, so visitors see the UI in English regardless of their browser language. Explicit language choices and regular installs keep their behaviour.
+- **Corrected a demo alert that gave wrong ZFS advice (#74)**: the demo dashboard used to show a mock alert claiming 12% fragmentation is high and suggesting a scrub. 12% free-space fragmentation is healthy, and scrubs verify checksums without rewriting data, so they never reduce fragmentation. The alert is now the critical "Pool tank DEGRADED" message the app really emits, matching the actual state of the demo pool.
+- **Landing hero CTA renamed (#75)**: the main button now reads "Install EasyZFS" instead of "Install on your NAS" in both languages, since the app runs on any Linux host.
+- **Language icon in Settings (#76)**: the language selector in Settings now carries the lucide languages icon, replacing the generic monitor icon on the mobile trigger and appearing beside the select on desktop.
+
+### v2.9.10
+
+- **Safe disk replacement with stable by-id paths (#65)**: the target disk of a replace is now resolved to its stable `/dev/disk/by-id/` path whenever one exists, since kernel sdX names can shift across boots or bay moves. The replace dialog shows an origin/destination summary with model and serial for both disks plus the stable path that will be used, and warns loudly when the selected origin is an ONLINE and healthy member, because replacing it triggers an unnecessary resilver. Server-side guards (same disk, disk already in a pool, undersized target) now compare the resolved device and also catch mixed base/by-id forms.
+
 
 ### v2.9.9
 

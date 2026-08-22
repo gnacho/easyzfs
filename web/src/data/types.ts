@@ -13,6 +13,39 @@ export interface SessionUser {
   avatar?: string; // nombre del fichero de avatar; vacío = sin foto
 }
 
+// Respuesta de POST /api/login: o bien una sesión, o bien el requerimiento del
+// segundo factor (2FA activo) con el token 'pending' para completar el login.
+export type LoginResult =
+  | (SessionUser & { twofa_required?: false; pending?: never })
+  | { twofa_required: true; pending: string };
+
+export interface TwoFASetup {
+  secret: string;
+  otpauth: string;
+  qr: string; // data:image/png;base64
+}
+
+export interface TwoFARecovery {
+  codes: string[];
+}
+
+export interface TwoFAStatus {
+  enabled: boolean;
+}
+
+// API keys de solo lectura (#87)
+export interface APIKeyInfo {
+  id: number;
+  name: string;
+  created_at?: string;
+  last_used?: string;
+}
+
+export interface APIKeyCreated {
+  name: string;
+  key: string; // ez_… solo en la respuesta de creación
+}
+
 export interface UserInfo {
   user: string;
   role: Role;
@@ -309,6 +342,7 @@ export interface Disk {
   model: string;
   serial: string;
   size_bytes: number;
+  by_id?: string; // enlace estable /dev/disk/by-id/<by_id> (issue #65); vacío si no existe
   temp_c: number | null; // null = sensor no disponible (p. ej. eMMC)
   smart: 'ok' | 'warn' | 'crit' | 'unknown'; // unknown = SMART no disponible
   smart_detail: string;

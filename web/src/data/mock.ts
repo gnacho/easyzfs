@@ -6,8 +6,9 @@ import { ApiError } from './types';
 import { computeRecommendations } from './recs';
 import type {
   Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SeriesPoint, SeriesResp, SessionUser, Settings, Snapshot, SmartSelftest,
-  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UserInfo, VersionInfo,
+  Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SeriesPoint, SeriesResp, SessionUser, Settings, Snapshot, SmartSelftest,
+  SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UserInfo, VersionInfo,
+  APIKeyCreated, APIKeyInfo,
   CreateReplicationReq, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, UpdateReplicationReq,
 } from './types';
 
@@ -141,12 +142,12 @@ export class MockProvider implements DataProvider {
   // temperatura, un NVMe Samsung de sistema y tres ORICO de datos.
   private disks: Disk[] = [
     { dev: 'mmcblk0', model: 'eMMC 5.1 (64 GB)', serial: '—', size_bytes: Math.round(58.2 * GiB), temp_c: null, smart: 'unknown', smart_detail: '', pool: '—', hours: 0 },
-    { dev: 'nvme3n1', model: 'Samsung MZVLB256HAHQ', serial: 'S417NB0K402133', size_bytes: Math.round(238 * GiB), temp_c: 55, smart: 'ok', smart_detail: 'PASSED', pool: 'ssd', hours: 1577 },
-    { dev: 'nvme0n1', model: 'ORICO NVMe SSD', serial: 'ORC2024A01', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
-    { dev: 'nvme1n1', model: 'ORICO NVMe SSD', serial: 'ORC2024A02', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
-    { dev: 'nvme2n1', model: 'ORICO NVMe SSD', serial: 'ORC2024A03', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: '—', hours: 8725 },
+    { dev: 'nvme3n1', by_id: 'nvme-Samsung_MZVLB256HAHQ_S417NB0K402133', model: 'Samsung MZVLB256HAHQ', serial: 'S417NB0K402133', size_bytes: Math.round(238 * GiB), temp_c: 55, smart: 'ok', smart_detail: 'PASSED', pool: 'ssd', hours: 1577 },
+    { dev: 'nvme0n1', by_id: 'nvme-ORICO_NVMe_SSD_ORC2024A01', model: 'ORICO NVMe SSD', serial: 'ORC2024A01', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
+    { dev: 'nvme1n1', by_id: 'nvme-ORICO_NVMe_SSD_ORC2024A02', model: 'ORICO NVMe SSD', serial: 'ORC2024A02', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
+    { dev: 'nvme2n1', by_id: 'nvme-ORICO_NVMe_SSD_ORC2024A03', model: 'ORICO NVMe SSD', serial: 'ORC2024A03', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: '—', hours: 8725 },
     // Caso real: disco USB montado (en uso) — no debe ofrecerse como libre.
-    { dev: 'sda', model: 'Seagate Expansion 4TB', serial: 'NAABC123', size_bytes: Math.round(3.64 * TiB), temp_c: 38, smart: 'warn', smart_detail: 'PASSED (realloc=48 pending=0)', realloc_sectors: 48, pool: '—', in_use: true, hours: 22100 },
+    { dev: 'sda', by_id: 'usb-Seagate_Expansion_4TB_NAABC123-0:0', model: 'Seagate Expansion 4TB', serial: 'NAABC123', size_bytes: Math.round(3.64 * TiB), temp_c: 38, smart: 'warn', smart_detail: 'PASSED (realloc=48 pending=0)', realloc_sectors: 48, pool: '—', in_use: true, hours: 22100 },
   ];
 
   private systemTimers: SystemTimer[] = [
@@ -158,7 +159,7 @@ export class MockProvider implements DataProvider {
   ];
 
   private alerts: Alert[] = [
-    { id: 1, ts: iso(daysAgo(2, 14)), level: 'warn', source: 'pool/tank', message: 'Fragmentación alta en tank (12%) · considera programar un scrub', acked: false, target: 'pools:tank' },
+    { id: 1, ts: iso(daysAgo(2, 14)), level: 'crit', source: 'pool/tank', message: 'Pool tank DEGRADED', acked: false, target: 'pools:tank' },
     { id: 2, ts: iso(new Date()), level: 'info', source: 'scrub/ssd', message: 'Scrub de ssd en curso (62%)', acked: false, target: 'pools:ssd' },
     { id: 4, ts: iso(daysAgo(1, 3)), level: 'warn', source: 'cron/backup', message: 'El backup nocturno terminó con avisos · revisa /var/log/backup.log', acked: false, target: 'tasks' },
     { id: 3, ts: iso(daysAgo(5, 9)), level: 'crit', source: 'smartd/nvme1n1', message: 'smartd: nvme1n1 a 48 °C de forma sostenida · revisar ventilación', acked: false, target: 'disks:nvme1n1' },
@@ -299,11 +300,16 @@ export class MockProvider implements DataProvider {
   };
 
   // ---- Auth ----
-  login = async (user: string, _password: string): Promise<SessionUser> => {
+  login = async (user: string, _password: string): Promise<LoginResult> => {
     await delay(300);
     // En modo demo entra cualquier credencial; rol según el usuario conocido
     const known = this.users.find((u) => u.user === user);
     this.session = { user: user || 'admin', role: known?.role ?? 'admin' };
+    return { ...this.session };
+  };
+  login2FA = async (_pending: string, _code: string): Promise<SessionUser> => {
+    await delay(200);
+    if (!this.session) throw new ApiError(401, 'unauthorized', 'Sesión no iniciada');
     return { ...this.session };
   };
   logout = async () => { await delay(80); this.session = null; };
@@ -318,6 +324,17 @@ export class MockProvider implements DataProvider {
     await delay();
     if (this.session) this.session = { ...this.session, display_name: d, email: e };
   };
+
+  // 2FA en demo: inerte (no se puede activar sobre el mock; devuelve no activo).
+  get2FAStatus = async (): Promise<TwoFAStatus> => { await delay(); return { enabled: false }; };
+  setup2FA = async (): Promise<TwoFASetup> => {
+    await delay();
+    const secret = 'JBSWY3DPEHPK3PXP';
+    return { secret, otpauth: `otpauth://totp/EasyZFS:demo?secret=${secret}&issuer=EasyZFS`, qr: '' };
+  };
+  confirm2FA = async (): Promise<TwoFARecovery> => { await delay(); throw new ApiError(400, 'demo_disabled', 'En modo demo la verificación en dos pasos no está disponible'); };
+  disable2FA = async () => { await delay(); };
+  regenerateRecoveryCodes = async (): Promise<TwoFARecovery> => { await delay(); throw new ApiError(400, 'demo_disabled', 'En modo demo la verificación en dos pasos no está disponible'); };
 
   // Avatares en memoria (object URLs): demo sin backend.
   private avatars = new Map<string, string>();
@@ -358,6 +375,20 @@ export class MockProvider implements DataProvider {
   setUserLanguage = async (name: string, language: Lang) => {
     await delay();
     this.users = this.users.map((u) => (u.user === name ? { ...u, language } : u));
+  };
+
+  // API keys read-only en demo (inertes)
+  private apiKeys: { id: number; name: string; created_at: string }[] = [];
+  getAPIKeys = async (): Promise<APIKeyInfo[]> => { await delay(); return this.apiKeys.map((k) => ({ ...k })); };
+  createAPIKey = async (name: string): Promise<APIKeyCreated> => {
+    await delay();
+    const id = this.apiKeys.length + 1;
+    this.apiKeys.push({ id, name, created_at: iso(new Date()) });
+    return { name, key: 'ez_' + 'a'.repeat(64) };
+  };
+  deleteAPIKey = async (id: number) => {
+    await delay();
+    this.apiKeys = this.apiKeys.filter((k) => k.id !== id);
   };
 
   // ---- Pools ----
@@ -760,7 +791,7 @@ export class MockProvider implements DataProvider {
   rollback = async (full: string, confirm: string) => {
     await delay(300);
     const [ds] = full.split('@');
-    if (confirm !== ds) throw new ApiError(400, 'confirm_required', `Escribe "${ds}" para confirmar`);
+    if (confirm !== ds && confirm !== full) throw new ApiError(400, 'confirm_required', `Escribe "${ds}" para confirmar`);
     this.activity.unshift({ ts: iso(new Date()), text: 'Rollback ejecutado', detail: full });
   };
 

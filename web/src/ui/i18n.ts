@@ -44,6 +44,33 @@ const es = {
   login_or: 'o',
   login_checking: 'Conectando con el servidor…',
   login_remember: 'Recordar contraseña',
+  login_code_title: 'Verificación en dos pasos',
+  login_code_sub: 'Introduce el código de 6 dígitos de tu autenticador ({user})',
+  login_code: 'Código',
+  login_code_btn: 'Verificar',
+  login_code_error: 'El código no es válido',
+  login_back: 'Volver a la contraseña',
+
+  // 2FA (TOTP) — Mi perfil
+  s_2fa: 'Verificación en dos pasos',
+  s_2fa_off: 'Desactivada',
+  s_2fa_on: 'Activa',
+  s_2fa_d: 'Añade una capa extra de seguridad: además de la contraseña necesitarás un código de 6 dígitos de tu aplicación de autenticación (Google Authenticator, Aegis, 1Password…)',
+  s_2fa_setup: 'Activar',
+  s_2fa_setup_d: 'Escanea el código QR con tu app de autenticación o introduce la clave manualmente.',
+  s_2fa_secret_lbl: 'Clave',
+  s_2fa_copy: 'Copiar clave',
+  s_2fa_copied: 'Copiado al portapapeles',
+  s_2fa_confirm: 'Confirmar',
+  s_2fa_confirm_d: 'Introduce el código que muestra tu app para confirmar la activación.',
+  s_2fa_disable: 'Desactivar',
+  s_2fa_disable_d: 'Para desactivar, introduce un código válido actual.',
+  s_2fa_recovery_title: 'Códigos de recuperación',
+  s_2fa_recovery_d: 'Guárdalos en un lugar seguro. Cada código solo puede usarse una vez; con ellos podrás entrar si pierdes el acceso al autenticador.',
+  s_2fa_recovery_done: 'Los he guardado',
+  s_2fa_regen: 'Regenerar códigos',
+  s_2fa_regen_warn: 'Regenerar invalida los códigos anteriores.',
+  s_2fa_loading: 'Comprobando…',
 
   // Panel
   kpi_health: 'Salud general', kpi_health_ok: 'todo en línea', kpi_health_warn: 'hay avisos',
@@ -53,6 +80,19 @@ const es = {
   dash_pools: 'Pools', dash_see_all: 'Ver todos',
   dash_alerts: 'Alertas recientes', dash_activity: 'Actividad',
   dash_no_alerts: 'Sin alertas. Todo en orden.',
+
+  // Tendencias (#85)
+  tr_title: 'Tendencias',
+  tr_sub: 'Evolución histórica de la capacidad de tus pools y la temperatura de tus discos. Los rangos largos usan agregados diarios.',
+  tr_source: 'Fuente',
+  tr_select: 'Elige una fuente…',
+  tr_range: 'Rango',
+  tr_pools: 'pools',
+  tr_disks: 'discos',
+  tr_error: 'No se pudieron cargar los datos',
+  tr_empty: 'Sin datos en este rango. Se irán acumulando con el tiempo.',
+  tr_chart: 'Gráfica de tendencia',
+  tr_last: 'Último valor',
 
   // Pools
   pools_all: 'Todos', pools_ok: 'Sanos', pools_warn: 'Con avisos',
@@ -160,6 +200,8 @@ const es = {
   rp_btn: 'Sustituir disco',
   rp_small: 'pequeño', rp_small_hidden: '({n} oculto(s) por tamaño)',
   rp_show_all: 'Mostrar también los {n} disco(s) de tamaño insuficiente',
+  rp_byid: 'Ruta estable',
+  rp_warn_online: 'El disco de origen está ONLINE y sano. Sustituir un disco sano dispara un resilver innecesario: comprueba que es exactamente lo que quieres hacer.',
 
   // Retirar disco de un mirror
   dt_title: 'Retirar disco',
@@ -294,11 +336,11 @@ const es = {
   rb_desc1: 'Vas a hacer rollback de',
   rb_desc2: 'a',
   rb_warn: 'Se perderán los cambios posteriores a este snapshot.',
-  rb_confirm_lbl: 'Escribe el nombre del dataset para confirmar',
+  rb_confirm_lbl: 'Escribe el nombre del dataset (o la ruta completa) para confirmar',
   rb_btn: 'Restaurar',
   dsn_title: 'Eliminar snapshot',
   dsn_desc: 'Se eliminará la instantánea. Los datos actuales no se ven afectados.',
-  dsn_confirm_lbl: 'Escribe el nombre del snapshot para confirmar',
+  dsn_confirm_lbl: 'Escribe el nombre del snapshot (o la ruta completa) para confirmar',
   snap_restore: 'Restaurar', snap_delete: 'Eliminar',
   snap_clone: 'Clonar', snap_diff_title: 'Cambios entre snapshots',
   snap_diff_btn: 'Comparar', sd_from: 'Origen', sd_to: 'Destino',
@@ -396,6 +438,15 @@ const es = {
   s_theme_toLight: 'Cambiar a tema claro', s_theme_toDark: 'Cambiar a tema oscuro',
   s_users: 'Usuarios', s_newuser: 'Nuevo usuario',
   s_roles_d: 'Admin: acceso total (usuarios, ajustes, acciones destructivas). Usuario: consulta y operaciones del día a día (snapshots, scrubs, datasets).',
+  s_apikeys: 'API keys',
+  s_apikeys_d: 'Claves de solo lectura para integraciones externas (monitorización, scripts). Solo pueden leer; nunca mutar.',
+  s_apikey_name: 'Nombre (p.ej. monitoring)',
+  s_apikey_new: 'Generar',
+  s_apikey_once: '¡Cópiala ahora! Solo se muestra esta vez.',
+  s_apikey_created: 'Creada',
+  s_apikey_last: 'último uso',
+  s_apikey_revoke: 'Revocar',
+  s_apikey_del_warn: '¿Revocar esta API key? Las integraciones que la usen dejarán de funcionar.',
   s_last_login: 'último acceso', s_sessions: 'sesiones activas', s_session_one: 'sesión activa',
   s_passwd: 'Contraseña', s_delete_user: 'Eliminar',
   s_thresh: 'Umbrales de salud', s_thresh_d: 'Se disparan alertas al superar estos valores.',
@@ -511,6 +562,32 @@ const es = {
   // Accesibilidad
   a11y_close_modal: 'Cerrar ventana', a11y_theme: 'Cambiar tema', a11y_alerts: 'Alertas',
   a11y_mainnav: 'Navegación principal',
+
+  // Toasts (avisos de acciones)
+  toast_dismiss: 'Descartar aviso',
+  toast_snap_created: 'Snapshot creado', toast_snap_deleted: 'Snapshot eliminado',
+  toast_rollback: 'Rollback en curso', toast_ds_created: 'Dataset creado',
+  toast_ds_deleted: 'Dataset eliminado',
+  toast_saved: 'Cambios guardados', toast_action_done: 'Hecho',
+  toast_pool_created: 'Pool creado', toast_pool_exported: 'Pool exportado',
+  toast_pool_imported: 'Pool importado', toast_vdev_added: 'Vdev añadido',
+  toast_disk_replacing: 'Sustitución de disco iniciada',
+  toast_checkpoint: 'Checkpoint actualizado', toast_ds_updated: 'Dataset actualizado',
+  toast_prop_inherited: 'Propiedad restablecida a heredada',
+  toast_rewrite_started: 'Reescritura iniciada', toast_expand_started: 'Expansión iniciada',
+  toast_ds_unlocked: 'Dataset desbloqueado', toast_ds_locked: 'Dataset bloqueado',
+  toast_key_changed: 'Passphrase actualizada',
+  toast_task_created: 'Tarea creada', toast_task_deleted: 'Tarea eliminada',
+  toast_task_started: 'Tarea lanzada', toast_timer_migrated: 'Temporizador migrado a systemd',
+  toast_repl_created: 'Replicación creada', toast_repl_deleted: 'Replicación eliminada',
+  toast_repl_started: 'Replicación lanzada',
+  toast_user_created: 'Usuario creado', toast_user_deleted: 'Usuario eliminado',
+  toast_pwd_changed: 'Contraseña actualizada', toast_clone_created: 'Clon creado',
+  toast_smart_started: 'Self-test iniciado', toast_disk_off: 'Disco apagado',
+  toast_backup_imported: 'Copia de seguridad restaurada',
+  toast_avatar_updated: 'Foto de perfil actualizada', toast_avatar_deleted: 'Foto de perfil eliminada',
+  toast_apikey_created: 'Clave API creada', toast_apikey_deleted: 'Clave API revocada',
+  toast_op_cancelled: 'Operación cancelada',
 };
 
 export type I18nKey = keyof typeof es;
@@ -554,6 +631,33 @@ const en: Record<I18nKey, string> = {
   login_or: 'or',
   login_checking: 'Connecting to the server…',
   login_remember: 'Remember password',
+  login_code_title: 'Two-step verification',
+  login_code_sub: 'Enter the 6-digit code from your authenticator app ({user})',
+  login_code: 'Code',
+  login_code_btn: 'Verify',
+  login_code_error: 'The code is not valid',
+  login_back: 'Back to password',
+
+  // 2FA (TOTP) — My profile
+  s_2fa: 'Two-step verification',
+  s_2fa_off: 'Off',
+  s_2fa_on: 'Active',
+  s_2fa_d: 'Adds an extra security layer: besides the password you will need a 6-digit code from your authenticator app (Google Authenticator, Aegis, 1Password…)',
+  s_2fa_setup: 'Enable',
+  s_2fa_setup_d: 'Scan the QR code with your authenticator app or enter the key manually.',
+  s_2fa_secret_lbl: 'Key',
+  s_2fa_copy: 'Copy key',
+  s_2fa_copied: 'Copied to clipboard',
+  s_2fa_confirm: 'Confirm',
+  s_2fa_confirm_d: 'Enter the code shown by your app to confirm activation.',
+  s_2fa_disable: 'Disable',
+  s_2fa_disable_d: 'To disable, enter a valid current code.',
+  s_2fa_recovery_title: 'Recovery codes',
+  s_2fa_recovery_d: 'Store them somewhere safe. Each code can only be used once; they let you sign in if you lose access to your authenticator.',
+  s_2fa_recovery_done: 'I have saved them',
+  s_2fa_regen: 'Regenerate codes',
+  s_2fa_regen_warn: 'Regenerating invalidates the previous codes.',
+  s_2fa_loading: 'Checking…',
 
   kpi_health: 'Overall health', kpi_health_ok: 'all online', kpi_health_warn: 'warnings present',
   kpi_cap: 'Total capacity', kpi_cap_used: 'used',
@@ -562,6 +666,19 @@ const en: Record<I18nKey, string> = {
   dash_pools: 'Pools', dash_see_all: 'View all',
   dash_alerts: 'Recent alerts', dash_activity: 'Activity',
   dash_no_alerts: 'No alerts. Everything is fine.',
+
+  // Trends (#85)
+  tr_title: 'Trends',
+  tr_sub: 'Historical evolution of your pool capacity and disk temperatures. Long ranges use daily aggregates.',
+  tr_source: 'Source',
+  tr_select: 'Pick a source…',
+  tr_range: 'Range',
+  tr_pools: 'pools',
+  tr_disks: 'disks',
+  tr_error: 'Could not load the data',
+  tr_empty: 'No data in this range. It will accumulate over time.',
+  tr_chart: 'Trend chart',
+  tr_last: 'Last value',
 
   pools_all: 'All', pools_ok: 'Healthy', pools_warn: 'With warnings',
   pool_create: '+ Create pool', pool_import: 'Import existing pool',
@@ -665,6 +782,8 @@ const en: Record<I18nKey, string> = {
   rp_btn: 'Replace disk',
   rp_small: 'too small', rp_small_hidden: '({n} hidden by size)',
   rp_show_all: 'Also show the {n} undersized disk(s)',
+  rp_byid: 'Stable path',
+  rp_warn_online: 'The origin disk is ONLINE and healthy. Replacing a healthy disk triggers an unnecessary resilver: double-check this is exactly what you want to do.',
 
   dt_title: 'Detach disk',
   dt_desc: '{dev} will be permanently detached from pool {pool}. Data stays safe on the rest of the mirror.',
@@ -796,11 +915,11 @@ const en: Record<I18nKey, string> = {
   rb_desc1: 'You are about to roll back',
   rb_desc2: 'to',
   rb_warn: 'Changes made after this snapshot will be lost.',
-  rb_confirm_lbl: 'Type the dataset name to confirm',
+  rb_confirm_lbl: 'Type the dataset name (or the full path) to confirm',
   rb_btn: 'Restore',
   dsn_title: 'Delete snapshot',
   dsn_desc: 'The snapshot will be deleted. Current data is not affected.',
-  dsn_confirm_lbl: 'Type the snapshot name to confirm',
+  dsn_confirm_lbl: 'Type the snapshot name (or the full path) to confirm',
   snap_restore: 'Restore', snap_delete: 'Delete',
   snap_clone: 'Clone', snap_diff_title: 'Changes between snapshots',
   snap_diff_btn: 'Compare', sd_from: 'Source', sd_to: 'Target',
@@ -894,6 +1013,15 @@ const en: Record<I18nKey, string> = {
   s_theme_toLight: 'Switch to light theme', s_theme_toDark: 'Switch to dark theme',
   s_users: 'Users', s_newuser: 'New user',
   s_roles_d: 'Admin: full access (users, settings, destructive actions). User: read-only plus day-to-day operations (snapshots, scrubs, datasets).',
+  s_apikeys: 'API keys',
+  s_apikeys_d: 'Read-only keys for external integrations (monitoring, scripts). They can only read, never mutate.',
+  s_apikey_name: 'Name (e.g. monitoring)',
+  s_apikey_new: 'Generate',
+  s_apikey_once: 'Copy it now! It is only shown once.',
+  s_apikey_created: 'Created',
+  s_apikey_last: 'last used',
+  s_apikey_revoke: 'Revoke',
+  s_apikey_del_warn: 'Revoke this API key? Integrations using it will stop working.',
   s_last_login: 'last login', s_sessions: 'active sessions', s_session_one: 'active session',
   s_passwd: 'Password', s_delete_user: 'Delete',
   s_thresh: 'Health thresholds', s_thresh_d: 'Alerts fire when these values are exceeded.',
@@ -1006,6 +1134,31 @@ const en: Record<I18nKey, string> = {
 
   a11y_close_modal: 'Close dialog', a11y_theme: 'Toggle theme', a11y_alerts: 'Alerts',
   a11y_mainnav: 'Main navigation',
+
+  toast_dismiss: 'Dismiss',
+  toast_snap_created: 'Snapshot created', toast_snap_deleted: 'Snapshot deleted',
+  toast_rollback: 'Rollback started', toast_ds_created: 'Dataset created',
+  toast_ds_deleted: 'Dataset deleted',
+  toast_saved: 'Changes saved', toast_action_done: 'Done',
+  toast_pool_created: 'Pool created', toast_pool_exported: 'Pool exported',
+  toast_pool_imported: 'Pool imported', toast_vdev_added: 'Vdev added',
+  toast_disk_replacing: 'Disk replacement started',
+  toast_checkpoint: 'Checkpoint updated', toast_ds_updated: 'Dataset updated',
+  toast_prop_inherited: 'Property reset to inherited',
+  toast_rewrite_started: 'Rewrite started', toast_expand_started: 'Expansion started',
+  toast_ds_unlocked: 'Dataset unlocked', toast_ds_locked: 'Dataset locked',
+  toast_key_changed: 'Passphrase changed',
+  toast_task_created: 'Task created', toast_task_deleted: 'Task deleted',
+  toast_task_started: 'Task started', toast_timer_migrated: 'Timer migrated to systemd',
+  toast_repl_created: 'Replication created', toast_repl_deleted: 'Replication deleted',
+  toast_repl_started: 'Replication started',
+  toast_user_created: 'User created', toast_user_deleted: 'User deleted',
+  toast_pwd_changed: 'Password changed', toast_clone_created: 'Clone created',
+  toast_smart_started: 'Self-test started', toast_disk_off: 'Disk powered off',
+  toast_backup_imported: 'Backup restored',
+  toast_avatar_updated: 'Profile photo updated', toast_avatar_deleted: 'Profile photo deleted',
+  toast_apikey_created: 'API key created', toast_apikey_deleted: 'API key revoked',
+  toast_op_cancelled: 'Operation cancelled',
 };
 
 const DICTS: Record<'es' | 'en', Record<I18nKey, string>> = { es, en };
@@ -1015,9 +1168,23 @@ const LANG_KEY_LEGACY = 'zfc-lang';
 
 let currentLang: 'es' | 'en' = 'es';
 const subs = new Set<() => void>();
+// true solo en el despliegue demo (DEMO=1, flag público del backend): el modo
+// auto se resuelve a inglés, la elección explícita del usuario sigue mandando.
+let demoServer = false;
+
+export function setDemoServer(v: boolean): void {
+  if (demoServer === v) return;
+  demoServer = v;
+  if (getLangMode() === 'auto') {
+    currentLang = resolveLang('auto');
+    document.documentElement.lang = currentLang;
+    subs.forEach((f) => f());
+  }
+}
 
 export function resolveLang(mode: LangMode): 'es' | 'en' {
   if (mode === 'auto') {
+    if (demoServer) return 'en';
     return (navigator.language || 'es').toLowerCase().startsWith('en') ? 'en' : 'es';
   }
   return mode;

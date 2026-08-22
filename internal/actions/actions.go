@@ -28,6 +28,7 @@ var (
 	ErrInvalidTopo   = errors.New("topología inválida")
 	ErrInvalidAction = errors.New("acción inválida")
 	ErrInvalidInput  = errors.New("entrada inválida")
+	ErrSnapshotNotFound = errors.New("el snapshot no existe; refresca la lista")
 )
 
 // Whitelists de nombres (lección 6 + ejecución segura del skill).
@@ -36,7 +37,18 @@ var (
 	reDataset  = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*(/[a-zA-Z0-9][a-zA-Z0-9_.-]*)*$`)
 	reSnapName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$`)
 	reDev      = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,63}$`) // sdb, nvme0n1, ata-XXX…
+	// reDevByIDPath — ruta estable completa '/dev/disk/by-id/<nombre>'.
+	// Es la forma preferida para el disco NUEVO de un replace: las letras
+	// sdX son inestables entre arranques y movimientos de bahía (issue #65).
+	// No se admite '/dev/sdX': solo nombres base o rutas by-id.
+	reDevByIDPath = regexp.MustCompile(`^/dev/disk/by-id/[a-zA-Z0-9][a-zA-Z0-9_.:-]{0,127}$`)
 )
+
+// validNewDev — el destino de un replace/attach puede ser un nombre base
+// ('sda', 'nvme0n1', nombre by-id sin ruta) o una ruta '/dev/disk/by-id/…'.
+func validNewDev(dev string) bool {
+	return reDev.MatchString(dev) || reDevByIDPath.MatchString(dev)
+}
 
 // ValidTopos — topologías admitidas al crear/añadir vdevs.
 var ValidTopos = map[string]bool{
@@ -388,11 +400,14 @@ func (s *Service) SysTaskMigrate(ctx context.Context, actor string, task model.S
 
 // Replace — 'zpool replace <pool> <old> <new>'; el resilver se observa en el colector.
 // confirmed debe ser true solo si el handler validó {"confirm":pool}.
+// newDev debería llegar ya resuelto a la ruta estable '/dev/disk/by-id/…'
+// (lo hace el handler con el inventario de discos); se acepta también un
+// nombre base como fallback cuando el disco no tiene enlace by-id.
 func (s *Service) Replace(ctx context.Context, actor, pool, oldDev, newDev string, confirmed bool) error {
 	if !rePool.MatchString(pool) {
 		return ErrInvalidName
 	}
-	if !reDev.MatchString(oldDev) || !reDev.MatchString(newDev) {
+	if !reDev.MatchString(oldDev) || !validNewDev(newDev) {
 		return ErrInvalidDev
 	}
 	s.audit(ctx, actor, "pool.replace", pool,
@@ -635,6 +650,9 @@ func (s *Service) SnapshotDelete(ctx context.Context, actor, full string) error 
 	}
 	s.audit(ctx, actor, "snapshot.delete", full, nil, true)
 	if _, err := executil.Run(ctx, 30*time.Second, "zfs", "destroy", full); err != nil {
+		if strings.Contains(err.Error(), "could not find any snapshots to destroy") {
+			return ErrSnapshotNotFound
+		}
 		return fmt.Errorf("borrar snapshot: %w", err)
 	}
 	return nil
@@ -648,6 +666,9 @@ func (s *Service) SnapshotRollback(ctx context.Context, actor, full string) erro
 	}
 	s.audit(ctx, actor, "snapshot.rollback", full, nil, true)
 	if _, err := executil.Run(ctx, 60*time.Second, "zfs", "rollback", "-r", full); err != nil {
+		if strings.Contains(err.Error(), "dataset does not exist") {
+			return ErrSnapshotNotFound
+		}
 		return fmt.Errorf("rollback: %w", err)
 	}
 	return nil

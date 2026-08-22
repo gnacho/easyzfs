@@ -93,7 +93,7 @@ export function ModalHost() {
 
 // ---------- crear snapshot ----------
 function SnapshotModal({ preset, onClose }: { preset?: string; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const datasets = useLoad(() => getProvider().getDatasets());
   const pools = useLoad(() => getProvider().getPools());
   const [target, setTarget] = useState(preset ?? '');
@@ -113,7 +113,8 @@ function SnapshotModal({ preset, onClose }: { preset?: string; onClose: () => vo
     try {
       await getProvider().createSnapshot({ dataset: target, name, recursive: isPoolTarget });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_snap_created'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -183,7 +184,7 @@ function HistoryModal({ pool, onClose }: { pool: string; onClose: () => void }) 
 
 // ---------- checkpoint del pool ----------
 function CheckpointModal({ pool, active, onClose }: { pool: string; active: boolean; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -194,7 +195,8 @@ function CheckpointModal({ pool, active, onClose }: { pool: string; active: bool
     try {
       await getProvider().checkpointPool(pool, active ? 'discard' : 'create', confirm);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_checkpoint'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -225,7 +227,7 @@ function CheckpointModal({ pool, active, onClose }: { pool: string; active: bool
 const TOPO_MIN: Record<Topo, number> = { stripe: 1, mirror: 2, raidz1: 3, raidz2: 4, raidz3: 5 };
 
 function NewPoolModal({ onClose }: { onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const disks = useLoad(() => getProvider().getDisks());
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState('');
@@ -262,7 +264,8 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
     try {
       await getProvider().createPool({ name: name.trim(), topo, disks: [...sel], confirm: confirm.trim() });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_pool_created'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -327,7 +330,7 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
 
 // ---------- nuevo dataset / zvol ----------
 function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const pools = useLoad(() => getProvider().getPools());
   const [pool, setPool] = useState('');
   const [name, setName] = useState('');
@@ -353,7 +356,8 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
         encryption: enc || undefined, passphrase: enc ? pass1 : undefined,
       });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_ds_created'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -407,7 +411,7 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
 
 // ---------- editar dataset (cuota / compresión) ----------
 function EditDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const [comp, setComp] = useState(ds.compression);
   const [quota, setQuota] = useState(ds.quota_bytes ? fmtBytes(ds.quota_bytes).replace('iB', '').replace('B', '') : '');
   const [busy, setBusy] = useState(false);
@@ -419,7 +423,8 @@ function EditDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void })
     try {
       await getProvider().updateDataset(ds.name, { compression: comp, quota_bytes: parseSize(quota) });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_ds_updated'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -449,7 +454,7 @@ function EditDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void })
 
 // ---------- propiedades del dataset (U3): tabla completa + editar/inherit ----------
 function DatasetPropsModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const [props, setProps] = useState<DatasetProp[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -515,7 +520,8 @@ function DatasetPropsModal({ ds, onClose }: { ds: Dataset; onClose: () => void }
       await load();
       setEditing(null);
       refresh();
-    } catch (e) { setErr(errorMessage(e, t)); setBusy(false); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const msg = errorMessage(e, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   const inherit = async (p: DatasetProp) => {
@@ -524,7 +530,8 @@ function DatasetPropsModal({ ds, onClose }: { ds: Dataset; onClose: () => void }
       await getProvider().inheritDatasetProp(ds.name, p.name);
       await load();
       refresh();
-    } catch (e) { setErr(errorMessage(e, t)); setBusy(false); }
+      notify(t('toast_prop_inherited'), 'ok');
+    } catch (e) { const msg = errorMessage(e, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   const enumValues = (name: string): string[] => {
@@ -763,7 +770,7 @@ function DiskDetailModal({ disk, onClose }: { disk: Disk; onClose: () => void })
 
 // ---------- eliminar dataset (confirmación escrita) ----------
 function DeleteDatasetModal({ name, onClose }: { name: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [recursive, setRecursive] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -775,7 +782,8 @@ function DeleteDatasetModal({ name, onClose }: { name: string; onClose: () => vo
     try {
       await getProvider().deleteDataset(name, confirm.trim(), recursive);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_ds_deleted'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -802,7 +810,7 @@ function DeleteDatasetModal({ name, onClose }: { name: string; onClose: () => vo
 
 // ---------- reescribir datos del dataset (zfs rewrite; operación larga) ----------
 function RewriteModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -813,7 +821,8 @@ function RewriteModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
     try {
       await getProvider().rewriteDataset(ds.name, confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_rewrite_started'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -841,7 +850,7 @@ function RewriteModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
 
 // ---------- desbloquear dataset cifrado (zfs load-key) ----------
 function UnlockDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [key, setKey] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -852,7 +861,8 @@ function UnlockDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void 
     try {
       await getProvider().unlockDataset(ds.name, key);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_ds_unlocked'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -875,7 +885,7 @@ function UnlockDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void 
 
 // ---------- bloquear dataset cifrado (zfs unload-key) ----------
 function LockDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -885,7 +895,8 @@ function LockDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void })
     try {
       await getProvider().lockDataset(ds.name);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_ds_locked'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -905,7 +916,7 @@ function LockDatasetModal({ ds, onClose }: { ds: Dataset; onClose: () => void })
 
 // ---------- cambiar la passphrase de un dataset cifrado (zfs change-key) ----------
 function ChangeKeyModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [cur, setCur] = useState('');
   const [n1, setN1] = useState('');
   const [n2, setN2] = useState('');
@@ -919,7 +930,8 @@ function ChangeKeyModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
     try {
       await getProvider().changeDatasetKey(ds.name, cur, n1);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_key_changed'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -950,7 +962,7 @@ function ChangeKeyModal({ ds, onClose }: { ds: Dataset; onClose: () => void }) {
 
 // ---------- expandir un vdev raidz (RAID-Z expansion, OpenZFS ≥ 2.3) ----------
 function ExpandModal({ pool, onClose }: { pool: Pool; onClose: () => void }) {
-  const { t, refresh, isAdmin, caps } = useApp();
+  const { t, refresh, isAdmin, caps, notify } = useApp();
   const disks = useLoad(() => getProvider().getDisks());
   const vdevs = pool.raidz_vdevs ?? [];
   const [vdev, setVdev] = useState(vdevs[0] ?? '');
@@ -968,7 +980,8 @@ function ExpandModal({ pool, onClose }: { pool: Pool; onClose: () => void }) {
     try {
       await getProvider().expandPool(pool.name, vdev, disk, confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_expand_started'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1021,7 +1034,7 @@ function ExpandModal({ pool, onClose }: { pool: Pool; onClose: () => void }) {
 
 // ---------- exportar pool ----------
 function ExportPoolModal({ pool, onClose }: { pool: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [force, setForce] = useState(false);
   const [destroy, setDestroy] = useState(false);
   const [confirm, setConfirm] = useState('');
@@ -1034,7 +1047,8 @@ function ExportPoolModal({ pool, onClose }: { pool: string; onClose: () => void 
     try {
       await getProvider().exportPool(pool, confirm.trim(), force, destroy);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_pool_exported'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1076,7 +1090,7 @@ function devBase(dev: string): string {
 // Modal genérico para las dos operaciones destructivas de pool: pide el
 // nombre del pool para confirmar y envía {confirm} al backend.
 function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: string; mode: 'vdev' | 'replace'; presetOld?: string; presetNew?: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const disks = useLoad(() => getProvider().getDisks());
   const pools = useLoad(() => getProvider().getPools());
   const [topo, setTopo] = useState<Topo>('mirror');
@@ -1092,7 +1106,9 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
   const [showAll, setShowAll] = useState(false);
   // tamaño del vdev a sustituir (si el disco viejo sigue visible): el nuevo debe ser >=
   const oldVdev = current.find((v) => v.dev === oldDev);
-  const oldSize = (disks ?? []).find((d) => oldVdev?.path && d.dev === devBase(oldVdev.path))?.size_bytes ?? 0;
+  const oldDisk = (disks ?? []).find((d) => oldVdev?.path ? d.dev === devBase(oldVdev.path) : d.dev === oldDev);
+  const newDisk = (disks ?? []).find((d) => d.dev === newDev);
+  const oldSize = oldDisk?.size_bytes ?? 0;
   const suitable = useMemo(() => free.filter((d) => oldSize === 0 || d.size_bytes >= oldSize), [free, oldSize]);
   const hidden = free.length - suitable.length;
   const toggle = (dev: string) => setSel((s) => {
@@ -1122,9 +1138,14 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
     setBusy(true); setErr('');
     try {
       if (mode === 'vdev') await getProvider().addVdev(pool, topo, [...sel], confirm.trim());
-      else await getProvider().replaceDisk(pool, oldDev, newDev, confirm.trim());
+      else {
+        // by-id si existe: las letras sdX son inestables entre arranques (#65)
+        const outDev = newDisk?.by_id ? '/dev/disk/by-id/' + newDisk.by_id : newDev;
+        await getProvider().replaceDisk(pool, oldDev, outDev, confirm.trim());
+      }
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t(mode === 'vdev' ? 'toast_vdev_added' : 'toast_disk_replacing'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1196,8 +1217,36 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
                   {t('rp_show_all', { n: hidden })}
                 </label>
               )}
-            </>);
+             </>);
           })()}
+
+          {/* #65: resumen explícito origen/destino con modelo+serial antes de confirmar */}
+          <div className="rp-summary">
+            <div>
+              <span className="lbl">{t('rp_old')}</span>
+              <span className="mono">
+                {oldVdev?.path ? oldVdev.path.replace('/dev/', '') : oldDev}
+                {oldDisk ? ` · ${oldDisk.model} · S/N ${oldDisk.serial}` : ''}
+              </span>
+            </div>
+            <div>
+              <span className="lbl">{t('rp_new')}</span>
+              <span className="mono">
+                {newDev}
+                {newDisk ? ` · ${newDisk.model} · S/N ${newDisk.serial}` : ''}
+              </span>
+            </div>
+            {newDisk?.by_id && (
+              <div>
+                <span className="lbl">{t('rp_byid')}</span>
+                <span className="mono wrap">/dev/disk/by-id/{newDisk.by_id}</span>
+              </div>
+            )}
+          </div>
+          {/* #65: aviso fuerte si el origen es un miembro ONLINE sano */}
+          {oldVdev?.status === 'ONLINE' && (
+            <p className="rp-warn" role="alert">{t('rp_warn_online')}</p>
+          )}
         </>)}
 
         <label htmlFor="pd-confirm">{t('ex_confirm_lbl_pool')}</label>
@@ -1220,7 +1269,7 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
 // avanzado muestra el input en crudo. Si la schedule actual no encaja en un
 // preset simple, se abre directamente en avanzado.
 function SysSchedModal({ task, onClose }: { task: SystemTimer; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const isCron = task.source === 'cron';
   const [initial] = useState(() => parseSysSchedule(task.schedule ?? '', task.source));
   const [advanced, setAdvanced] = useState(initial === null);
@@ -1238,7 +1287,8 @@ function SysSchedModal({ task, onClose }: { task: SystemTimer; onClose: () => vo
     try {
       await getProvider().setSystemTimerSchedule(task, sched);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_saved'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1281,7 +1331,7 @@ function SysSchedModal({ task, onClose }: { task: SystemTimer; onClose: () => vo
 
 // ---------- cambiar cron → systemd timer ----------
 function SysMigrateModal({ task, onClose }: { task: SystemTimer; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -1292,7 +1342,8 @@ function SysMigrateModal({ task, onClose }: { task: SystemTimer; onClose: () => 
     try {
       await getProvider().migrateSystemTimer(task, name.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_timer_migrated'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1322,7 +1373,7 @@ function SysMigrateModal({ task, onClose }: { task: SystemTimer; onClose: () => 
 
 // ---------- retirar disco de un mirror (confirmación escrita) ----------
 function DetachModal({ pool, dev, path, onClose }: { pool: string; dev: string; path?: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -1334,7 +1385,8 @@ function DetachModal({ pool, dev, path, onClose }: { pool: string; dev: string; 
     try {
       await getProvider().vdevAction(pool, dev, 'detach', confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_action_done'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1357,19 +1409,23 @@ function DetachModal({ pool, dev, path, onClose }: { pool: string; dev: string; 
 
 // ---------- rollback de snapshot ----------
 function RollbackModal({ full, onClose }: { full: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [ds, snap] = full.split('@');
+  // Se acepta el nombre corto (dataset) o la ruta completa que muestra el modal
+  const rbConfirmOk = [ds, full].includes(confirm.trim());
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setErr('');
     try {
-      await getProvider().rollback(full, confirm.trim());
+      // El backend exige confirm == ruta completa; la UI pide el dataset
+      await getProvider().rollback(full, confirm.trim() === ds ? full : confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_rollback'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1383,7 +1439,7 @@ function RollbackModal({ full, onClose }: { full: string; onClose: () => void })
         {err && <p className="form-err" role="alert">{err}</p>}
         <div className="m-actions">
           <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
-          <SubmitBtn label={t('rb_btn')} busy={busy} danger disabled={!isAdmin || confirm.trim() !== ds} />
+          <SubmitBtn label={t('rb_btn')} busy={busy} danger disabled={!isAdmin || !rbConfirmOk} />
         </div>
       </form>
     </ModalBox>
@@ -1392,19 +1448,23 @@ function RollbackModal({ full, onClose }: { full: string; onClose: () => void })
 
 // ---------- eliminar snapshot ----------
 function DeleteSnapModal({ full, onClose }: { full: string; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [, snap] = full.split('@');
+  // Se acepta el nombre corto (tras la @) o la ruta completa que muestra el modal
+  const dsnConfirmOk = [snap, full].includes(confirm.trim());
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setErr('');
     try {
-      await getProvider().deleteSnapshot(full, confirm.trim());
+      // El backend exige confirm == ruta completa; la UI pide el nombre corto
+      await getProvider().deleteSnapshot(full, confirm.trim() === snap ? full : confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_snap_deleted'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1418,7 +1478,7 @@ function DeleteSnapModal({ full, onClose }: { full: string; onClose: () => void 
         {err && <p className="form-err" role="alert">{err}</p>}
         <div className="m-actions">
           <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
-          <SubmitBtn label={t('delete')} busy={busy} danger disabled={!isAdmin || confirm.trim() !== snap} />
+          <SubmitBtn label={t('delete')} busy={busy} danger disabled={!isAdmin || !dsnConfirmOk} />
         </div>
       </form>
     </ModalBox>
@@ -1514,7 +1574,7 @@ function ScheduleFields({ s, set, showRetention, retention, setRetention, t }: {
 }
 
 function NewTaskModal({ onClose }: { onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const datasets = useLoad(() => getProvider().getDatasets());
   const pools = useLoad(() => getProvider().getPools());
   const [tipo, setTipo] = useState<'snapshot' | 'scrub' | 'trim' | 'smart'>('snapshot');
@@ -1542,7 +1602,8 @@ function NewTaskModal({ onClose }: { onClose: () => void }) {
         retention: tipo === 'snapshot' ? retention : undefined,
       });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_task_created'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1583,7 +1644,7 @@ function NewTaskModal({ onClose }: { onClose: () => void }) {
 }
 
 function EditScheduleModal({ job, onClose }: { job: Job; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [sched, setSched] = useState<SchedState>(() => parseSchedule(job.schedule));
   const [retention, setRetention] = useState(job.retention || '1m');
   const [busy, setBusy] = useState(false);
@@ -1598,15 +1659,18 @@ function EditScheduleModal({ job, onClose }: { job: Job; onClose: () => void }) 
         retention: job.tipo === 'snapshot' ? retention : undefined,
       });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_saved'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   const remove = async () => {
     setBusy(true); setErr('');
     try {
-      await getProvider().deleteJob(job.id, String(job.id));
+      // El backend exige confirm == target del job (no su id)
+      await getProvider().deleteJob(job.id, job.target);
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_task_deleted'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1632,7 +1696,7 @@ function EditScheduleModal({ job, onClose }: { job: Job; onClose: () => void }) 
 
 // ---------- replicación ZFS (send/recv local y SSH) ----------
 function NewReplModal({ onClose }: { onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const datasets = useLoad(() => getProvider().getDatasets());
   const [source, setSource] = useState('');
   const [destType, setDestType] = useState<'local' | 'ssh'>('local');
@@ -1676,7 +1740,8 @@ function NewReplModal({ onClose }: { onClose: () => void }) {
         raw, force_full: force, schedule: buildSchedule(sched),
       });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_repl_created'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   const sshOk = destType !== 'ssh' || (host.trim() && user.trim() && +port >= 1 && +port <= 65535);
@@ -1750,7 +1815,7 @@ function NewReplModal({ onClose }: { onClose: () => void }) {
 }
 
 function EditReplModal({ job, onClose }: { job: ReplicationJob; onClose: () => void }) {
-  const { t, refresh, isAdmin } = useApp();
+  const { t, refresh, isAdmin, notify } = useApp();
   const [sched, setSched] = useState<SchedState>(() => parseSchedule(job.schedule));
   const [raw, setRaw] = useState(job.raw);
   const [force, setForce] = useState(job.force_full);
@@ -1766,14 +1831,16 @@ function EditReplModal({ job, onClose }: { job: ReplicationJob; onClose: () => v
         schedule: buildSchedule(sched), raw, force_full: force,
       });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_saved'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
   const remove = async () => {
     setBusy(true); setErr('');
     try {
       await getProvider().deleteReplicationJob(job.id, confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_repl_deleted'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1812,7 +1879,7 @@ function EditReplModal({ job, onClose }: { job: ReplicationJob; onClose: () => v
 
 // ---------- usuarios ----------
 function NewUserModal({ onClose }: { onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const [user, setUser] = useState('');
   const [pass, setPass] = useState('');
   const [role, setRole] = useState<'admin' | 'user'>('user');
@@ -1825,7 +1892,8 @@ function NewUserModal({ onClose }: { onClose: () => void }) {
     try {
       await getProvider().createUser({ user: user.trim(), password: pass, role });
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_user_created'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1854,7 +1922,7 @@ function NewUserModal({ onClose }: { onClose: () => void }) {
 
 // Cambiar la contraseña de la sesión actual (desde Ajustes > Mi sesión)
 function MyPasswdModal({ onClose }: { onClose: () => void }) {
-  const { t } = useApp();
+  const { t, notify } = useApp();
   const [cur, setCur] = useState('');
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
@@ -1868,7 +1936,8 @@ function MyPasswdModal({ onClose }: { onClose: () => void }) {
     try {
       await getProvider().setMyPassword(cur, p1);
       onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_pwd_changed'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1895,7 +1964,7 @@ function MyPasswdModal({ onClose }: { onClose: () => void }) {
 }
 
 function PasswdModal({ user, onClose }: { user: string; onClose: () => void }) {
-  const { t } = useApp();
+  const { t, notify } = useApp();
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
   const [closeSess, setCloseSess] = useState(true);
@@ -1909,7 +1978,8 @@ function PasswdModal({ user, onClose }: { user: string; onClose: () => void }) {
     try {
       await getProvider().setUserPassword(user, p1, closeSess);
       onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_pwd_changed'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1937,7 +2007,7 @@ function PasswdModal({ user, onClose }: { user: string; onClose: () => void }) {
 }
 
 function DeleteUserModal({ user, onClose }: { user: string; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -1948,7 +2018,8 @@ function DeleteUserModal({ user, onClose }: { user: string; onClose: () => void 
     try {
       await getProvider().deleteUser(user, confirm.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_user_deleted'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (
@@ -1971,7 +2042,7 @@ function DeleteUserModal({ user, onClose }: { user: string; onClose: () => void 
 
 // ---------- Rename dataset ----------
 function RenameDatasetModal({ name, onClose }: { name: string; onClose: () => void }) {
-  const { t, refresh } = useApp();
+  const { t, refresh, notify } = useApp();
   const [newName, setNewName] = useState(name);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -1983,7 +2054,8 @@ function RenameDatasetModal({ name, onClose }: { name: string; onClose: () => vo
     try {
       await getProvider().renameDataset(name, newName.trim());
       refresh(); onClose();
-    } catch (ex) { setErr(errorMessage(ex, t)); setBusy(false); }
+      notify(t('toast_ds_updated'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
   };
 
   return (

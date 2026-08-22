@@ -243,9 +243,11 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
   color:var(--text);font:inherit;font-size:13px;padding:0 8px;cursor:pointer;
 }
 .plang:focus{outline:2px solid var(--accent);outline-offset:-1px}
-/* Idioma en móvil: solo icono; desktop: select completo */
+/* Idioma en móvil: solo icono; desktop: icono + select completo */
 .lang-mobile{display:none}
-.lang-desktop{width:120px}
+.lang-desktop{display:inline-flex;align-items:center;gap:7px;color:var(--text2)}
+.lang-desktop svg{flex-shrink:0}
+.lang-desktop .plang{width:120px}
 @media(max-width:639px){.lang-mobile{display:inline-flex}.lang-desktop{display:none}}
 .plogout{
   margin-left:auto;border-color:color-mix(in srgb, var(--err) 35%, transparent);
@@ -542,6 +544,7 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
  *   40 — bottomnav (navegación inferior móvil)
  *   50 — popovers/dropdowns (sel-pop, alertpanel) y tooltips (infobubble-pop)
  *   60 — overlay + modal (SIEMPRE por encima de cualquier popover/tooltip)
+ *   70 — toasts (avisos de acciones, visibles incluso sobre un modal)
  * Regla: nada que viva dentro de una tarjeta/vista puede superar 60. */
 /* modal */
 .overlay{
@@ -603,6 +606,12 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
 .diskpick{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-top:8px;cursor:pointer}
 .diskpick.sel{border-color:var(--accent);background:var(--accent-soft)}
 .form-err{color:var(--err);font-size:12.5px;margin-top:10px;font-weight:600}
+/* #65: resumen origen/destino del replace y aviso de origen sano */
+.rp-summary{display:flex;flex-direction:column;gap:7px;margin-top:12px;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);font-size:12.5px}
+.rp-summary>div{display:flex;gap:10px;align-items:baseline;min-width:0}
+.rp-summary .lbl{color:var(--text2);font-weight:700;font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+.rp-summary .mono.wrap{word-break:break-all}
+.rp-warn{margin-top:10px;padding:10px 12px;border:1px solid var(--warn);border-left-width:3px;border-radius:10px;background:var(--warn-soft);color:var(--text);font-size:12.5px;font-weight:600}
 
 /* alertas */
 .alert{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);font-size:13.5px}
@@ -847,3 +856,43 @@ html.reduce-motion *{transition:none!important;animation:none!important}
     opacity: 0.7;
   }
 }
+
+/* ---- Tendencias (#85) ---- */
+.tr-controls { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.tr-src { flex: 1; min-width: 200px; max-width: 420px; }
+.tr-ranges { display: inline-flex; border: 1px solid var(--border); border-radius: 9px; overflow: hidden; }
+.tr-range { padding: 6px 12px; font-size: 12.5px; font-weight: 700; background: transparent; color: var(--muted); border: none; cursor: pointer; }
+.tr-range:hover { background: var(--surface2); }
+.tr-range.active { background: var(--accent); color: #fff; }
+.tr-card { padding: 14px; }
+.tr-plot svg { min-height: 160px; }
+@media (max-width: 640px) {
+  .tr-controls { flex-direction: column; align-items: stretch; }
+  .tr-src { max-width: none; }
+  .tr-ranges { justify-content: space-between; }
+  .tr-range { flex: 1; text-align: center; padding: 8px 4px; }
+}
+
+/* toasts — avisos de acciones (70: por encima del modal), abajo-derecha */
+.toast-host{
+  position:fixed;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));
+  z-index:70;display:flex;flex-direction:column;gap:8px;max-width:min(360px,92vw);
+  pointer-events:none;
+}
+.toast{
+  pointer-events:auto;display:flex;align-items:flex-start;gap:10px;
+  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+  border-radius:10px;padding:11px 12px;box-shadow:0 6px 22px rgba(10,14,10,.22);
+  color:var(--text);font-size:13.5px;line-height:1.45;
+  animation:toast-in .18s ease-out;
+}
+.toast.err{border-left-color:var(--err)}
+.toast.warn{border-left-color:var(--warn)}
+.toast.ok{border-left-color:var(--ok)}
+.toast .toast-msg{flex:1;word-break:break-word}
+.toast .toast-x{
+  flex-shrink:0;background:transparent;border:0;color:var(--text2);font-size:16px;
+  line-height:1;padding:2px 4px;cursor:pointer;border-radius:6px;
+}
+.toast .toast-x:hover{color:var(--text);background:var(--surface2)}
+@keyframes toast-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}

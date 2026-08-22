@@ -11,9 +11,11 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor, IconLanguages } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
+import { TwoFAPanel } from '../components/TwoFA';
+import { APIKeysPanel } from '../components/APIKeysPanel';
 import { usePush } from '../data/push';
 import { useReleaseCheck } from '../ui/releasecheck';
 import { ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion } from '../ui/theme';
@@ -217,7 +219,7 @@ function BackupCard({ settings, onSave }: {
   settings: SettingsData;
   onSave: (patch: Partial<SettingsData>) => Promise<void>;
 }) {
-  const { t } = useApp();
+  const { t, notify } = useApp();
   const [st, setSt] = useState<BackupStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
@@ -240,7 +242,8 @@ function BackupCard({ settings, onSave }: {
       const f = await getProvider().runBackup();
       setMsg(t('bk_done', { f: f.file }));
       load();
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('bk_done', { f: f.file }), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -252,9 +255,11 @@ function BackupCard({ settings, onSave }: {
       // El server hace swap y reinicia el proceso; recargamos al cabo de unos
       // segundos para volver al login con la BD importada.
       setMsg(t('bk_import_restarting'));
+      notify(t('toast_backup_imported'), 'ok');
       setTimeout(() => location.reload(), 4000);
     } catch (e) {
-      setErr(errorMessage(e, t));
+      const m = errorMessage(e, t);
+      setErr(m); notify(m, 'err');
       setBusy(false);
       setImportFile(null);
     }
@@ -516,12 +521,13 @@ function PushPanel() {
 // sin título, avatar + nombre editable + rol; a la derecha email, idioma,
 // contraseña y notificaciones (despliegan inline); cerrar sesión rojo.
 function ProfileCard() {
-  const { t, user, langMode, setLang, logout, reloadUser, isAdmin } = useApp();
+  const { t, user, langMode, setLang, logout, reloadUser, isAdmin, notify } = useApp();
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [show2FA, setShow2FA] = useState(false);
   const [cur, setCur] = useState('');
   const [p1, setP1] = useState('');
   const [p2, setP2] = useState('');
@@ -543,7 +549,8 @@ function ProfileCard() {
       await getProvider().setMyAvatar(blob);
       reloadUser();
       setMsg(t('saved_ok'));
-    } catch (e) { setErr(errorMessage(e, t)); throw e; }
+      notify(t('toast_avatar_updated'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); throw e; }
   };
 
   const removeAvatar = async () => {
@@ -552,7 +559,8 @@ function ProfileCard() {
       await getProvider().deleteMyAvatar();
       reloadUser();
       setMsg(t('s_avatar_removed'));
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_avatar_deleted'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   const saveName = async () => {
@@ -564,7 +572,8 @@ function ProfileCard() {
       reloadUser();
       setMsg(t('saved_ok'));
       setEditingName(false);
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -577,7 +586,8 @@ function ProfileCard() {
       reloadUser();
       setMsg(t('saved_ok'));
       setEditingEmail(false);
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -589,7 +599,8 @@ function ProfileCard() {
       await getProvider().setMyPassword(cur, p1);
       setShowPass(false); setCur(''); setP1(''); setP2('');
       setMsg(t('saved_ok'));
-    } catch (ex) { setErr(errorMessage(ex, t)); }
+      notify(t('toast_pwd_changed'), 'ok');
+    } catch (ex) { const m = errorMessage(ex, t); setErr(m); notify(m, 'err'); }
     setBusy(false);
   };
 
@@ -598,14 +609,17 @@ function ProfileCard() {
     <>
       <label className="pact-ico lang-mobile" aria-label={t('s_lang')} title={t('s_lang')}
         onClick={(e) => { e.preventDefault(); const s = document.getElementById('mp-lang'); if (s) { (s as HTMLSelectElement).focus(); (s as HTMLSelectElement).click(); } }}>
-        <IconMonitor size={16} />
+        <IconLanguages size={16} />
       </label>
-      <select id="mp-lang" className="plang lang-desktop" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
-        aria-label={t('s_lang')} title={t('s_lang')}>
-        <option value="auto">{t('s_lang_auto')}</option>
-        <option value="es">Español</option>
-        <option value="en">English</option>
-      </select>
+      <span className="lang-desktop">
+        <IconLanguages size={16} aria-hidden="true" />
+        <select id="mp-lang" className="plang" value={langMode} onChange={(e) => setLang(e.target.value as Lang)}
+          aria-label={t('s_lang')} title={t('s_lang')}>
+          <option value="auto">{t('s_lang_auto')}</option>
+          <option value="es">Español</option>
+          <option value="en">English</option>
+        </select>
+      </span>
     </>
   );
 
@@ -686,6 +700,12 @@ function ProfileCard() {
             <IconBell size={16} aria-hidden="true" />
             <span className="hidden-sm">{t('s_notifs')}</span>
           </button>
+
+          <button type="button" className="pact-btn" aria-expanded={show2FA}
+            onClick={() => setShow2FA((v) => !v)} title={t('s_2fa')}>
+            <IconShield size={16} aria-hidden="true" />
+            <span className="hidden-sm">{t('s_2fa')}</span>
+          </button>
         </div>
 
         {/* Cerrar sesión — siempre a la derecha, rojo */}
@@ -722,6 +742,13 @@ function ProfileCard() {
         </div>
       )}
 
+      {/* Verificación en dos pasos INLINE */}
+      {show2FA && (
+        <div style={{ marginTop: 14, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+          <TwoFAPanel />
+        </div>
+      )}
+
       {msg && <p style={{ fontSize: 13, color: 'var(--ok)', fontWeight: 600, marginTop: 10 }} role="status">{msg}</p>}
       {err && <p className="form-err" role="alert" style={{ marginTop: 10 }}>{err}</p>}
     </div>
@@ -729,7 +756,7 @@ function ProfileCard() {
 }
 
 export default function Settings() {
-  const { t, themeMode, themeEff, setTheme, isAdmin, user, refresh, reloadUser, logout, setLang } = useApp();
+  const { t, themeMode, themeEff, setTheme, isAdmin, user, refresh, reloadUser, logout, setLang, notify } = useApp();
   const { openModal } = useModal();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [users, setUsers] = useState<Awaited<ReturnType<ReturnType<typeof getProvider>['getUsers']>> | null>(null);
@@ -741,7 +768,7 @@ export default function Settings() {
   const [reduceMotion, setReduceMotionState] = useState(getReduceMotion());
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone());
-  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | null>(null);
+  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | 'apikeys' | null>(null);
   // Snapshot de los umbrales guardados (para resaltar los campos modificados
   // y limpiar la marca al guardar) + mensaje de feedback local de la tarjeta.
   const [threshSaved, setThreshSaved] = useState<{ cap_warn_pct: number; cap_crit_pct: number; disk_temp_c: number } | null>(null);
@@ -783,7 +810,8 @@ export default function Settings() {
     try {
       await getProvider().putSettings(next);
       setMsg(t('saved_ok'));
-    } catch (e) { setErr(errorMessage(e, t)); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   // Guardado de la tarjeta Datos y umbrales: feedback local (mensaje dentro de
@@ -795,7 +823,8 @@ export default function Settings() {
       await getProvider().putSettings(settings);
       setThreshSaved({ cap_warn_pct: settings.cap_warn_pct, cap_crit_pct: settings.cap_crit_pct, disk_temp_c: settings.disk_temp_c });
       setThreshMsg(t('saved_ok'));
-    } catch (e) { setThreshErr(errorMessage(e, t)); }
+      notify(t('toast_saved'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setThreshErr(m); notify(m, 'err'); }
   };
 
   if (!settings) return <Spinner label={t('loading')} />;
@@ -942,6 +971,15 @@ export default function Settings() {
               <IconChev className="chev" />
             </button>
 
+            {/* 3b. API keys de solo lectura (desplegable) */}
+            <button type="button" aria-expanded={adminPanel === 'apikeys'}
+              onClick={() => setAdminPanel(adminPanel === 'apikeys' ? null : 'apikeys')}
+              className={`ab-btn${adminPanel === 'apikeys' ? ' on' : ''}`}>
+              <IconCode size={15} />
+              <span className="hidden-sm">{t('s_apikeys')}</span>
+              <IconChev className="chev" />
+            </button>
+
             {/* 4. Modo demo a la derecha */}
             <div className="ab-right">
               <span>{t('s_demo_enable')}</span>
@@ -995,6 +1033,11 @@ export default function Settings() {
                 </div>
                 <p style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8 }}>{t('s_roles_d')}</p>
               </div>
+            </div>
+          )}
+          {adminPanel === 'apikeys' && (
+            <div className="ab-panel">
+              <APIKeysPanel />
             </div>
           )}
         </div>

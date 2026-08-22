@@ -23,8 +23,10 @@ import (
 
 	"easyzfs/internal/actions"
 	"easyzfs/internal/alerts"
+	"easyzfs/internal/apikeys"
 	"easyzfs/internal/auth"
 	"easyzfs/internal/backup"
+	"easyzfs/internal/channels"
 	"easyzfs/internal/collectors"
 	"easyzfs/internal/config"
 	"easyzfs/internal/db"
@@ -126,6 +128,18 @@ func main() {
 	// la ventana de silencio. En demo o sin VAPID queda inerte.
 	go pushSender.RunQueue(ctx)
 
+	// Canales ntfy/gotify/syslog (#86): inerte si no hay ninguna configurada.
+	channelsClient := channels.New(
+		cfg.NtfyURL, cfg.NtfyToken,
+		cfg.GotifyURL, cfg.GotifyToken,
+		cfg.SyslogHost, cfg.SyslogPort, cfg.SyslogProto, cfg.SyslogFacility,
+	)
+	if channelsClient.Enabled() {
+		alerter.SetChannels(channelsClient)
+		log.Printf("canales de alerta configurados (ntfy=%v gotify=%v syslog=%v)",
+			cfg.NtfyURL != "", cfg.GotifyURL != "", cfg.SyslogHost != "")
+	}
+
 	// Colectores (reales o mock) + providers para los handlers.
 	providers, cols := collectors.Build(cfg, database, h, alerter)
 
@@ -154,9 +168,14 @@ func main() {
 		cancel()
 	}
 
+	// API keys de solo lectura (#87): el middleware de auth las valida.
+	keyStore := apikeys.NewStore(database)
+	authManager := auth.NewManager(database, cfg.SessionSecret, cfg.CookieSecure)
+	authManager.SetAPIKeys(keyStore)
+
 	srv := httpapi.NewServer(httpapi.Deps{
-		Cfg: cfg, DB: database, Auth: auth.NewManager(database, cfg.SessionSecret, cfg.CookieSecure),
-		Users: userStore, Alerter: alerter, Settings: stStore,
+		Cfg: cfg, DB: database, Auth: authManager,
+		Users: userStore, APIKeys: keyStore, Alerter: alerter, Settings: stStore,
 		Pools: providers.Pools, Disks: providers.Disks, SysTimers: providers.SysTimers,
 		Perf: providers.Perf, Caps: providers.Caps,
 		Actions: act, Sched: sched, Jobs: jobStore, Hub: h, Push: pushSender,

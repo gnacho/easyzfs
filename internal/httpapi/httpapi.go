@@ -6,6 +6,7 @@ package httpapi
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 
 	"easyzfs/internal/actions"
 	"easyzfs/internal/alerts"
+	"easyzfs/internal/apikeys"
 	"easyzfs/internal/auth"
 	"easyzfs/internal/backup"
 	"easyzfs/internal/collectors"
@@ -36,6 +38,7 @@ type Server struct {
 	db         *sql.DB
 	auth       *auth.Manager
 	users      *users.Store
+	apiKeys    *apikeys.Store
 	alerter    *alerts.Alerter
 	settings   *settings.Store
 	pools      collectors.PoolProvider
@@ -66,6 +69,7 @@ type Deps struct {
 	DB         *sql.DB
 	Auth       *auth.Manager
 	Users      *users.Store
+	APIKeys    *apikeys.Store
 	Alerter    *alerts.Alerter
 	Settings   *settings.Store
 	Pools      collectors.PoolProvider
@@ -90,7 +94,7 @@ type Deps struct {
 // NewServer crea el servidor del API.
 func NewServer(d Deps) *Server {
 	return &Server{
-		cfg: d.Cfg, db: d.DB, auth: d.Auth, users: d.Users,
+		cfg: d.Cfg, db: d.DB, auth: d.Auth, users: d.Users, apiKeys: d.APIKeys,
 		alerter: d.Alerter, settings: d.Settings,
 		pools: d.Pools, disks: d.Disks, sysTimers: d.SysTimers,
 		perf: d.Perf, caps: d.Caps,
@@ -107,6 +111,7 @@ func NewServer(d Deps) *Server {
 func (s *Server) Handler() http.Handler {
 	root := http.NewServeMux()
 	root.HandleFunc("POST /api/login", s.login)
+	root.HandleFunc("POST /api/login/2fa", s.login2FA)
 	// Público (sin sesión): el login consulta si el modo demo está habilitado.
 	root.HandleFunc("GET /api/public/demo", s.publicDemo)
 
@@ -120,12 +125,23 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("DELETE /api/me/avatar", s.deleteMyAvatar)
 	a.HandleFunc("GET /api/avatars/{name}", s.getAvatar)
 	a.HandleFunc("POST /api/me/password", s.changeMyPassword)
+	// 2FA del propio usuario (#84)
+	a.HandleFunc("GET /api/me/2fa", s.my2FAStatus)
+	a.HandleFunc("POST /api/me/2fa/setup", s.my2FASetup)
+	a.HandleFunc("POST /api/me/2fa/confirm", s.my2FAConfirm)
+	a.HandleFunc("POST /api/me/2fa/disable", s.my2FADisable)
+	a.HandleFunc("GET /api/me/2fa/recovery", s.my2FARecovery)
 	// usuarios (admin)
 	a.HandleFunc("GET /api/users", s.auth.RequireAdmin(s.listUsers))
 	a.HandleFunc("POST /api/users", s.auth.RequireAdmin(s.createUser))
 	a.HandleFunc("DELETE /api/users/{name}", s.auth.RequireAdmin(s.deleteUser))
 	a.HandleFunc("POST /api/users/{name}/password", s.auth.RequireAdmin(s.setUserPassword))
 	a.HandleFunc("PUT /api/users/{name}/language", s.auth.RequireAdmin(s.setUserLanguage))
+	a.HandleFunc("DELETE /api/users/{name}/2fa", s.auth.RequireAdmin(s.admin2FADisable))
+	// API keys de solo lectura (admin, #87)
+	a.HandleFunc("GET /api/keys", s.auth.RequireAdmin(s.listAPIKeys))
+	a.HandleFunc("POST /api/keys", s.auth.RequireAdmin(s.createAPIKey))
+	a.HandleFunc("DELETE /api/keys/{id}", s.auth.RequireAdmin(s.deleteAPIKey))
 	// sistema
 	a.HandleFunc("GET /api/version", s.getVersion)
 	a.HandleFunc("GET /api/settings", s.getSettings)
@@ -382,6 +398,8 @@ func actionErr(w http.ResponseWriter, err error) {
 	switch {
 	case err == nil:
 		return
+	case errors.Is(err, actions.ErrSnapshotNotFound):
+		writeErr(w, http.StatusNotFound, "not_found", err.Error())
 	case strings.Contains(err.Error(), "inválid"):
 		writeErr(w, http.StatusBadRequest, "invalid_input", err.Error())
 	default:

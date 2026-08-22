@@ -17,7 +17,7 @@ const TIPO_CLS: Record<JobType, 'info' | 'ok' | 'warn'> = {
 };
 
 export default function Tasks() {
-  const { t, isAdmin } = useApp();
+  const { t, isAdmin, notify } = useApp();
   const { openModal } = useModal();
   const jobs = useData((p) => p.getJobs());
   const hist = useData((p) => p.getJobHistory());
@@ -44,29 +44,29 @@ export default function Tasks() {
 
   const runRepl = async (id: number) => {
     setErr('');
-    try { await getProvider().runReplicationJob(id); repl.reload(); ops.reload(); }
-    catch (e) { setErr(errorMessage(e, t)); }
+    try { await getProvider().runReplicationJob(id); repl.reload(); ops.reload(); notify(t('toast_repl_started'), 'ok'); }
+    catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
   const toggleRepl = async (id: number, on: boolean) => {
     setErr('');
     try { await getProvider().updateReplicationJob(id, { enabled: on }); repl.reload(); }
-    catch (e) { setErr(errorMessage(e, t)); }
+    catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   const run = async (id: number) => {
     setErr('');
-    try { await getProvider().runJob(id); jobs.reload(); hist.reload(); }
-    catch (e) { setErr(errorMessage(e, t)); }
+    try { await getProvider().runJob(id); jobs.reload(); hist.reload(); notify(t('toast_task_started'), 'ok'); }
+    catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
   const toggleEnabled = async (j: Job, on: boolean) => {
     setErr('');
     try { await getProvider().updateJob(j.id, { enabled: on }); jobs.reload(); }
-    catch (e) { setErr(errorMessage(e, t)); }
+    catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
   const cancelOp = async (id: string) => {
     setErr('');
-    try { await getProvider().cancelLongOp(id); ops.reload(); }
-    catch (e) { setErr(errorMessage(e, t)); }
+    try { await getProvider().cancelLongOp(id); ops.reload(); notify(t('toast_op_cancelled'), 'ok'); }
+    catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
   };
 
   const list = jobs.data ?? [];

@@ -3,26 +3,39 @@ import type { DataProvider } from './provider';
 import { ApiError } from './types';
 import { notifyAuthExpired } from './events';
 import type {
-  ActivityItem, Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
+  ActivityItem, Alert, APIKeyCreated, APIKeyInfo, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
+  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings, SeriesResp,
-  SnapshotGroup, SystemTimer, SystemTimersResp, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
+  SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
 
 const BASE = '/api';
 
-// Modo demo habilitado (GET /api/public/demo, sin sesión): lo consulta el
-// login para mostrar u ocultar el botón "Entrar como demo". Fuera del
-// provider porque se llama ANTES de autenticarse.
-export async function fetchDemoEnabled(): Promise<boolean> {
-  try {
-    const res = await fetch(`${BASE}/public/demo`, { credentials: 'same-origin' });
-    if (!res.ok) return true; // sin respuesta: por defecto se ofrece (como antes)
-    const j = await res.json();
-    return j?.demo_enabled !== false;
-  } catch {
-    return true; // sin red: se ofrece el botón igualmente
+// Estado público del demo (GET /api/public/demo, sin sesión): lo consulta el
+// login para mostrar u ocultar el botón "Entrar como demo" y main.tsx para
+// resolver el idioma por defecto. Fuera del provider porque se llama ANTES de
+// autenticarse. Single-flight: main.tsx y Login comparten la misma petición.
+export interface PublicDemo {
+  enabled: boolean; // ajuste del admin: se ofrece el botón de demo
+  server: boolean;  // este servidor ES el despliegue demo (DEMO=1)
+}
+
+let publicDemoPromise: Promise<PublicDemo> | null = null;
+
+export function fetchPublicDemo(): Promise<PublicDemo> {
+  if (!publicDemoPromise) {
+    publicDemoPromise = (async () => {
+      try {
+        const res = await fetch(`${BASE}/public/demo`, { credentials: 'same-origin' });
+        if (!res.ok) return { enabled: true, server: false }; // sin respuesta: botón visible, servidor no-demo
+        const j = await res.json();
+        return { enabled: j?.demo_enabled !== false, server: j?.demo_server === true };
+      } catch {
+        return { enabled: true, server: false }; // sin red: botón visible, servidor no-demo
+      }
+    })();
   }
+  return publicDemoPromise;
 }
 
 async function req<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -86,7 +99,8 @@ export class HttpProvider implements DataProvider {
     }
   };
 
-  login = (user: string, password: string) => post<SessionUser>('/login', { user, password });
+  login = (user: string, password: string) => post<LoginResult>('/login', { user, password });
+  login2FA = (pending: string, code: string) => post<SessionUser>('/login/2fa', { pending, code });
   logout = () => post<void>('/logout');
   me = () => get<SessionUser>('/me');
   setMyPassword = (current: string, next: string) => post<void>('/me/password', { current, new: next });
@@ -94,6 +108,12 @@ export class HttpProvider implements DataProvider {
 
   updateMyProfile = (display_name: string, email: string) =>
     put<void>('/me/profile', { display_name, email });
+
+  get2FAStatus = () => get<TwoFAStatus>('/me/2fa');
+  setup2FA = () => post<TwoFASetup>('/me/2fa/setup');
+  confirm2FA = (code: string) => post<TwoFARecovery>('/me/2fa/confirm', { code });
+  disable2FA = (code: string) => post<void>('/me/2fa/disable', { code });
+  regenerateRecoveryCodes = () => get<TwoFARecovery>('/me/2fa/recovery');
 
   // Avatar: el blob ya viene recortado y re-codificado (webp/jpeg) del
   // diálogo de recorte; se manda crudo como importBackup.
@@ -120,6 +140,10 @@ export class HttpProvider implements DataProvider {
     post<void>(`/users/${enc(name)}/password`, { new: next, close_sessions: closeSessions });
   setUserLanguage = (name: string, language: Lang) =>
     put<void>(`/users/${enc(name)}/language`, { language });
+
+  getAPIKeys = () => get<{ keys: APIKeyInfo[] }>('/keys').then((r) => r.keys);
+  createAPIKey = (name: string) => post<APIKeyCreated>('/keys', { name });
+  deleteAPIKey = (id: number) => del<void>(`/keys/${id}`);
 
   getPools = () => get<Pool[]>('/pools');
   createPool = (r: CreatePoolReq) => post<void>('/pools', r);

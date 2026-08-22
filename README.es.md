@@ -361,9 +361,42 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
-### v2.9.10
+### v2.9.16
 
 - **La actualización desde la app detecta units de reinicio ausentes (#66)**: `GET /api/update/status` ahora devuelve `restartConfigured`, y `GET /api/update/plan` incluye la comprobación `restart_ready`. Si el host se desplegó antes de que existieran las units systemd de auto-update, la UI deshabilita el botón Actualizar y muestra un aviso claro en vez de descargar el binario nuevo en silencio y quedarse bloqueada.
+### v2.9.15
+
+- **Toasts en todas las acciones mutantes restantes (#97)**: checkpoint/export/scrub/acciones vdev de pools, crear/editar/renombrar/cifrar/rewrite de datasets, crear/editar/ejecutar/cancelar tareas, jobs de replicación, crear/borrar usuarios, cambios de contraseña, backups, claves API, tests SMART y apagado de discos, y guardados de ajustes muestran ahora un toast de éxito o de error. Los interruptores solo muestran error; el propio control es el feedback de éxito.
+- **Aceptar la ruta completa en la confirmación de borrar/rollback de snapshots (#99)**: los modales de confirmación muestran la ruta completa `dataset@snapshot`, así que copiar esa ruta en el campo de confirmación activa el botón en vez de dejarlo deshabilitado. El nombre corto (tras la `@`) sigue funcionando.
+- **Error claro y refresco de caché cuando un snapshot ya no existe (#100)**: si un proceso externo (por ejemplo, una poda automática de snapshots) elimina un snapshot entre la actualización de la caché de la UI y el click de borrar/rollback, ZFS devuelve el críptico mensaje en inglés "could not find any snapshots to destroy". La UI ahora muestra "El snapshot no existe; refresca la lista" y refresca la caché de snapshots inmediatamente tras cualquier mutación, incluidos los borrados fallidos, para que las entradas obsoletas desaparezcan enseguida.
+
+### v2.9.14
+
+- **Avisos toast al completar acciones (#94)**: las acciones que modifican datos ahora se confirman con un pequeño aviso abajo a la derecha, por encima de cualquier modal abierto. Crear/borrar snapshots y datasets y el rollback muestran un aviso de éxito, y los fallos aparecen como aviso de error aunque ya hayas cambiado de vista. Cierre automático a los pocos segundos (los errores duran más), cierre manual, anuncio a lectores de pantalla y respeto del movimiento reducido. Sin dependencias nuevas. Portado del fork comunitario coruhoorhan/easyzfs-truenas (AGPL-3.0), gracias coruhoorhan.
+- **Fix: las acciones destructivas no pasaban la confirmación (#95)**: borrar un snapshot, hacer rollback y borrar una tarea desde la UI siempre fallaban contra un backend real con 400 confirm_required, porque la UI mandaba el nombre corto (o el id del job) y el backend exige la ruta completa del snapshot (o el target del job). El mock de la demo aceptaba los valores cortos y escondía el bug. La UI ahora envía el valor que el backend espera.
+
+### v2.9.13
+
+- **Tendencias de capacidad a largo plazo (#85)**: nueva vista Tendencias en la navegación con selector de fuente (uso de pools en %, temperatura de discos), botones de rango de 7 días a 5 años y gráfica de área SVG sin dependencias. Las muestras crudas se agregan en resúmenes diarios (media/mín/máx por fuente y día) antes de salir de la retención, así los rangos largos siguen siendo rápidos sin guardar todo el detalle.
+- **Canales de alerta ntfy, Gotify y syslog (#86)**: además de Web Push, email y webhook, las alertas pueden llegar a ntfy, Gotify y un syslog local. Cada canal es opcional e inerte salvo que se configure por entorno (`NTFY_URL`, `GOTIFY_URL`, `SYSLOG_HOST`…), siguiendo el mismo patrón que SMTP.
+- **API keys de solo lectura (#87)**: los administradores pueden generar claves revocables para integraciones externas (monitorización, scripts) desde Ajustes. La clave se muestra una sola vez al crearla y se guarda con hash; autentica con `Authorization: Bearer ez_…` y solo puede leer (GET/HEAD), nunca mutar. Cualquier admin puede revocar una clave en cualquier momento.
+- **Landing: detección SMART profunda (#88)**: la landing y la tabla comparativa destacan ahora que EasyZFS marca los discos desde contadores de sector (reasignados, pendientes, incorregibles) y el historial de errores CRC, no solo el autodiagnóstico del propio disco.
+
+### v2.9.12
+
+- **Verificación en dos pasos TOTP opcional (#84)**: cualquier cuenta puede activar el 2FA desde Ajustes → Mi perfil. La activación muestra un código QR y la clave secreta para cualquier app de autenticación (Google Authenticator, Aegis, 1Password…); al confirmar con un código válido se generan 10 códigos de recuperación de un solo uso (almacenados con hash, nunca en claro). Con el 2FA activo, el login pasa a ser de dos pasos: primero la contraseña y luego un código de 6 dígitos (o un código de recuperación). Los administradores pueden resetear el 2FA de otro usuario desde la gestión de usuarios, y el límite de intentos de login también aplica al segundo factor.
+
+### v2.9.11
+
+- **Demo pública en inglés por defecto (#73)**: la demo alojada resuelve ahora el idioma automático a inglés antes del primer render, así los visitantes ven la interfaz en inglés sea cual sea el idioma de su navegador. La elección explícita de idioma y las instalaciones normales mantienen su comportamiento.
+- **Corregida una alerta de la demo que daba mal consejo ZFS (#74)**: el panel de la demo mostraba una alerta de ejemplo que decía que un 12% de fragmentación es alto y sugería un scrub. Un 12% de fragmentación del espacio libre es sano, y los scrubs verifican checksums sin reescribir datos, así que nunca reducen la fragmentación. La alerta pasa a ser el mensaje crítico "Pool tank DEGRADED" que la app emite de verdad, coherente con el estado real del pool de la demo.
+- **CTA del hero de la landing renombrado (#75)**: el botón principal pasa de "Instalar en tu NAS" a "Instalar EasyZFS" en ambos idiomas, ya que la app funciona en cualquier host Linux.
+- **Icono de idioma en Ajustes (#76)**: el selector de idioma de Ajustes lleva ahora el icono "languages" de lucide; sustituye al icono genérico de monitor en el disparador móvil y aparece junto al select en escritorio.
+
+### v2.9.10
+
+- **Sustitución de discos segura con rutas by-id estables (#65)**: el disco destino de un replace se resuelve ahora a su ruta estable `/dev/disk/by-id/` siempre que exista, ya que las letras sdX del kernel pueden cambiar entre arranques o movimientos de bahía. El diálogo de sustitución muestra un resumen de origen y destino con modelo y número de serie de ambos discos más la ruta estable que se usará, y avisa con fuerza cuando el origen elegido es un miembro ONLINE y sano, porque sustituirlo dispara un resiliver innecesario. Las guardas del servidor (mismo disco, disco ya presente en un pool, destino más pequeño) comparan el dispositivo resuelto y detectan también formas mezcladas base/by-id.
+
 
 ### v2.9.9
 

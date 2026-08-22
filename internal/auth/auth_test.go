@@ -5,10 +5,12 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	"easyzfs/internal/apikeys"
 	"easyzfs/internal/db"
 )
 
@@ -191,5 +193,107 @@ func TestTokenRandomness(t *testing.T) {
 	}
 	if len(t1) != 64 {
 		t.Errorf("token esperado 64 hex chars, got %d", len(t1))
+	}
+}
+
+func TestSignPendingRoundTrip(t *testing.T) {
+	m := nuevoManager(t)
+	pending, err := m.SignPending("admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	user, ok := m.VerifyPending(pending)
+	if !ok || user != "admin" {
+		t.Fatalf("pending válido rechazado: user=%q ok=%v", user, ok)
+	}
+}
+
+func TestVerifyPendingRejectsTampered(t *testing.T) {
+	m := nuevoManager(t)
+	pending, err := m.SignPending("admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Cambia un carácter del payload: la firma no cuadra.
+	bad := "usuario" + pending[len("admin"):]
+	if _, ok := m.VerifyPending(bad); ok {
+		t.Error("pending manipulado aceptado")
+	}
+}
+
+func TestVerifyPendingRejectsExpired(t *testing.T) {
+	m := nuevoManager(t)
+	pending, err := m.SignPending("admin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Verificar con el tiempo congelado tras la expiración: recomponer el
+	// token con una expiración pasada usando la misma firma.
+	_, rest, _ := strings.Cut(pending, "|")
+	_, sig, _ := strings.Cut(rest, "|")
+	expired := time.Now().Add(-time.Minute).UTC().Format(time.RFC3339)
+	bad := "admin|" + expired + "|" + sig
+	if _, ok := m.VerifyPending(bad); ok {
+		t.Error("pending caducado aceptado")
+	}
+}
+
+func TestVerifyPendingRejectsBogus(t *testing.T) {
+	m := nuevoManager(t)
+	if _, ok := m.VerifyPending(""); ok {
+		t.Error("pending vacío aceptado")
+	}
+	if _, ok := m.VerifyPending("solo-un-campo"); ok {
+		t.Error("pending malformado aceptado")
+	}
+}
+
+// --- API keys de solo lectura (#87) ---
+
+// Con una API key válida: GET pasa con rol user; POST/PUT dan 403.
+func TestMiddlewareAPIKeyReadOnly(t *testing.T) {
+	m := nuevoManager(t)
+	ks := apikeys.NewStore(m.db)
+	key, err := ks.Create(context.Background(), "monitoring")
+	if err != nil {
+		t.Fatal(err)
+	}
+	m.SetAPIKeys(ks)
+
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		user, role := UserFromContext(r.Context()), RoleFromContext(r.Context())
+		w.Header().Set("X-User", user)
+		w.Header().Set("X-Role", role)
+		w.WriteHeader(http.StatusOK)
+	})
+	h := m.Middleware(inner)
+
+	// GET con Bearer → 200, user apikey:monitoring, role user.
+	req := httptest.NewRequest(http.MethodGet, "/api/pools", nil)
+	req.Header.Set("Authorization", "Bearer "+key)
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("GET con key: %d, esperado 200", rec.Code)
+	}
+	if rec.Header().Get("X-User") != "apikey:monitoring" || rec.Header().Get("X-Role") != "user" {
+		t.Fatalf("ctx inyectado: user=%q role=%q", rec.Header().Get("X-User"), rec.Header().Get("X-Role"))
+	}
+
+	// POST con Bearer → 403 (solo lectura).
+	req = httptest.NewRequest(http.MethodPost, "/api/pools", strings.NewReader(`{}`))
+	req.Header.Set("Authorization", "Bearer "+key)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != 403 {
+		t.Fatalf("POST con key: %d, esperado 403", rec.Code)
+	}
+
+	// Sin credenciales → 401.
+	req = httptest.NewRequest(http.MethodGet, "/api/pools", nil)
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != 401 {
+		t.Fatalf("sin credenciales: %d, esperado 401", rec.Code)
 	}
 }

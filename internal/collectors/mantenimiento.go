@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	alertsRetentionDays  = 90
-	historyRetentionDays = 180
+	alertsRetentionDays      = 90
+	historyRetentionDays     = 180
+	seriesDailyRetentionDays = 1825 // 5 años de tendencia diaria (#85)
 )
 
 // Mantenimiento — colector diario de limpieza (lección 4: toda serie tiene retención).
@@ -59,10 +60,21 @@ func (m *Mantenimiento) maybeRun(ctx context.Context) {
 
 // purge — la limpieza propiamente dicha. Fallos: log y seguir (no críticos).
 func (m *Mantenimiento) purge(ctx context.Context) {
+	// 1. Agregar crudas viejas a series_daily ANTES de purgarlas (tendencia larga).
+	if n, err := db.RollupSeriesToDaily(ctx, m.db, m.retentionDays); err != nil {
+		log.Printf("mantenimiento: rollup series→daily: %v", err)
+	} else if n > 0 {
+		log.Printf("mantenimiento: %d puntos de serie agregados a diario", n)
+	}
 	if n, err := db.PurgeSeries(ctx, m.db, m.retentionDays); err != nil {
 		log.Printf("mantenimiento: purga series: %v", err)
 	} else if n > 0 {
 		log.Printf("mantenimiento: %d puntos de serie purgados", n)
+	}
+	if n, err := db.PurgeSeriesDaily(ctx, m.db, seriesDailyRetentionDays); err != nil {
+		log.Printf("mantenimiento: purga series_daily: %v", err)
+	} else if n > 0 {
+		log.Printf("mantenimiento: %d días de serie diaria purgados", n)
 	}
 	if err := db.PurgeSessions(ctx, m.db); err != nil {
 		log.Printf("mantenimiento: purga sesiones: %v", err)
