@@ -14,6 +14,8 @@
   <a href="https://ko-fi.com/gnacho"><img alt="Apóyame en Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
 
+<p align="center"><a href="https://demo.easyzfs.cloudless.club"><strong>Prueba la demo en vivo</strong></a> en <code>demo.easyzfs.cloudless.club</code></p>
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/hero-es-dark.png">
@@ -28,6 +30,10 @@ binario Go estático que envuelve los comandos del sistema (`zpool`, `zfs`,
 embebida. Corre 24/7 con una huella mínima y se despliega en un LXC Debian
 + systemd. Sin Docker, sin sistema operativo de appliance, sin stack
 pesado.
+
+> **Prueba la demo en vivo**
+>
+> Mírala en funcionamiento sin instalar nada. Entra en **[demo.easyzfs.cloudless.club](https://demo.easyzfs.cloudless.club)** — dos pools de ejemplo con datos mock realistas, sin registro. En modo demo las acciones destructivas están bloqueadas, así que puedes explorar sin riesgo.
 
 ## ¿Por qué existe?
 

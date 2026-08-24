@@ -14,6 +14,8 @@
   <a href="https://ko-fi.com/gnacho"><img alt="Support on Ko-fi" src="https://img.shields.io/badge/Ko--fi-Donate-ff5e5b?logo=ko-fi&logoColor=white"></a>
 </p>
 
+<p align="center"><a href="https://demo.easyzfs.cloudless.club"><strong>Try the live demo</strong></a> on <code>demo.easyzfs.cloudless.club</code></p>
+
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/hero-en-dark.png">
@@ -27,6 +29,10 @@ static Go binary that wraps the system commands (`zpool`, `zfs`, `smartctl`,
 hwmon sensors), exposes a REST + SSE API and serves an embedded PWA. It runs
 24/7 with a minimal footprint and deploys on a Debian LXC + systemd. No
 Docker, no appliance OS, no heavy stack.
+
+> **Try the live demo**
+>
+> See it running without installing anything. Head to **[demo.easyzfs.cloudless.club](https://demo.easyzfs.cloudless.club)** — two sample ZFS pools, realistic mock data, no sign-up required. In demo mode destructive actions are blocked, so you can explore freely.
 
 ## Why does this exist?
 
