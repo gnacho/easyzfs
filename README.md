@@ -30,6 +30,10 @@ hwmon sensors), exposes a REST + SSE API and serves an embedded PWA. It runs
 24/7 with a minimal footprint and deploys on a Debian LXC + systemd. No
 Docker, no appliance OS, no heavy stack.
 
+> **Try the live demo**
+>
+> See it running without installing anything. Head to **[demo.easyzfs.cloudless.club](https://demo.easyzfs.cloudless.club)** — two sample ZFS pools, realistic mock data, no sign-up required. In demo mode destructive actions are blocked, so you can explore freely.
+
 ## Why does this exist?
 
 After years with commercial NAS boxes (first Synology, then QNAP), I ended

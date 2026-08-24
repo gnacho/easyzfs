@@ -31,6 +31,10 @@ embebida. Corre 24/7 con una huella mínima y se despliega en un LXC Debian
 + systemd. Sin Docker, sin sistema operativo de appliance, sin stack
 pesado.
 
+> **Prueba la demo en vivo**
+>
+> Mírala en funcionamiento sin instalar nada. Entra en **[demo.easyzfs.cloudless.club](https://demo.easyzfs.cloudless.club)** — dos pools de ejemplo con datos mock realistas, sin registro. En modo demo las acciones destructivas están bloqueadas, así que puedes explorar sin riesgo.
+
 ## ¿Por qué existe?
 
 Tras años con NAS comerciales (primero Synology, luego QNAP) acabé con
