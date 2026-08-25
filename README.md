@@ -359,6 +359,11 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.17
+
+- **Pool creation lets you choose the alignment (ashift) (#105)**: `POST /api/pools` accepts an optional `ashift` (9-16; 0 or omitted = auto) and passes `-o ashift=N` to `zpool create`. The create-pool wizard exposes it as a select (Auto, 12 for 4K drives, 13 for 8K NVMe, 9 for 512B sectors). Alignment is immutable after the pool is created, so choosing it at creation time avoids pools silently inheriting a misdetected sector size.
+- **Dataset creation lets you choose access-time tracking (#106)**: `POST /api/datasets` accepts an optional `atime` (`on`/`off`/`relatime`) and passes `-o atime=` when set. The new-dataset form defaults to `relatime` (the OpenZFS recommendation), minimizing writes while staying compatible.
+- **Pools and vdevs are created with stable `/dev/disk/by-id` paths (#107)**: pool create and vdev add resolve each disk to its stable `/dev/disk/by-id/<id>` path when one exists (base name as fallback), matching the replace flow (#65) and avoiding pools that depend on unstable `sdX` letters between reboots. The disk-to-pool cross-check and temperature join now also match by ByID, which also fixes the same gap for by-id replaces.
 ### v2.9.16
 
 - **In-app update detects missing systemd restart units (#66)**: `GET /api/update/status` now reports `restartConfigured`, and `GET /api/update/plan` includes a `restart_ready` readiness check. If the host was deployed before the auto-update systemd units existed, the UI disables the Update button and shows a clear message instead of silently downloading the new binary and stalling.

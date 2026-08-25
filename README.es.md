@@ -367,6 +367,11 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.17
+
+- **Crear un pool con la alineación elegida (ashift) (#105)**: `POST /api/pools` acepta un `ashift` opcional (9-16; 0 u omitido = automático) y pasa `-o ashift=N` a `zpool create`. El asistente de crear pool lo expone como selector (Auto, 12 para discos 4K, 13 para NVMe 8K, 9 para sectores 512B). La alineación es inmutable tras crear el pool, así que elegirla al crearlo evita que el pool herede en silencio un tamaño de sector mal detectado.
+- **Crear datasets eligiendo el registro de acceso (#106)**: `POST /api/datasets` acepta un `atime` opcional (`on`/`off`/`relatime`) y pasa `-o atime=` cuando se indica. El formulario de nuevo dataset usa `relatime` por defecto (la recomendación de OpenZFS), minimizando escrituras sin perder compatibilidad.
+- **Pools y vdevs creados con rutas `/dev/disk/by-id` estables (#107)**: crear pool y añadir vdev resuelve cada disco a su ruta estable `/dev/disk/by-id/<id>` cuando existe (nombre base como fallback), igual que el flujo de replace (#65), y evita pools que dependen de letras `sdX` inestables entre reinicios. El cruce disco-pool y la unión de temperaturas ahora también casan por ByID, lo que arregla además la misma laguna en los replaces por by-id.
 ### v2.9.16
 
 - **La actualización desde la app detecta units de reinicio ausentes (#66)**: `GET /api/update/status` ahora devuelve `restartConfigured`, y `GET /api/update/plan` incluye la comprobación `restart_ready`. Si el host se desplegó antes de que existieran las units systemd de auto-update, la UI deshabilita el botón Actualizar y muestra un aviso claro en vez de descargar el binario nuevo en silencio y quedarse bloqueada.
