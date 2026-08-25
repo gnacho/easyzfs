@@ -147,7 +147,9 @@ export class MockProvider implements DataProvider {
     { dev: 'nvme1n1', by_id: 'nvme-ORICO_NVMe_SSD_ORC2024A02', model: 'ORICO NVMe SSD', serial: 'ORC2024A02', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: 'tank', hours: 8725 },
     { dev: 'nvme2n1', by_id: 'nvme-ORICO_NVMe_SSD_ORC2024A03', model: 'ORICO NVMe SSD', serial: 'ORC2024A03', size_bytes: Math.round(1.86 * TiB), temp_c: 48, smart: 'ok', smart_detail: 'PASSED', pool: '—', hours: 8725 },
     // Caso real: disco USB montado (en uso) — no debe ofrecerse como libre.
-    { dev: 'sda', by_id: 'usb-Seagate_Expansion_4TB_NAABC123-0:0', model: 'Seagate Expansion 4TB', serial: 'NAABC123', size_bytes: Math.round(3.64 * TiB), temp_c: 38, smart: 'warn', smart_detail: 'PASSED (realloc=48 pending=0)', realloc_sectors: 48, pool: '—', in_use: true, hours: 22100 },
+    // realloc 48 (vigilar) + CRC histórico de por vida congelado (se consulta
+    // solo en la burbuja info, no genera recomendación).
+    { dev: 'sda', by_id: 'usb-Seagate_Expansion_4TB_NAABC123-0:0', model: 'Seagate Expansion 4TB', serial: 'NAABC123', size_bytes: Math.round(3.64 * TiB), temp_c: 38, smart: 'warn', smart_detail: 'PASSED (realloc=48 pending=0)', realloc_sectors: 48, crc_errors: 200, crc_recent: 0, pool: '—', in_use: true, hours: 22100 },
   ];
 
   private systemTimers: SystemTimer[] = [
