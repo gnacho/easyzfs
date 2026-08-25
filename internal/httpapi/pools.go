@@ -13,13 +13,16 @@ func (s *Server) listPools(w http.ResponseWriter, r *http.Request) {
 	for _, d := range s.disks.Disks() {
 		if d.TempC != nil {
 			temps[d.Dev] = *d.TempC
+			if d.ByID != "" {
+				temps[d.ByID] = *d.TempC
+			}
 		}
 	}
 	for i := range pools {
 		for j := range pools[i].Vdevs {
-			key := stripPart(strings.TrimPrefix(pools[i].Vdevs[j].Path, "/dev/"))
+			key := vdevKey(pools[i].Vdevs[j].Path)
 			if key == "" {
-				key = stripPart(pools[i].Vdevs[j].Dev)
+				key = vdevKey(pools[i].Vdevs[j].Dev)
 			}
 			if t, ok := temps[key]; ok {
 				pools[i].Vdevs[j].TempC = t
@@ -44,7 +47,8 @@ func (s *Server) createPool(w http.ResponseWriter, r *http.Request) {
 	if !requireConfirm(w, body.Confirm, body.Name) {
 		return
 	}
-	if err := s.act.PoolCreate(r.Context(), actor(r), body.Name, body.Topo, body.Disks, true); err != nil {
+	disks := s.resolveDisks(body.Disks)
+	if err := s.act.PoolCreate(r.Context(), actor(r), body.Name, body.Topo, disks, body.Ashift, true); err != nil {
 		actionErr(w, err)
 		return
 	}
@@ -126,7 +130,8 @@ func (s *Server) addVdev(w http.ResponseWriter, r *http.Request) {
 	if !requireConfirm(w, body.Confirm, name) {
 		return
 	}
-	if err := s.act.VdevAdd(r.Context(), actor(r), name, body.Topo, body.Disks, true); err != nil {
+	disks := s.resolveDisks(body.Disks)
+	if err := s.act.VdevAdd(r.Context(), actor(r), name, body.Topo, disks, true); err != nil {
 		actionErr(w, err)
 		return
 	}
@@ -161,6 +166,26 @@ func (s *Server) resolveNewDev(in string) (canonical, base string, ok bool) {
 		}
 	}
 	return base, base, false
+}
+
+// resolveDisks — resuelve cada disco de create/add vdev a su ruta by-id estable
+// '/dev/disk/by-id/<id>' cuando existe (issue #107); nombre base como fallback
+// (discos sin enlace by-id, p.ej. algunas eMMC). Reusa resolveNewDev.
+func (s *Server) resolveDisks(disks []string) []string {
+	out := make([]string, len(disks))
+	for i, d := range disks {
+		canonical, _, _ := s.resolveNewDev(d)
+		out[i] = canonical
+	}
+	return out
+}
+
+// vdevKey reduce el nombre o ruta de un vdev a la clave para cruzar con discos:
+// '/dev/disk/by-id/ata-XXX' → 'ata-XXX'; '/dev/sda1' → 'sda'; 'nvme0n1' → 'nvme0n1'.
+func vdevKey(v string) string {
+	v = strings.TrimPrefix(v, "/dev/")
+	v = strings.TrimPrefix(v, "disk/by-id/")
+	return stripPart(v)
 }
 
 // replaceDisk — POST /api/pools/{name}/replace {old_dev, new_dev, confirm} → 202.
@@ -479,12 +504,20 @@ func allDigits(s string) bool {
 }
 
 // poolForDisk — pool al que pertenece un disco (por vdevs conocidos).
-func poolForDisk(pools []string, vdevs map[string][]string, dev string) string {
-	base := stripPart(dev)
+// `aliases` son nombres equivalentes del disco (p.ej. su ByID) para que un
+// vdev creado por ruta by-id también se cruce con el disco físico.
+func poolForDisk(pools []string, vdevs map[string][]string, dev string, aliases ...string) string {
+	keys := []string{stripPart(dev)}
+	for _, a := range aliases {
+		keys = append(keys, stripPart(a))
+	}
 	for _, p := range pools {
 		for _, v := range vdevs[p] {
-			if stripPart(strings.TrimPrefix(v, "/dev/")) == base || v == dev {
-				return p
+			k := vdevKey(v)
+			for _, a := range keys {
+				if k == a || v == dev {
+					return p
+				}
 			}
 		}
 	}

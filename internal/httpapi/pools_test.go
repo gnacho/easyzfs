@@ -43,3 +43,40 @@ func TestPoolForDisk(t *testing.T) {
 		}
 	}
 }
+
+func TestVdevKey(t *testing.T) {
+	cases := map[string]string{
+		"/dev/sda":                             "sda",
+		"/dev/sda1":                            "sda",
+		"/dev/disk/by-id/ata-WDC_WD40EFRX_123": "ata-WDC_WD40EFRX_123",
+		"/dev/disk/by-id/ata-WDC_123-part1":    "ata-WDC_123-part1",
+		"ata-WDC_WD40EFRX_123":                 "ata-WDC_WD40EFRX_123",
+		"nvme0n1":                              "nvme0n1",
+		"nvme0n1p3":                            "nvme0n1",
+		"":                                     "",
+	}
+	for in, want := range cases {
+		if got := vdevKey(in); got != want {
+			t.Errorf("vdevKey(%q)=%q, esperaba %q", in, got, want)
+		}
+	}
+}
+
+func TestPoolForDiskByID(t *testing.T) {
+	pools := []string{"bigtank"}
+	byid := "/dev/disk/by-id/ata-WDC_WD40EFRX_WD-WCC4E1234567"
+	vdevs := map[string][]string{"bigtank": {byid}}
+	// El disco (sda) con su ByID cruza con el vdev creado por ruta by-id (#107).
+	if got := poolForDisk(pools, vdevs, "sda", "ata-WDC_WD40EFRX_WD-WCC4E1234567"); got != "bigtank" {
+		t.Errorf("poolForDisk por ByID = %q, esperaba bigtank", got)
+	}
+	// Sin el alias ByID no cruza (vdev by-id vs nombre base).
+	if got := poolForDisk(pools, vdevs, "sda"); got != "" {
+		t.Errorf("poolForDisk sin ByID = %q, esperaba vacío", got)
+	}
+	// El nombre base pasado directamente como vdev sigue cruzando.
+	vdevs = map[string][]string{"bigtank": {"/dev/sda1"}}
+	if got := poolForDisk(pools, vdevs, "sda"); got != "bigtank" {
+		t.Errorf("poolForDisk base = %q, esperaba bigtank", got)
+	}
+}

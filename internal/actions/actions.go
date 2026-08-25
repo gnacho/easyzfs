@@ -457,6 +457,8 @@ func (s *Service) PoolExpand(ctx context.Context, actor, pool, vdev, disk string
 
 // vdevArgs traduce topología + lista de discos a argumentos de zpool.
 // stripe: discos sueltos; mirror/raidzN: palabra clave + discos.
+// Cada disco se valida con validNewDev: nombre base ('sda', 'ata-XXX') o ruta
+// estable '/dev/disk/by-id/...' (preferida, issue #107).
 func vdevArgs(topo string, disks []string) ([]string, error) {
 	if len(disks) == 0 {
 		return nil, fmt.Errorf("%w: se requiere al menos 1 disco", ErrInvalidDev)
@@ -467,7 +469,7 @@ func vdevArgs(topo string, disks []string) ([]string, error) {
 		args = append(args, topo)
 	}
 	for _, d := range disks {
-		if !reDev.MatchString(d) {
+		if !validNewDev(d) {
 			return nil, ErrInvalidDev
 		}
 		args = append(args, d)
