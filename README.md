@@ -32,7 +32,7 @@ Docker, no appliance OS, no heavy stack.
 
 > **Try the live demo**
 >
-> See it running without installing anything. Head to **[demo.easyzfs.cloudless.club](https://demo.easyzfs.cloudless.club)** — two sample ZFS pools, realistic mock data, no sign-up required. In demo mode destructive actions are blocked, so you can explore freely.
+> See it running without installing anything. Head to **[demo.easyzfs.cloudless.club](https://demo.easyzfs.cloudless.club)** - two sample ZFS pools, realistic mock data, no sign-up required. In demo mode destructive actions are blocked, so you can explore freely.
 
 ## Why does this exist?
 
