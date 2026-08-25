@@ -220,6 +220,8 @@ const es = {
   nds_desc: 'Dentro de un pool existente.',
   nds_pool: 'Pool padre', nds_name: 'Nombre', nds_name_ph: 'p. ej. backups',
   nds_comp: 'Compresión', nds_comp_rec: 'lz4 (recomendado)', nds_comp_off: 'desactivada',
+  nds_atime: 'Registro de acceso (atime)', nds_atime_relatime: 'relatime (recomendado)',
+  nds_atime_on: 'on', nds_atime_off: 'off',
   nds_quota: 'Cuota (0 = sin límite)', nds_quota_ph: 'p. ej. 500G',
   nds_volsize: 'Tamaño del volumen', nds_volsize_ph: 'p. ej. 100G',
   // Cifrado nativo por dataset (lote D)
@@ -803,6 +805,8 @@ const en: Record<I18nKey, string> = {
   nds_desc: 'Inside an existing pool.',
   nds_pool: 'Parent pool', nds_name: 'Name', nds_name_ph: 'e.g. backups',
   nds_comp: 'Compression', nds_comp_rec: 'lz4 (recommended)', nds_comp_off: 'disabled',
+  nds_atime: 'Access time (atime)', nds_atime_relatime: 'relatime (recommended)',
+  nds_atime_on: 'on', nds_atime_off: 'off',
   nds_quota: 'Quota (0 = no limit)', nds_quota_ph: 'e.g. 500G',
   nds_volsize: 'Volume size', nds_volsize_ph: 'e.g. 100G',
   // Native per-dataset encryption (batch D)

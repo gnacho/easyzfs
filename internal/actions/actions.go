@@ -477,12 +477,13 @@ func vdevArgs(topo string, disks []string) ([]string, error) {
 
 // --- Datasets ---
 
-// DatasetCreate — 'zfs create [-p] [-o compression=..] [-o quota=..] [-V size]
-// [-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt] <pool/name>'.
+// DatasetCreate — 'zfs create [-p] [-o compression=..] [-o atime=..] [-o quota=..]
+// [-V size] [-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt] <pool/name>'.
 // Con encrypted=true la passphrase va SOLO por stdin (nunca argv/logs/audit) y
 // el buffer se limpia antes de volver.
+// atime: "" (no tocar, hereda del pool) | "on" | "off" | "relatime" (recomendado).
 func (s *Service) DatasetCreate(ctx context.Context, actor, pool, name, typ, compression string,
-	quota, volsize uint64, encrypted bool, passphrase string) error {
+	quota, volsize uint64, encrypted bool, passphrase, atime string) error {
 	if !rePool.MatchString(pool) || !reDataset.MatchString(name) {
 		return ErrInvalidName
 	}
@@ -493,7 +494,13 @@ func (s *Service) DatasetCreate(ctx context.Context, actor, pool, name, typ, com
 	if compression != "lz4" && compression != "zstd" && compression != "off" {
 		return fmt.Errorf("compresión inválida (lz4|zstd|off)")
 	}
+	if atime != "" && atime != "on" && atime != "off" && atime != "relatime" {
+		return fmt.Errorf("%w: atime debe ser on, off o relatime", ErrInvalidInput)
+	}
 	args := []string{"create", "-p", "-o", "compression=" + compression}
+	if atime != "" {
+		args = append(args, "-o", "atime="+atime)
+	}
 	if quota > 0 {
 		args = append(args, "-o", "quota="+strconv.FormatUint(quota, 10))
 	}
@@ -518,8 +525,8 @@ func (s *Service) DatasetCreate(ctx context.Context, actor, pool, name, typ, com
 	}
 	args = append(args, full)
 	s.audit(ctx, actor, "dataset.create", full, map[string]any{
-		"type": typ, "compression": compression, "quota_bytes": quota,
-		"volsize_bytes": volsize, "encrypted": encrypted, // NUNCA la passphrase
+		"type": typ, "compression": compression, "atime": atime,
+		"quota_bytes": quota, "volsize_bytes": volsize, "encrypted": encrypted, // NUNCA la passphrase
 	}, false)
 	var err error
 	if encrypted {

@@ -6,6 +6,7 @@ package actions
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -50,7 +51,7 @@ func TestDatasetCreateCifrado(t *testing.T) {
 	svc, argsLog, stdinLog := newKeyTestService(t)
 
 	err := svc.DatasetCreate(context.Background(), "tester", "tank", "secretos",
-		"fs", "lz4", 0, 0, true, testPass)
+		"fs", "lz4", 0, 0, true, testPass, "")
 	if err != nil {
 		t.Fatalf("DatasetCreate cifrado: %v", err)
 	}
@@ -87,7 +88,7 @@ func TestDatasetCreateCifrado(t *testing.T) {
 func TestDatasetCreateSinCifrarNoUsaStdin(t *testing.T) {
 	svc, argsLog, stdinLog := newKeyTestService(t)
 	if err := svc.DatasetCreate(context.Background(), "tester", "tank", "docs",
-		"fs", "zstd", 0, 0, false, ""); err != nil {
+		"fs", "zstd", 0, 0, false, "", ""); err != nil {
 		t.Fatalf("DatasetCreate: %v", err)
 	}
 	args, _ := os.ReadFile(argsLog)
@@ -103,7 +104,7 @@ func TestDatasetCreateSinCifrarNoUsaStdin(t *testing.T) {
 func TestDatasetCreatePassphraseCorta(t *testing.T) {
 	svc, _, _ := newKeyTestService(t)
 	err := svc.DatasetCreate(context.Background(), "tester", "tank", "x",
-		"fs", "lz4", 0, 0, true, "corta")
+		"fs", "lz4", 0, 0, true, "corta", "")
 	if err == nil {
 		t.Fatal("passphrase <8 aceptada")
 	}
@@ -203,5 +204,39 @@ func TestPoolExpand(t *testing.T) {
 		if err := svc.PoolExpand(context.Background(), "tester", "tank", bad, "sde", true); err == nil {
 			t.Errorf("PoolExpand vdev=%q aceptado", bad)
 		}
+	}
+}
+
+func TestDatasetCreateAtime(t *testing.T) {
+	svc, argsLog, _ := newKeyTestService(t)
+
+	if err := svc.DatasetCreate(context.Background(), "tester", "tank", "docs",
+		"fs", "lz4", 0, 0, false, "", "relatime"); err != nil {
+		t.Fatalf("DatasetCreate con atime: %v", err)
+	}
+	args, _ := os.ReadFile(argsLog)
+	if got := strings.TrimSpace(string(args)); got != "create -p -o compression=lz4 -o atime=relatime tank/docs" {
+		t.Fatalf("argv = %q, esperaba %q", got, "create -p -o compression=lz4 -o atime=relatime tank/docs")
+	}
+}
+
+func TestDatasetCreateAtimeVacioNoTocaAtime(t *testing.T) {
+	svc, argsLog, _ := newKeyTestService(t)
+
+	if err := svc.DatasetCreate(context.Background(), "tester", "tank", "docs",
+		"fs", "lz4", 0, 0, false, "", ""); err != nil {
+		t.Fatalf("DatasetCreate: %v", err)
+	}
+	args, _ := os.ReadFile(argsLog)
+	if got := strings.TrimSpace(string(args)); got != "create -p -o compression=lz4 tank/docs" {
+		t.Fatalf("argv = %q, esperaba %q", got, "create -p -o compression=lz4 tank/docs")
+	}
+}
+
+func TestDatasetCreateAtimeInvalido(t *testing.T) {
+	svc, _, _ := newKeyTestService(t)
+	if err := svc.DatasetCreate(context.Background(), "tester", "tank", "docs",
+		"fs", "lz4", 0, 0, false, "", "atime=on;rm -rf"); !errors.Is(err, ErrInvalidInput) {
+		t.Errorf("atime inválido = %v, esperaba ErrInvalidInput", err)
 	}
 }

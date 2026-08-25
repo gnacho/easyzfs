@@ -345,6 +345,7 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
   const [pool, setPool] = useState('');
   const [name, setName] = useState('');
   const [comp, setComp] = useState<'lz4' | 'zstd' | 'off'>('lz4');
+  const [atime, setAtime] = useState<'on' | 'off' | 'relatime'>('relatime');
   const [quota, setQuota] = useState('');
   const [volsize, setVolsize] = useState('');
   const [enc, setEnc] = useState(false);
@@ -361,7 +362,7 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
     setBusy(true); setErr('');
     try {
       await getProvider().createDataset({
-        pool, name: name.trim(), type: vol ? 'volume' : 'fs', compression: comp,
+        pool, name: name.trim(), type: vol ? 'volume' : 'fs', compression: comp, atime,
         quota_bytes: parseSize(quota), volsize_bytes: vol ? parseSize(volsize) : undefined,
         encryption: enc || undefined, passphrase: enc ? pass1 : undefined,
       });
@@ -386,6 +387,12 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
           <option value="lz4">{t('nds_comp_rec')}</option>
           <option value="zstd">zstd</option>
           <option value="off">{t('nds_comp_off')}</option>
+        </select>
+        <label htmlFor="nd-atime">{t('nds_atime')}</label>
+        <select id="nd-atime" value={atime} onChange={(e) => setAtime(e.target.value as 'on' | 'off' | 'relatime')}>
+          <option value="relatime">{t('nds_atime_relatime')}</option>
+          <option value="on">{t('nds_atime_on')}</option>
+          <option value="off">{t('nds_atime_off')}</option>
         </select>
         {vol ? (<>
           <label htmlFor="nd-volsize">{t('nds_volsize')}</label>

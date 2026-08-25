@@ -446,6 +446,7 @@ export interface CreatePoolReq { name: string; topo: Topo; disks: string[]; conf
 export interface CreateDatasetReq {
   pool: string; name: string; type: DatasetType;
   compression: 'lz4' | 'zstd' | 'off';
+  atime?: 'on' | 'off' | 'relatime';  // regist. de acceso; relatime recomendado (#106)
   quota_bytes: number; volsize_bytes?: number;
   encryption?: boolean;   // cifrado nativo AES-256-GCM (lote D)
   passphrase?: string;    // solo si encryption; viaja en el body, jamás en URL
