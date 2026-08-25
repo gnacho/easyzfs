@@ -232,6 +232,7 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
   const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState('');
   const [topo, setTopo] = useState<Topo>('mirror');
+  const [ashift, setAshift] = useState(0);
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
@@ -262,7 +263,7 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
   const submit = async () => {
     setBusy(true); setErr('');
     try {
-      await getProvider().createPool({ name: name.trim(), topo, disks: [...sel], confirm: confirm.trim() });
+      await getProvider().createPool({ name: name.trim(), topo, disks: [...sel], confirm: confirm.trim(), ashift: ashift || undefined });
       refresh(); onClose();
       notify(t('toast_pool_created'), 'ok');
     } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
@@ -289,6 +290,15 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
             { v: 'mirror', label: 'Mirror' }, { v: 'raidz1', label: 'RaidZ1' },
             { v: 'raidz2', label: 'RaidZ2' }, { v: 'stripe', label: 'Stripe' },
           ]} />
+        <label htmlFor="np-ashift" style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>{t('np_ashift')}
+          <InfoBubble title={t('np_ashift_hint')}>{t('np_ashift_hint')}</InfoBubble>
+        </label>
+        <select id="np-ashift" value={ashift} onChange={(e) => setAshift(Number(e.target.value))}>
+          <option value={0}>{t('np_ashift_auto')}</option>
+          <option value={12}>{t('np_ashift_12')}</option>
+          <option value={13}>{t('np_ashift_13')}</option>
+          <option value={9}>{t('np_ashift_9')}</option>
+        </select>
         {!canNext && <p className="form-err">{t('np_need_name')}</p>}
         <div className="m-actions">
           <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
@@ -335,6 +345,7 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
   const [pool, setPool] = useState('');
   const [name, setName] = useState('');
   const [comp, setComp] = useState<'lz4' | 'zstd' | 'off'>('lz4');
+  const [atime, setAtime] = useState<'on' | 'off' | 'relatime'>('relatime');
   const [quota, setQuota] = useState('');
   const [volsize, setVolsize] = useState('');
   const [enc, setEnc] = useState(false);
@@ -351,7 +362,7 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
     setBusy(true); setErr('');
     try {
       await getProvider().createDataset({
-        pool, name: name.trim(), type: vol ? 'volume' : 'fs', compression: comp,
+        pool, name: name.trim(), type: vol ? 'volume' : 'fs', compression: comp, atime,
         quota_bytes: parseSize(quota), volsize_bytes: vol ? parseSize(volsize) : undefined,
         encryption: enc || undefined, passphrase: enc ? pass1 : undefined,
       });
@@ -376,6 +387,12 @@ function NewDatasetModal({ vol, onClose }: { vol: boolean; onClose: () => void }
           <option value="lz4">{t('nds_comp_rec')}</option>
           <option value="zstd">zstd</option>
           <option value="off">{t('nds_comp_off')}</option>
+        </select>
+        <label htmlFor="nd-atime">{t('nds_atime')}</label>
+        <select id="nd-atime" value={atime} onChange={(e) => setAtime(e.target.value as 'on' | 'off' | 'relatime')}>
+          <option value="relatime">{t('nds_atime_relatime')}</option>
+          <option value="on">{t('nds_atime_on')}</option>
+          <option value="off">{t('nds_atime_off')}</option>
         </select>
         {vol ? (<>
           <label htmlFor="nd-volsize">{t('nds_volsize')}</label>

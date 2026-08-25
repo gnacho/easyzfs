@@ -40,7 +40,7 @@ func (s *Server) disksEnriched(ctx context.Context) []model.Disk {
 	inUse := mountedDisks(ctx)
 	for i := range disks {
 		if disks[i].Pool == "" {
-			disks[i].Pool = poolForDisk(names, vdevs, disks[i].Dev)
+			disks[i].Pool = poolForDisk(names, vdevs, disks[i].Dev, disks[i].ByID)
 		}
 		disks[i].InUse = inUse[disks[i].Dev]
 	}
@@ -95,7 +95,16 @@ func (s *Server) powerOff(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if p := poolForDisk(names, vdevs, dev); p != "" {
+	var aliases []string
+	for _, d := range s.disks.Disks() {
+		if d.Dev == dev || d.ByID == dev {
+			if d.ByID != "" {
+				aliases = append(aliases, d.ByID)
+			}
+			break
+		}
+	}
+	if p := poolForDisk(names, vdevs, dev, aliases...); p != "" {
 		writeErr(w, http.StatusConflict, "dev_in_use", "el disco pertenece al pool '"+p+"'")
 		return
 	}

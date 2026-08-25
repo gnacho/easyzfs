@@ -17,16 +17,18 @@ func (s *Server) listDatasets(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.pools.Datasets())
 }
 
-// createDataset — POST /api/datasets {pool, name, type, compression, quota_bytes,
-// volsize_bytes?, encryption?, passphrase?} → 201.
+// createDataset — POST /api/datasets {pool, name, type, compression, atime?,
+// quota_bytes, volsize_bytes?, encryption?, passphrase?} → 201.
 // encryption:true crea con cifrado nativo AES-256-GCM; la passphrase viaja
 // solo en el body JSON de esta request (NUNCA en URL, logs ni audit_log).
+// atime (opcional): "" (heredar del pool) | "on" | "off" | "relatime".
 func (s *Server) createDataset(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Pool         string `json:"pool"`
 		Name         string `json:"name"`
 		Type         string `json:"type"`
 		Compression  string `json:"compression"`
+		Atime        string `json:"atime"`
 		QuotaBytes   uint64 `json:"quota_bytes"`
 		VolsizeBytes uint64 `json:"volsize_bytes"`
 		Encryption   bool   `json:"encryption"`
@@ -61,7 +63,7 @@ func (s *Server) createDataset(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := s.act.DatasetCreate(r.Context(), actor(r), body.Pool, body.Name,
 		body.Type, body.Compression, body.QuotaBytes, body.VolsizeBytes,
-		body.Encryption, body.Passphrase); err != nil {
+		body.Encryption, body.Passphrase, body.Atime); err != nil {
 		actionErr(w, err)
 		return
 	}

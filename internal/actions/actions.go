@@ -94,23 +94,33 @@ func (s *Service) AuditOnly(ctx context.Context, actor, action, target string, p
 
 // --- Pools ---
 
-// PoolCreate — 'zpool create <name> [topo] <disks...>'.
+// PoolCreate — 'zpool create [-o ashift=N] <name> [topo] <disks...>'.
 // confirmed debe ser true solo si el handler validó {"confirm":name}.
-func (s *Service) PoolCreate(ctx context.Context, actor, name, topo string, disks []string, confirmed bool) error {
+// ashift: 0 = automático (no se pasa -o); 9-16 = alineación explícita
+// (12 para discos 4K, 13 para algunos NVMe; inmutable tras crear).
+func (s *Service) PoolCreate(ctx context.Context, actor, name, topo string, disks []string, ashift int, confirmed bool) error {
 	if !rePool.MatchString(name) {
 		return ErrInvalidName
 	}
 	if !ValidTopos[topo] {
 		return ErrInvalidTopo
 	}
+	if ashift != 0 && (ashift < 9 || ashift > 16) {
+		return fmt.Errorf("%w: ashift debe estar entre 9 y 16 (o 0 = automático)", ErrInvalidInput)
+	}
 	args, err := vdevArgs(topo, disks)
 	if err != nil {
 		return err
 	}
-	params := map[string]any{"topo": topo, "disks": disks}
+	cli := []string{"create"}
+	if ashift > 0 {
+		cli = append(cli, "-o", fmt.Sprintf("ashift=%d", ashift))
+	}
+	cli = append(cli, name)
+	cli = append(cli, args...)
+	params := map[string]any{"topo": topo, "disks": disks, "ashift": ashift}
 	s.audit(ctx, actor, "pool.create", name, params, confirmed)
-	_, err = executil.Run(ctx, 60*time.Second, "zpool",
-		append([]string{"create", name}, args...)...)
+	_, err = executil.Run(ctx, 60*time.Second, "zpool", cli...)
 	if err != nil {
 		return fmt.Errorf("crear pool: %w", err)
 	}
@@ -447,6 +457,8 @@ func (s *Service) PoolExpand(ctx context.Context, actor, pool, vdev, disk string
 
 // vdevArgs traduce topología + lista de discos a argumentos de zpool.
 // stripe: discos sueltos; mirror/raidzN: palabra clave + discos.
+// Cada disco se valida con validNewDev: nombre base ('sda', 'ata-XXX') o ruta
+// estable '/dev/disk/by-id/...' (preferida, issue #107).
 func vdevArgs(topo string, disks []string) ([]string, error) {
 	if len(disks) == 0 {
 		return nil, fmt.Errorf("%w: se requiere al menos 1 disco", ErrInvalidDev)
@@ -457,7 +469,7 @@ func vdevArgs(topo string, disks []string) ([]string, error) {
 		args = append(args, topo)
 	}
 	for _, d := range disks {
-		if !reDev.MatchString(d) {
+		if !validNewDev(d) {
 			return nil, ErrInvalidDev
 		}
 		args = append(args, d)
@@ -467,12 +479,13 @@ func vdevArgs(topo string, disks []string) ([]string, error) {
 
 // --- Datasets ---
 
-// DatasetCreate — 'zfs create [-p] [-o compression=..] [-o quota=..] [-V size]
-// [-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt] <pool/name>'.
+// DatasetCreate — 'zfs create [-p] [-o compression=..] [-o atime=..] [-o quota=..]
+// [-V size] [-o encryption=aes-256-gcm -o keyformat=passphrase -o keylocation=prompt] <pool/name>'.
 // Con encrypted=true la passphrase va SOLO por stdin (nunca argv/logs/audit) y
 // el buffer se limpia antes de volver.
+// atime: "" (no tocar, hereda del pool) | "on" | "off" | "relatime" (recomendado).
 func (s *Service) DatasetCreate(ctx context.Context, actor, pool, name, typ, compression string,
-	quota, volsize uint64, encrypted bool, passphrase string) error {
+	quota, volsize uint64, encrypted bool, passphrase, atime string) error {
 	if !rePool.MatchString(pool) || !reDataset.MatchString(name) {
 		return ErrInvalidName
 	}
@@ -483,7 +496,13 @@ func (s *Service) DatasetCreate(ctx context.Context, actor, pool, name, typ, com
 	if compression != "lz4" && compression != "zstd" && compression != "off" {
 		return fmt.Errorf("compresión inválida (lz4|zstd|off)")
 	}
+	if atime != "" && atime != "on" && atime != "off" && atime != "relatime" {
+		return fmt.Errorf("%w: atime debe ser on, off o relatime", ErrInvalidInput)
+	}
 	args := []string{"create", "-p", "-o", "compression=" + compression}
+	if atime != "" {
+		args = append(args, "-o", "atime="+atime)
+	}
 	if quota > 0 {
 		args = append(args, "-o", "quota="+strconv.FormatUint(quota, 10))
 	}
@@ -508,8 +527,8 @@ func (s *Service) DatasetCreate(ctx context.Context, actor, pool, name, typ, com
 	}
 	args = append(args, full)
 	s.audit(ctx, actor, "dataset.create", full, map[string]any{
-		"type": typ, "compression": compression, "quota_bytes": quota,
-		"volsize_bytes": volsize, "encrypted": encrypted, // NUNCA la passphrase
+		"type": typ, "compression": compression, "atime": atime,
+		"quota_bytes": quota, "volsize_bytes": volsize, "encrypted": encrypted, // NUNCA la passphrase
 	}, false)
 	var err error
 	if encrypted {
