@@ -94,23 +94,33 @@ func (s *Service) AuditOnly(ctx context.Context, actor, action, target string, p
 
 // --- Pools ---
 
-// PoolCreate — 'zpool create <name> [topo] <disks...>'.
+// PoolCreate — 'zpool create [-o ashift=N] <name> [topo] <disks...>'.
 // confirmed debe ser true solo si el handler validó {"confirm":name}.
-func (s *Service) PoolCreate(ctx context.Context, actor, name, topo string, disks []string, confirmed bool) error {
+// ashift: 0 = automático (no se pasa -o); 9-16 = alineación explícita
+// (12 para discos 4K, 13 para algunos NVMe; inmutable tras crear).
+func (s *Service) PoolCreate(ctx context.Context, actor, name, topo string, disks []string, ashift int, confirmed bool) error {
 	if !rePool.MatchString(name) {
 		return ErrInvalidName
 	}
 	if !ValidTopos[topo] {
 		return ErrInvalidTopo
 	}
+	if ashift != 0 && (ashift < 9 || ashift > 16) {
+		return fmt.Errorf("%w: ashift debe estar entre 9 y 16 (o 0 = automático)", ErrInvalidInput)
+	}
 	args, err := vdevArgs(topo, disks)
 	if err != nil {
 		return err
 	}
-	params := map[string]any{"topo": topo, "disks": disks}
+	cli := []string{"create"}
+	if ashift > 0 {
+		cli = append(cli, "-o", fmt.Sprintf("ashift=%d", ashift))
+	}
+	cli = append(cli, name)
+	cli = append(cli, args...)
+	params := map[string]any{"topo": topo, "disks": disks, "ashift": ashift}
 	s.audit(ctx, actor, "pool.create", name, params, confirmed)
-	_, err = executil.Run(ctx, 60*time.Second, "zpool",
-		append([]string{"create", name}, args...)...)
+	_, err = executil.Run(ctx, 60*time.Second, "zpool", cli...)
 	if err != nil {
 		return fmt.Errorf("crear pool: %w", err)
 	}

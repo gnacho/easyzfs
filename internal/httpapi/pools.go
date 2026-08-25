@@ -29,13 +29,14 @@ func (s *Server) listPools(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, pools)
 }
 
-// createPool — POST /api/pools {name, topo, disks[], confirm} → 202.
+// createPool — POST /api/pools {name, topo, disks[], confirm, ashift?} → 202.
 func (s *Server) createPool(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Name    string   `json:"name"`
 		Topo    string   `json:"topo"`
 		Disks   []string `json:"disks"`
 		Confirm string   `json:"confirm"`
+		Ashift  int      `json:"ashift"`
 	}
 	if !decodeJSON(w, r, &body) {
 		return

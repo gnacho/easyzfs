@@ -79,3 +79,49 @@ func TestTrimNombreInvalido(t *testing.T) {
 		}
 	}
 }
+
+func TestPoolCreateAshift(t *testing.T) {
+	svc, logFile := newTestService(t)
+	if err := svc.PoolCreate(context.Background(), "tester", "tank", "mirror",
+		[]string{"sda", "sdb"}, 12, true); err != nil {
+		t.Fatalf("PoolCreate: %v", err)
+	}
+	out, _ := os.ReadFile(logFile)
+	if got := strings.TrimSpace(string(out)); got != "create -o ashift=12 tank mirror sda sdb" {
+		t.Fatalf("argv zpool = %q, esperaba %q", got, "create -o ashift=12 tank mirror sda sdb")
+	}
+	var action string
+	var confirmed int
+	err := svc.db.QueryRow(
+		"SELECT action, confirmed FROM audit_log WHERE target='tank'").Scan(&action, &confirmed)
+	if err != nil {
+		t.Fatalf("audit_log: %v", err)
+	}
+	if action != "pool.create" || confirmed != 1 {
+		t.Fatalf("audit = (%q,%d), esperaba (pool.create,1)", action, confirmed)
+	}
+}
+
+func TestPoolCreateAshiftAuto(t *testing.T) {
+	svc, logFile := newTestService(t)
+	if err := svc.PoolCreate(context.Background(), "tester", "tank", "mirror",
+		[]string{"sda", "sdb"}, 0, true); err != nil {
+		t.Fatalf("PoolCreate: %v", err)
+	}
+	out, _ := os.ReadFile(logFile)
+	if got := strings.TrimSpace(string(out)); got != "create tank mirror sda sdb" {
+		t.Fatalf("argv zpool = %q, esperaba %q", got, "create tank mirror sda sdb")
+	}
+}
+
+func TestPoolCreateAshiftInvalido(t *testing.T) {
+	svc, _ := newTestService(t)
+	if err := svc.PoolCreate(context.Background(), "tester", "tank", "mirror",
+		[]string{"sda", "sdb"}, 5, true); !errors.Is(err, ErrInvalidInput) {
+		t.Errorf("ashift=5 = %v, esperaba ErrInvalidInput", err)
+	}
+	if err := svc.PoolCreate(context.Background(), "tester", "tank", "mirror",
+		[]string{"sda", "sdb"}, 17, true); !errors.Is(err, ErrInvalidInput) {
+		t.Errorf("ashift=17 = %v, esperaba ErrInvalidInput", err)
+	}
+}

@@ -442,7 +442,7 @@ export interface LongOp {
 }
 
 // --- Peticiones ---
-export interface CreatePoolReq { name: string; topo: Topo; disks: string[]; confirm: string }
+export interface CreatePoolReq { name: string; topo: Topo; disks: string[]; confirm: string; ashift?: number }
 export interface CreateDatasetReq {
   pool: string; name: string; type: DatasetType;
   compression: 'lz4' | 'zstd' | 'off';
