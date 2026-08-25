@@ -12,7 +12,6 @@ export function RecLine({ r }: { r: Recommendation }) {
   if (r.pending_sectors) reasons.push(t('dk_pending', { n: r.pending_sectors }));
   if (r.offline_uncorr) reasons.push(t('dk_offunc', { n: r.offline_uncorr }));
   if ((r.crc_recent ?? 0) > 0) reasons.push(t('dk_crc_recent', { n: r.crc_recent!, total: r.crc_errors ?? 0 }));
-  else if ((r.crc_errors ?? 0) >= 100) reasons.push(t('dk_crc_stable', { n: r.crc_errors! }));
   return (
     <div className="alert">
       <div className="ico" style={{ background: `var(--${tone}-soft)`, color: `var(--${tone})` }}>{ico}</div>

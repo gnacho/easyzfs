@@ -457,7 +457,7 @@ export interface UpdateJobReq { enabled?: boolean; schedule?: string; retention?
 export interface CreateUserReq { user: string; password: string; role: Role }
 
 // --- Recomendaciones de discos (motor de reglas del backend) ---
-export type RecKind = 'replace_now' | 'replace_soon' | 'watch' | 'check_cable' | 'crc_history';
+export type RecKind = 'replace_now' | 'replace_soon' | 'watch' | 'check_cable';
 export type RecHoldReason = 'resilver' | 'pool_degraded' | 'no_redundancy';
 
 export interface Recommendation {

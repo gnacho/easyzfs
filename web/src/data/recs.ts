@@ -3,7 +3,6 @@
 import type { Disk, Pool, Recommendation } from './types';
 
 const REALLOC_SOON = 100;
-const CRC_WARN = 100;
 
 export function computeRecommendations(disks: Disk[], pools: Pool[]): Recommendation[] {
   const byPool = new Map(pools.map((p) => [p.name, p]));
@@ -33,9 +32,9 @@ export function computeRecommendations(disks: Disk[], pools: Pool[]): Recommenda
     else if ((d.realloc_sectors ?? 0) > 0 || (d.nvme_warn ?? 0) > 0) add('info', 'watch');
     // CRC: lo accionable es el CRECIMIENTO (link roto ahora); el acumulado de
     // por vida no se resetea y perseguiría al disco equivocado tras un cambio
-    // de bahías (caso real bigtank 4-Ago-2026). Réplica de internal/recs.
+    // de bahías (caso real bigtank 4-Ago-2026). El CRC histórico estable se
+    // consulta en la burbuja info del disco, no como recomendación.
     if ((d.crc_recent ?? 0) > 0) add('warn', 'check_cable');
-    else if ((d.crc_errors ?? 0) >= CRC_WARN) add('info', 'crc_history');
   }
   const rank = (l: string) => (l === 'crit' ? 0 : l === 'warn' ? 1 : 2);
   return out.sort((a, b) => rank(a.level) - rank(b.level));

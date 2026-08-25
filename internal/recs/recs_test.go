@@ -35,7 +35,8 @@ func TestEvaluate_DiscoMuriendo(t *testing.T) {
 
 // Caso real sdc (TEST0002) ABSUELTO: 48 realloc (vigilar) + 1,19M CRC de por
 // vida PERO congelado (CrcRecent=0, crecía cuando ocupaba la bahía rota) →
-// info watch + info crc_history. Jamás warn check_cable ni sustitución por CRC.
+// solo info watch; el CRC histórico estable NO genera recomendación (se ve
+// en la burbuja info del disco). Jamás warn check_cable ni sustitución por CRC.
 func TestEvaluate_TormentaCRCEstable(t *testing.T) {
 	disks := []model.Disk{{
 		Dev: "sdc", Serial: "TEST0002", Pool: "bigtank", Smart: "warn",
@@ -43,26 +44,17 @@ func TestEvaluate_TormentaCRCEstable(t *testing.T) {
 	}}
 	pools := []model.Pool{pool("bigtank", "ONLINE", "raidz1")}
 	rs := Evaluate(disks, pools)
-	if len(rs) != 2 {
-		t.Fatalf("recs = %d, esperadas 2: %+v", len(rs), rs)
+	if len(rs) != 1 {
+		t.Fatalf("recs = %d, esperada 1 (solo watch): %+v", len(rs), rs)
 	}
-	var history, watch bool
-	for _, r := range rs {
-		if r.Kind == model.RecCrcHistory && r.Level == "info" {
-			history = true
-		}
-		if r.Kind == model.RecWatch && r.Level == "info" {
-			watch = true
-		}
-		if r.Kind == model.RecCheckCable {
-			t.Errorf("check_cable NO debe saltar con CRC congelado: %+v", r)
-		}
-		if r.Kind == model.RecReplaceNow || r.Kind == model.RecReplaceSoon {
-			t.Errorf("NUNCA sugerir sustitución por CRC: %+v", r)
-		}
+	if rs[0].Kind != model.RecWatch || rs[0].Level != "info" {
+		t.Errorf("rec = %s/%s, esperado info/watch: %+v", rs[0].Level, rs[0].Kind, rs[0])
 	}
-	if !history || !watch {
-		t.Errorf("esperadas crc_history(info) + watch(info): %+v", rs)
+	if rs[0].Kind == model.RecCheckCable {
+		t.Errorf("check_cable NO debe saltar con CRC congelado: %+v", rs[0])
+	}
+	if rs[0].Kind == model.RecReplaceNow || rs[0].Kind == model.RecReplaceSoon {
+		t.Errorf("NUNCA sugerir sustitución por CRC: %+v", rs[0])
 	}
 }
 
