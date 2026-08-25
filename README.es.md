@@ -33,7 +33,7 @@ pesado.
 
 > **Prueba la demo en vivo**
 >
-> Mírala en funcionamiento sin instalar nada. Entra en **[demo.easyzfs.cloudless.club](https://demo.easyzfs.cloudless.club)** — dos pools de ejemplo con datos mock realistas, sin registro. En modo demo las acciones destructivas están bloqueadas, así que puedes explorar sin riesgo.
+> Mírala en funcionamiento sin instalar nada. Entra en **[demo.easyzfs.cloudless.club](https://demo.easyzfs.cloudless.club)** - dos pools de ejemplo con datos mock realistas, sin registro. En modo demo las acciones destructivas están bloqueadas, así que puedes explorar sin riesgo.
 
 ## ¿Por qué existe?
 
