@@ -42,14 +42,13 @@ function smartBase(d: Disk, t: (k: string) => string): string {
 
 // smartParts — contadores como línea aparte bajo el badge (así la píldora
 // queda en una línea y los contadores "bajan a dos líneas" según el ancho).
+// El CRC (histórico o reciente) vive en el detalle del disco (#112), no aquí.
 function smartParts(d: Disk, t: (k: string, v?: Record<string, string | number>) => string): string[] {
   if (d.smart === 'unknown' || d.smart === 'crit') return [];
   const parts: string[] = [];
   if ((d.realloc_sectors ?? 0) > 0) parts.push(t('dk_realloc', { n: d.realloc_sectors! }));
   if ((d.pending_sectors ?? 0) > 0) parts.push(t('dk_pending', { n: d.pending_sectors! }));
   if ((d.offline_uncorr ?? 0) > 0) parts.push(t('dk_offunc', { n: d.offline_uncorr! }));
-  if ((d.crc_recent ?? 0) > 0) parts.push(t('dk_crc_recent', { n: d.crc_recent!, total: d.crc_errors ?? 0 }));
-  else if ((d.crc_errors ?? 0) >= 100) parts.push(t('dk_crc_stable', { n: d.crc_errors! }));
   if ((d.nvme_warn ?? 0) > 0) parts.push(t('dk_nvme_warn', { n: d.nvme_warn! }));
   return parts;
 }
@@ -89,7 +88,9 @@ export default function Disks() {
     } catch (e) { const m = errorMessage(e, t); setMsg(m); notify(m, 'err'); }
   };
 
-  // Apagar disco: doble clic (1º arma "¿Confirmar?", 2º ejecuta). Se desarma a los 3 s.
+  // Apagar disco: miembro de pool → modal de confirmación escrita (hot swap,
+  // el pool quedará DEGRADED); disco libre → doble clic (1º arma, 2º ejecuta).
+  // Se desarma a los 3 s.
   useEffect(() => {
     if (!arm) return;
     const id = setTimeout(() => setArm(''), 3000);
@@ -107,17 +108,10 @@ export default function Disks() {
     } catch (e) { const m = errorMessage(e, t); setMsg(m); notify(m, 'err'); }
   };
 
-  // Identificar disco: parpadeo del LED de actividad de la bahía (lectura I/O).
-  const [ident, setIdent] = useState('');
-  const identify = async (dev: string) => {
-    if (ident) return;
-    setIdent(dev); setMsg('');
-    try {
-      await getProvider().identifyDisk(dev);
-      setMsg(`${t('dk_identify_started', { dev })}`);
-      notify(t('toast_disk_identify'), 'ok');
-    } catch (e) { const m = errorMessage(e, t); setMsg(m); notify(m, 'err'); }
-    setIdent('');
+  // Disco miembro de pool: abrir el modal de confirmación escrita de apagado.
+  const poweroffClick = (d: Disk) => {
+    if (d.pool && d.pool !== '—') { openModal('poweroffdisk', { disk: d }); return; }
+    poweroff(d.dev);
   };
 
   return (
@@ -179,19 +173,13 @@ export default function Disks() {
                 <td className="actions">
                   <span className="testbtns">
                     <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_short_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'short'); }}>{t('dk_test_short')}</button>{' '}
-                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_long_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'long'); }}>{t('dk_test_long')}</button>{' '}
-                    <button className="btn sm" disabled={!isAdmin || ident === d.dev} title={!isAdmin ? t('no_permission') : t('dk_identify_hint')}
-                      onClick={(e) => { e.stopPropagation(); identify(d.dev); }}>
-                      {ident === d.dev ? '…' : t('dk_identify')}
-                    </button>
+                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_long_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'long'); }}>{t('dk_test_long')}</button>
                   </span>{' '}
-                  {(d.pool === '—' || d.pool === '') && !d.in_use && (
-                    <button className={`btn sm ${arm === d.dev ? 'danger' : ''}`} disabled={!isAdmin}
-                      title={!isAdmin ? t('no_permission') : t('dk_poweroff_hint')}
-                      onClick={(e) => { e.stopPropagation(); poweroff(d.dev); }}>
-                      {arm === d.dev ? t('dk_poweroff_arm') : t('dk_poweroff')}
-                    </button>
-                  )}
+                  <button className={`btn sm ${arm === d.dev ? 'danger' : ''}`} disabled={!isAdmin}
+                    title={!isAdmin ? t('no_permission') : t(d.pool && d.pool !== '—' ? 'dk_poweroff_pool_hint' : 'dk_poweroff_hint')}
+                    onClick={(e) => { e.stopPropagation(); poweroffClick(d); }}>
+                    {arm === d.dev ? t('dk_poweroff_arm') : t('dk_poweroff')}
+                  </button>
                 </td>
               </tr>
             ))}

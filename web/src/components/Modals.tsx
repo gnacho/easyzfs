@@ -63,6 +63,7 @@ export function ModalHost() {
     case 'editds': return <EditDatasetModal ds={p.ds as Dataset} onClose={closeModal} />;
     case 'propsds': return <DatasetPropsModal ds={p.ds as Dataset} onClose={closeModal} />;
     case 'diskdetail': return <DiskDetailModal disk={p.disk as Disk} onClose={closeModal} />;
+    case 'poweroffdisk': return <PowerOffDiskModal disk={p.disk as Disk} onClose={closeModal} />;
     case 'delds': return <DeleteDatasetModal name={p.name as string} onClose={closeModal} />;
     case 'renameds': return <RenameDatasetModal name={p.name as string} onClose={closeModal} />;
     case 'rewrite': return <RewriteModal ds={p.ds as Dataset} onClose={closeModal} />;
@@ -687,6 +688,14 @@ function DiskDetailModal({ disk, onClose }: { disk: Disk; onClose: () => void })
     <ModalBox onClose={onClose} wide label={t('dsm_title')}>
       <h3>{t('dsm_title')}</h3>
       <p className="desc mono">{disk.dev} · {disk.model}</p>
+      {/* CRC destacado (#112): el historial vive aquí, no en la burbuja de la fila */}
+      {(disk.crc_errors ?? 0) > 0 && (
+        <p style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 8, color: 'var(--warn)' }}>
+          {(disk.crc_recent ?? 0) > 0
+            ? t('dk_crc_recent', { n: disk.crc_recent!, total: disk.crc_errors! })
+            : t('dk_crc_stable', { n: disk.crc_errors! })}
+        </p>
+      )}
       <div role="tablist" aria-label={t('dsm_title')} style={{ display: 'inline-flex', gap: 6, marginBottom: 10 }}>
         <button className={`btn sm ${tab === 'attrs' ? 'primary' : ''}`} role="tab" aria-selected={tab === 'attrs'}
           onClick={() => setTab('attrs')}>{t('dsm_tab_attrs')}</button>
@@ -793,6 +802,43 @@ function DiskDetailModal({ disk, onClose }: { disk: Disk; onClose: () => void })
         </button>
         <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
       </div>
+    </ModalBox>
+  );
+}
+
+// ---------- apagar disco miembro de pool (confirmación escrita, hot swap) ----------
+// El pool quedará DEGRADED hasta reemplazar o volver a encender el disco: se
+// pide escribir el nombre del dispositivo para confirmar (#113).
+function PowerOffDiskModal({ disk, onClose }: { disk: Disk; onClose: () => void }) {
+  const { t, refresh, isAdmin, notify } = useApp();
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setErr('');
+    try {
+      await getProvider().poweroffDisk(disk.dev, confirm.trim());
+      refresh(); onClose();
+      notify(t('toast_disk_off'), 'ok');
+    } catch (ex) { const m = errorMessage(ex, t); setErr(m); notify(m, 'err'); setBusy(false); }
+  };
+
+  return (
+    <ModalBox onClose={onClose} label={t('po_title')}>
+      <form onSubmit={submit}>
+        <h3>{t('po_title')} · <span className="mono">{disk.dev}</span></h3>
+        <p className="desc">{t('po_desc', { pool: disk.pool })}</p>
+        <label htmlFor="po-confirm">{t('po_confirm_lbl')}</label>
+        <input id="po-confirm" placeholder={disk.dev} value={confirm}
+          onChange={(e) => setConfirm(e.target.value)} autoComplete="off" />
+        {err && <p className="form-err" role="alert">{err}</p>}
+        <div className="m-actions">
+          <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
+          <SubmitBtn label={t('dk_poweroff')} busy={busy} danger disabled={!isAdmin || confirm.trim() !== disk.dev} />
+        </div>
+      </form>
     </ModalBox>
   );
 }

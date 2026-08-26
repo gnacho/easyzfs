@@ -228,7 +228,7 @@ export class HttpProvider implements DataProvider {
   getDisks = () => get<Disk[]>('/disks');
   getRecommendations = () => get<Recommendation[]>('/recommendations');
   smartTest = (dev: string, type: 'short' | 'long') => post<void>(`/disks/${enc(dev)}/smart-test`, { type });
-  poweroffDisk = (dev: string) => post<void>(`/disks/${enc(dev)}/poweroff`, {});
+  poweroffDisk = (dev: string, confirm?: string) => post<void>(`/disks/${enc(dev)}/poweroff`, { confirm });
   identifyDisk = (dev: string) => post<void>(`/disks/${enc(dev)}/identify`, {});
 
   getPushVapidKey = () => get<{ publicKey: string }>('/push/vapid-public-key');
