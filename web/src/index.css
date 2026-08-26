@@ -500,9 +500,14 @@ table.data td.modelcell{white-space:normal;min-width:130px}
 table.data td.modelcell .mono{white-space:normal;overflow-wrap:anywhere}
 table.data td.actions{white-space:normal}
 table.data td.actions .btn{margin:2px 4px 2px 0}
-/* ≥1100px: Test corto/largo siempre en la misma línea (Apagar baja si hace
-   falta; solo los tests van en el span nowrap). */
-@media(min-width:1100px){ table.data td.actions .testbtns{white-space:nowrap} }
+/* Acciones de disco en una sola línea: flex con gap (Apagar ya no baja).
+   En móvil el texto se oculta y quedan solo los iconos (#112-114). */
+table.data td.actions .disk-actions{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+table.data td.actions .disk-actions .btn{display:inline-flex;align-items:center;gap:5px;margin:0}
+@media(max-width:699px){
+  table.data td.actions .disk-actions .lbl{display:none}
+  table.data td.actions .disk-actions .btn{padding:4px 8px}
+}
 /* Columnas prescindibles según ancho (evita el scroll horizontal en
    pantallas medianas/pequeñas). */
 @media(max-width:1299px){ .hide-md{display:none} }

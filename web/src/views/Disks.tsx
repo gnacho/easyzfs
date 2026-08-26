@@ -7,6 +7,7 @@ import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, fmtInt } from '../ui/format';
 import { Badge, InfoBubble, Spinner } from '../components/ui';
 import { Sparkline } from '../components/Sparkline';
+import { IconZap, IconClock, IconPower } from '../components/icons';
 import type { Disk, SeriesPoint } from '../data/types';
 import { useModal } from '../components/Modal';
 
@@ -171,15 +172,19 @@ export default function Disks() {
                   {d.in_use && <Badge tone="warn" dot={false}> {t('dk_in_use')}</Badge>}
                 </td>
                 <td className="actions">
-                  <span className="testbtns">
-                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_short_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'short'); }}>{t('dk_test_short')}</button>{' '}
-                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_long_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'long'); }}>{t('dk_test_long')}</button>
-                  </span>{' '}
-                  <button className={`btn sm ${arm === d.dev ? 'danger' : ''}`} disabled={!isAdmin}
-                    title={!isAdmin ? t('no_permission') : t(d.pool && d.pool !== '—' ? 'dk_poweroff_pool_hint' : 'dk_poweroff_hint')}
-                    onClick={(e) => { e.stopPropagation(); poweroffClick(d); }}>
-                    {arm === d.dev ? t('dk_poweroff_arm') : t('dk_poweroff')}
-                  </button>
+                  <span className="disk-actions">
+                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_short_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'short'); }}>
+                      <IconZap size={14} /><span className="lbl">{t('dk_test_short')}</span>
+                    </button>
+                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_long_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'long'); }}>
+                      <IconClock size={14} /><span className="lbl">{t('dk_test_long')}</span>
+                    </button>
+                    <button className={`btn sm ${arm === d.dev ? 'danger' : ''}`} disabled={!isAdmin}
+                      title={!isAdmin ? t('no_permission') : t(d.pool && d.pool !== '—' ? 'dk_poweroff_pool_hint' : 'dk_poweroff_hint')}
+                      onClick={(e) => { e.stopPropagation(); poweroffClick(d); }}>
+                      <IconPower size={14} /><span className="lbl">{arm === d.dev ? t('dk_poweroff_arm') : t('dk_poweroff')}</span>
+                    </button>
+                  </span>
                 </td>
               </tr>
             ))}
