@@ -370,6 +370,7 @@ Dependencias Go (mantenidas a 2 a propósito):
 ### v2.9.18
 
 - **Identificar un disco físico haciendo parpadear el LED de actividad de su bahía (#81)**: una acción "Identificar" ejecuta una ráfaga de I/O de solo lectura contra el disco (`dd` a /dev/null, unos 8-9 segundos), lo que hace parpadear el LED de actividad de la bahía y deja claro qué ranura ocupa el dispositivo antes de extraerlo, por ejemplo justo antes de un replace. Funciona en hardware sin LED de localización controlable por software (sin encierro SES/SGPIO), no requiere confirmación y es segura también para miembros de pool (es una lectura directa). Disponible en cada fila de discos, en el modal de detalle SMART y en el diálogo de replace, junto al disco que se va a sustituir. La lista sudoers restringida ganó una regla `dd` de un solo uso.
+- **Eliminada la recomendación de "CRC histórico"; el historial de CRC queda solo en la burbuja info de SMART (#110)**: el motor de recomendaciones ya no emite la recomendación `crc_history` (un contador de CRC UDMA estable de por vida no aporta señal accionable; el caso accionable de crecimiento ya lo cubre `check_cable`). El recuento histórico de CRC sigue visible dentro de la burbuja info de SMART de cada disco, y la burbuja info recibió un pulido visual (orientación, título y punto, flecha).
 
 ### v2.9.17
 

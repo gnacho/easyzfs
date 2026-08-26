@@ -362,6 +362,7 @@ Go dependencies (kept to 2 on purpose):
 ### v2.9.18
 
 - **Identify a physical disk by blinking its bay activity LED (#81)**: an "Identify" action runs a short read-only I/O burst against the disk (`dd` to /dev/null, about 8-9 seconds), which makes the bay activity LED blink so the physical slot holding a device is obvious before pulling it out, for example right before a replace. It works on hardware without software-controllable locate LEDs (no SES/SGPIO enclosure), requires no confirmation and is safe for pool members too (it is a direct read). Available on every disk row, in the SMART detail modal and in the replace dialog next to the disk being replaced. The restricted sudoers allowlist gained a single-purpose `dd` rule.
+- **Drop the "historical CRC" recommendation; keep the CRC history only in the SMART info bubble (#110)**: the recommendation engine no longer emits the `crc_history` info recommendation (a stable lifetime UDMA CRC counter carries no actionable signal; the actionable growth case is already covered by `check_cable`). The historical CRC count is still visible inside each disk's SMART info bubble, and the info bubble got a visual polish (orientation, title and dot, arrow).
 
 ### v2.9.17
 
