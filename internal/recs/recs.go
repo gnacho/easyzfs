@@ -16,9 +16,6 @@ const (
 	// ReallocSoon — sectores reasignados a partir de los cuales se recomienda
 	// planificar la sustitución (por debajo: "vigilar").
 	ReallocSoon = 100
-	// CrcWarn — errores UDMA CRC a partir de los cuales se sospecha del link
-	// físico (cable/puerto/backplane), no del medio del disco.
-	CrcWarn = 100
 )
 
 // Evaluate aplica las reglas sobre los discos, con contexto de sus pools
@@ -63,12 +60,10 @@ func Evaluate(disks []model.Disk, pools []model.Pool) []model.Recommendation {
 		// (link roto AHORA). El acumulado de por vida no se resetea y
 		// perseguiría al disco equivocado tras un cambio de bahías (caso
 		// real bigtank 4-Ago-2026: disco absuelto marcado como "cable malo"
-		// por su histórico mientras el puerto roto azotaba a otro).
-		switch {
-		case d.CrcRecent > 0:
+		// por su histórico mientras el puerto roto azotaba a otro). El CRC
+		// histórico estable se consulta en la burbuja info del disco.
+		if d.CrcRecent > 0 {
 			add("warn", model.RecCheckCable)
-		case d.CrcErrors >= CrcWarn:
-			add("info", model.RecCrcHistory)
 		}
 	}
 	sort.SliceStable(out, func(i, j int) bool { return rank(out[i].Level) < rank(out[j].Level) })

@@ -210,7 +210,6 @@ const (
 	RecReplaceSoon = "replace_soon" // planificar sustitución (warn)
 	RecWatch       = "watch"        // vigilar evolución (info)
 	RecCheckCable  = "check_cable"  // revisar cable/puerto/backplane, NO el disco (warn, CRC creciendo)
-	RecCrcHistory  = "crc_history"  // CRC alto pero ESTABLE: contexto histórico, sin acción (info)
 )
 
 // Razones de Hold (la acción sugerida debe esperar).

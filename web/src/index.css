@@ -650,25 +650,48 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
   position:relative;display:inline-grid;place-items:center;width:18px;height:18px;
   border-radius:50%;background:var(--info-soft);color:var(--info);
   font-size:11px;font-weight:700;cursor:help;vertical-align:middle;flex-shrink:0;
+  transition:background .15s ease,color .15s ease,transform .12s ease;
+  user-select:none;
 }
+.infobubble:hover,.infobubble:focus-visible{background:var(--info);color:#fff;outline:none}
+.infobubble:focus-visible{box-shadow:0 0 0 3px color-mix(in srgb,var(--info) 30%,transparent)}
+.infobubble:active{transform:scale(.92)}
 .infobubble-pop{
   /* position:fixed + top/left los pone InfoBubble por JS (useEffect):
      fixed escapa del overflow de los ancestros (.tblwrap recortaba la
      burbuja del primer disco) y permite voltear hacia abajo si no cabe
-     arriba. pointer-events:none evita parpadeo al pisar el trigger. */
+     arriba. pointer-events:none evita parpadeo al pisar el trigger.
+     La clase up/down (JS) orienta la flecha hacia el trigger. */
   position:fixed;
-  width:min(290px,78vw);padding:12px 14px;border-radius:10px;z-index:50;
+  width:min(300px,78vw);padding:12px 14px;border-radius:12px;z-index:50;
   background:var(--surface2);color:var(--text);border:1px solid var(--border);
-  box-shadow:0 8px 28px rgba(0,0,0,.28);font-size:12px;font-weight:400;line-height:1.5;
+  box-shadow:0 2px 8px rgba(0,0,0,.12),0 14px 34px rgba(0,0,0,.2);
+  font-size:12px;font-weight:400;line-height:1.55;
   /* display:none cerrado; .open lo hace medible (opacity:0, invisible) y
-     .placed lo revela una vez posicionado. pointer-events:none evita
-     parpadeo al pisar el trigger con el ratón. */
+     .placed lo revela una vez posicionado, con una entrada suave. */
   display:none;pointer-events:none;opacity:0;
+  transition:opacity .14s ease,transform .14s ease;
+  transform:translateY(3px) scale(.98);
 }
 .infobubble-pop.open{display:block}
-.infobubble-pop.open.placed{opacity:1}
-.infobubble-pop ul{margin:4px 0 0;padding-left:16px}
-.infobubble-pop li{margin-bottom:3px}
+.infobubble-pop.open.placed{opacity:1;transform:none}
+/* flecha hacia el trigger (doble triángulo: borde + relleno) */
+.infobubble-pop::before,.infobubble-pop::after{
+  content:'';position:absolute;left:50%;width:10px;height:10px;margin-left:-5px;transform:rotate(45deg);
+}
+.infobubble-pop.up::before{bottom:-6px;background:var(--border)}
+.infobubble-pop.up::after{bottom:-5px;background:var(--surface2)}
+.infobubble-pop.down::before{top:-6px;background:var(--border)}
+.infobubble-pop.down::after{top:-5px;background:var(--surface2)}
+.ib-title{display:flex;align-items:center;gap:7px;margin-bottom:7px}
+.ib-title b{font-size:12.5px;font-weight:700;color:var(--info);line-height:1.3}
+.ib-dot{width:7px;height:7px;border-radius:50%;background:var(--info);flex-shrink:0}
+.infobubble-pop ul{margin:6px 0 0;padding:0;list-style:none;display:grid;gap:4px}
+.infobubble-pop li{position:relative;padding-left:13px}
+.infobubble-pop li::before{
+  content:'';position:absolute;left:0;top:6px;width:5px;height:5px;
+  border-radius:50%;background:var(--info);opacity:.7;
+}
 
 /* vdev nuevo incorporándose al RAID: etiqueta info + barra fina */
 .vdevjoin{

@@ -134,6 +134,7 @@ export function InfoBubble({ title, glyph = '?', children }: { title?: string; g
   const popRef = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  const [dir, setDir] = useState<'up' | 'down'>('up');
 
   const place = () => {
     const btn = btnRef.current, pop = popRef.current;
@@ -142,8 +143,10 @@ export function InfoBubble({ title, glyph = '?', children }: { title?: string; g
     const pw = pop.offsetWidth, ph = pop.offsetHeight;
     const pad = 8, vw = window.innerWidth, vh = window.innerHeight;
     // Por defecto arriba; voltea abajo si se cortaría con el borde superior
-    const top = r.top - ph - pad >= 4 ? r.top - ph - pad : Math.min(r.bottom + pad, vh - ph - 4);
+    const up = r.top - ph - pad >= 4;
+    const top = up ? r.top - ph - pad : Math.min(r.bottom + pad, vh - ph - 4);
     const left = Math.max(4, Math.min(r.left + r.width / 2 - pw / 2, vw - pw - 4));
+    setDir(up ? 'up' : 'down');
     setPos({ top, left });
   };
 
@@ -176,9 +179,14 @@ export function InfoBubble({ title, glyph = '?', children }: { title?: string; g
       onTouchStart={() => setOpen((o) => !o)}
       onKeyDown={(e) => { if (e.key === 'Escape') setOpen(false); }}>
       {glyph}
-      <span className={`infobubble-pop${open ? ' open' : ''}${pos ? ' placed' : ''}`} role="tooltip" ref={popRef}
+      <span className={`infobubble-pop${open ? ' open' : ''}${pos ? ' placed' : ''} ${dir}`} role="tooltip" ref={popRef}
         style={pos ? { top: pos.top, left: pos.left } : undefined}>
-        {title && <b style={{ display: 'block', marginBottom: 6 }}>{title}</b>}
+        {title && (
+          <div className="ib-title">
+            <span className="ib-dot" aria-hidden="true" />
+            <b>{title}</b>
+          </div>
+        )}
         {children}
       </span>
     </span>
