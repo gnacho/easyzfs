@@ -524,11 +524,12 @@ table.data td.actions .disk-actions .btn{display:inline-flex;align-items:center;
   table.data.responsive td.smartcell{min-width:0;max-width:none}
   table.data.responsive td.hide-md{display:block} /* apilado hay sitio: se muestran */
   table.data.responsive td[data-l]::before{content:attr(data-l) ': ';color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
-  /* Acciones de disco en móvil: la fila ocupa el ancho y los botones se
-     reparten, sin hueco a la derecha (touch-friendly). */
-  table.data.responsive td.actions{padding:8px 0 2px}
-  table.data.responsive td.actions .disk-actions{display:flex;width:100%;gap:8px}
-  table.data.responsive td.actions .disk-actions .btn{flex:1;justify-content:center;padding:10px 8px}
+  /* Acciones de disco en móvil: botones compactos (solo icono) centrados en
+     una fila, sin estirarlos a ocupar todo el ancho (evita el aire alrededor
+     del icono). Touch-friendly con padding y ancho mínimo. */
+  table.data.responsive td.actions{padding:10px 0 0}
+  table.data.responsive td.actions .disk-actions{display:flex;align-items:center;justify-content:center;gap:12px}
+  table.data.responsive td.actions .disk-actions .btn{flex:0 0 auto;min-width:52px;justify-content:center;padding:10px 14px}
 }
 tr.clickable{cursor:pointer} tr.clickable:hover td{background:var(--surface2)}
 table.data th.num,table.data td.num{text-align:right;font-variant-numeric:tabular-nums}
