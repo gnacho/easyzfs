@@ -504,7 +504,9 @@ table.data td.actions .btn{margin:2px 4px 2px 0}
    En móvil el texto se oculta y quedan solo los iconos (#112-114). */
 table.data td.actions .disk-actions{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
 table.data td.actions .disk-actions .btn{display:inline-flex;align-items:center;gap:5px;margin:0}
-@media(max-width:699px){
+/* 700-1099px: los tres botones con texto no caben y empujan la tabla (overflow
+   horizontal); en ese rango se ocultan los labels y quedan solo los iconos. */
+@media(max-width:1099px){
   table.data td.actions .disk-actions .lbl{display:none}
   table.data td.actions .disk-actions .btn{padding:4px 8px}
 }
