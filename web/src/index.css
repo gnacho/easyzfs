@@ -518,18 +518,20 @@ table.data td.actions .disk-actions .btn{display:inline-flex;align-items:center;
 @media(max-width:699px){
   table.data.responsive, table.data.responsive tbody, table.data.responsive tr, table.data.responsive td{display:block}
   table.data.responsive thead{display:none}
-  table.data.responsive tr{padding:11px 14px}
-  table.data.responsive td{padding:2px 0;border-bottom:none;white-space:normal}
+  /* El tr pasa a flex para que la celda pool y la de acciones compartan la
+     MISMA última línea (acciones junto al POOL, a la izquierda). */
+  table.data.responsive tr{display:flex;flex-wrap:wrap;padding:11px 14px}
+  table.data.responsive td{padding:2px 0;border-bottom:none;white-space:normal;flex:1 1 100%}
   table.data.responsive td.num{text-align:left}
   table.data.responsive td.smartcell{min-width:0;max-width:none}
   table.data.responsive td.hide-md{display:block} /* apilado hay sitio: se muestran */
   table.data.responsive td[data-l]::before{content:attr(data-l) ': ';color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
-  /* Acciones de disco en móvil: botones compactos (solo icono) centrados en
-     una fila, sin estirarlos a ocupar todo el ancho (evita el aire alrededor
-     del icono). Touch-friendly con padding y ancho mínimo. */
-  table.data.responsive td.actions{padding:10px 0 0}
-  table.data.responsive td.actions .disk-actions{display:flex;align-items:center;justify-content:center;gap:12px}
-  table.data.responsive td.actions .disk-actions .btn{flex:0 0 auto;min-width:52px;justify-content:center;padding:10px 14px}
+  /* PoOL + acciones en la última línea compartida, alineadas a la izquierda. */
+  table.data.responsive tr td:nth-last-child(1),
+  table.data.responsive tr td:nth-last-child(2){flex:0 0 auto}
+  table.data.responsive td.actions{padding:2px 0}
+  table.data.responsive td.actions .disk-actions{display:inline-flex;align-items:center;gap:8px}
+  table.data.responsive td.actions .disk-actions .btn{min-width:44px;justify-content:center;padding:8px 12px}
 }
 tr.clickable{cursor:pointer} tr.clickable:hover td{background:var(--surface2)}
 table.data th.num,table.data td.num{text-align:right;font-variant-numeric:tabular-nums}
