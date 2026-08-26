@@ -131,6 +131,7 @@ export interface DataProvider {
   getRecommendations(): Promise<Recommendation[]>;
   smartTest(dev: string, type: 'short' | 'long'): Promise<void>;
   poweroffDisk(dev: string): Promise<void>;
+  identifyDisk(dev: string): Promise<void>;
 
   // Notificaciones push
   getPushVapidKey(): Promise<{ publicKey: string }>;

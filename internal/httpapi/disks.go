@@ -143,6 +143,19 @@ func (s *Server) smartTest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+// identifyDisk — POST /api/disks/{dev}/identify → 202.
+// Hace parpadear el LED de actividad de la bahía (lectura I/O durante unos
+// segundos) para localizar físicamente el disco. Inofensivo: lectura directa,
+// sirve también para miembros de pool antes de un replace.
+func (s *Server) identifyDisk(w http.ResponseWriter, r *http.Request) {
+	dev := r.PathValue("dev")
+	if err := s.act.IdentifyDisk(r.Context(), actor(r), dev); err != nil {
+		actionErr(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusAccepted)
+}
+
 // diskSmart — GET /api/disks/{dev}/smart (U1): detalle SMART completo del
 // disco (atributos + info) desde la caché del colector. 404 si no existe;
 // discos "unknown" (sin smartctl) → 200 con attributes vacíos.

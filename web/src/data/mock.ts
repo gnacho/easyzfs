@@ -957,6 +957,12 @@ export class MockProvider implements DataProvider {
     if (d.in_use) throw new ApiError(409, 'dev_mounted', 'el disco tiene particiones montadas o swap activo');
     this.history.unshift({ ts: iso(new Date()), tipo: 'poweroff', target: dev, ok: true, detail: 'disco apagado' });
   };
+  identifyDisk = async (dev: string) => {
+    await delay(400);
+    const d = this.disks.find((x) => x.dev === dev);
+    if (!d) throw new ApiError(404, 'not_found', 'Disco no encontrado');
+    this.history.unshift({ ts: iso(new Date()), tipo: 'identify', target: dev, ok: true, detail: 'LED parpadeando (actividad I/O)' });
+  };
 
   // ---- Notificaciones push (demo: simula OK SIN push real — regla demo) ----
   getPushVapidKey = async () => { await delay(); return { publicKey: '' }; };

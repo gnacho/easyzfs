@@ -657,11 +657,12 @@ function DatasetPropsModal({ ds, onClose }: { ds: Dataset; onClose: () => void }
 
 // ---------- detalle SMART del disco (U1): atributos + selftests + errores ----------
 function DiskDetailModal({ disk, onClose }: { disk: Disk; onClose: () => void }) {
-  const { t } = useApp();
+  const { t, isAdmin, notify } = useApp();
   const [tab, setTab] = useState<'attrs' | 'tests' | 'errors'>('attrs');
   const [smart, setSmart] = useState<DiskSmartResp | null>(null);
   const [log, setLog] = useState<DiskSmartLogResp | null>(null);
   const [err, setErr] = useState('');
+  const [ident, setIdent] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -779,6 +780,15 @@ function DiskDetailModal({ disk, onClose }: { disk: Disk; onClose: () => void })
       )}
 
       <div className="m-actions">
+        <button type="button" className="btn" disabled={!isAdmin || ident} title={!isAdmin ? t('no_permission') : t('dk_identify_hint')}
+          onClick={async () => {
+            setIdent(true); setErr('');
+            try { await getProvider().identifyDisk(disk.dev); notify(t('toast_disk_identify'), 'ok'); }
+            catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
+            setIdent(false);
+          }}>
+          {ident ? '…' : t('dk_identify')}
+        </button>
         <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
       </div>
     </ModalBox>
@@ -1117,6 +1127,7 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [identifying, setIdentifying] = useState(false);
 
   const free = useMemo(() => (disks ?? []).filter((d) => (d.pool === '—' || d.pool === '') && !d.in_use), [disks]);
   const current = useMemo(() => pools?.find((pl) => pl.name === pool)?.vdevs ?? [], [pools, pool]);
@@ -1199,7 +1210,19 @@ function PoolDiskModal({ pool, mode, presetOld, presetNew, onClose }: { pool: st
 
         {mode === 'replace' && (<>
           <p className="desc" style={{ marginTop: 0, color: 'var(--text2)' }}>{t('rp_proc')}</p>
-          <label htmlFor="rp-old">{t('rp_old')}</label>
+          <label htmlFor="rp-old">{t('rp_old')}
+            <button type="button" className="btn sm" style={{ marginLeft: 8 }} disabled={!isAdmin || identifying || !oldDev}
+              title={!isAdmin ? t('no_permission') : t('dk_identify_hint')}
+              onClick={async () => {
+                const dev = oldDisk?.dev ?? devBase(oldDev);
+                setIdentifying(true); setErr('');
+                try { await getProvider().identifyDisk(dev); notify(t('toast_disk_identify'), 'ok'); }
+                catch (e) { const m = errorMessage(e, t); setErr(m); notify(m, 'err'); }
+                setIdentifying(false);
+              }}>
+              {identifying ? '…' : t('dk_identify')}
+            </button>
+          </label>
           <select id="rp-old" value={oldDev} onChange={(e) => setOldDev(e.target.value)} disabled={!!presetOld}>
             {current.filter((v) => !v.replacing).map((v) => (
               <option key={v.dev} value={v.dev}>
