@@ -367,6 +367,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.18
+
+- **Identificar un disco físico haciendo parpadear el LED de actividad de su bahía (#81)**: una acción "Identificar" ejecuta una ráfaga de I/O de solo lectura contra el disco (`dd` a /dev/null, unos 8-9 segundos), lo que hace parpadear el LED de actividad de la bahía y deja claro qué ranura ocupa el dispositivo antes de extraerlo, por ejemplo justo antes de un replace. Funciona en hardware sin LED de localización controlable por software (sin encierro SES/SGPIO), no requiere confirmación y es segura también para miembros de pool (es una lectura directa). Disponible en cada fila de discos, en el modal de detalle SMART y en el diálogo de replace, junto al disco que se va a sustituir. La lista sudoers restringida ganó una regla `dd` de un solo uso.
+
 ### v2.9.17
 
 - **Crear un pool con la alineación elegida (ashift) (#105)**: `POST /api/pools` acepta un `ashift` opcional (9-16; 0 u omitido = automático) y pasa `-o ashift=N` a `zpool create`. El asistente de crear pool lo expone como selector (Auto, 12 para discos 4K, 13 para NVMe 8K, 9 para sectores 512B). La alineación es inmutable tras crear el pool, así que elegirla al crearlo evita que el pool herede en silencio un tamaño de sector mal detectado.

@@ -359,6 +359,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.18
+
+- **Identify a physical disk by blinking its bay activity LED (#81)**: an "Identify" action runs a short read-only I/O burst against the disk (`dd` to /dev/null, about 8-9 seconds), which makes the bay activity LED blink so the physical slot holding a device is obvious before pulling it out, for example right before a replace. It works on hardware without software-controllable locate LEDs (no SES/SGPIO enclosure), requires no confirmation and is safe for pool members too (it is a direct read). Available on every disk row, in the SMART detail modal and in the replace dialog next to the disk being replaced. The restricted sudoers allowlist gained a single-purpose `dd` rule.
+
 ### v2.9.17
 
 - **Pool creation lets you choose the alignment (ashift) (#105)**: `POST /api/pools` accepts an optional `ashift` (9-16; 0 or omitted = auto) and passes `-o ashift=N` to `zpool create`. The create-pool wizard exposes it as a select (Auto, 12 for 4K drives, 13 for 8K NVMe, 9 for 512B sectors). Alignment is immutable after the pool is created, so choosing it at creation time avoids pools silently inheriting a misdetected sector size.
