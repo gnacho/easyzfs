@@ -139,8 +139,8 @@ export default function Disks() {
                     {d.serial} · {fmtInt(d.hours)} {t('dk_hours')}
                   </div>
                 </td>
-                <td className="num hide-md" data-l={t('dk_size')}>{fmtBytes(d.size_bytes)}</td>
-                <td className="num" data-l={t('dk_temp')}>
+                <td className="num hide-md cell-size" data-l={t('dk_size')}>{fmtBytes(d.size_bytes)}</td>
+                <td className="num cell-temp" data-l={t('dk_temp')}>
                   {d.temp_c === null ? '—' : `${d.temp_c}°C`}
                   <DiskTempSpark dev={d.dev} />
                 </td>

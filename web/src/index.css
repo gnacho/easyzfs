@@ -514,19 +514,29 @@ table.data td.actions .disk-actions .btn{display:inline-flex;align-items:center;
    pantallas medianas/pequeñas). */
 @media(max-width:1299px){ .hide-md{display:none} }
 /* Tabla responsive: en pantalla estrecha las filas pasan a bloques
-   apilados (sin scroll horizontal y sin perder columnas). */
+   apilados (sin scroll horizontal y sin perder columnas). La info se agrupa
+   en una cuadrícula compacta para no dejar hueco a la derecha. */
 @media(max-width:699px){
   table.data.responsive, table.data.responsive tbody, table.data.responsive tr, table.data.responsive td{display:block}
   table.data.responsive thead{display:none}
-  /* El tr pasa a flex para que la celda pool y la de acciones compartan la
-     MISMA última línea (acciones junto al POOL, a la izquierda). */
-  table.data.responsive tr{display:flex;flex-wrap:wrap;padding:11px 14px}
-  table.data.responsive td{padding:2px 0;border-bottom:none;white-space:normal;flex:1 1 100%}
+  /* tr flex-wrap: cada celda ocupa el ancho, pero las que forman la
+     cuadrícula se reparten en columnas (modelo+serie, tamaño+temp, y el
+     pool con las acciones en la última línea). */
+  table.data.responsive tr{display:flex;flex-wrap:wrap;padding:11px 14px;gap:2px 10px}
+  table.data.responsive td{padding:2px 0;border-bottom:none;white-space:normal}
   table.data.responsive td.num{text-align:left}
   table.data.responsive td.smartcell{min-width:0;max-width:none}
   table.data.responsive td.hide-md{display:block} /* apilado hay sitio: se muestran */
   table.data.responsive td[data-l]::before{content:attr(data-l) ': ';color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
-  /* PoOL + acciones en la última línea compartida, alineadas a la izquierda. */
+  /* Línea 1: dev (nombre) + model (serie) — model ocupa el resto del ancho. */
+  table.data.responsive td.mono{flex:0 0 auto;font-weight:650}
+  table.data.responsive td.modelcell{flex:1 1 auto}
+  /* Línea 2: tamaño y temperatura en dos columnas. */
+  table.data.responsive td.cell-size,
+  table.data.responsive td.cell-temp{flex:0 0 calc(50% - 5px)}
+  /* Línea 3: salud SMART a ancho completo (badge + pista de recomendación). */
+  table.data.responsive td.smartcell{flex:1 1 100%}
+  /* Última línea: pool + acciones compartidas, a la izquierda. */
   table.data.responsive tr td:nth-last-child(1),
   table.data.responsive tr td:nth-last-child(2){flex:0 0 auto}
   table.data.responsive td.actions{padding:2px 0}
