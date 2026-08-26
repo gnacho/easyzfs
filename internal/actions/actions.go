@@ -346,6 +346,27 @@ func (s *Service) PowerOff(ctx context.Context, actor, dev string) error {
 	return nil
 }
 
+// IdentifyDisk — hace parpadear el LED de actividad de la bahía leyendo el
+// disco de forma continua (dd a /dev/null) durante unos segundos, para
+// localizar físicamente qué bahía corresponde al dispositivo antes de
+// extraerlo. No hay LED de locate por software sin SES/SGPIO; la actividad
+// I/O hace visible la bahía. count = ~10s de lectura a velocidad típica; el
+// timeout del contexto corta antes si el disco es lento o problemático.
+func (s *Service) IdentifyDisk(ctx context.Context, actor, dev string) error {
+	if !reDev.MatchString(dev) {
+		return ErrInvalidDev
+	}
+	s.audit(ctx, actor, "disk.identify", dev, nil, false)
+	_, err := executil.Run(ctx, 30*time.Second, "dd", "if=/dev/"+dev, "of=/dev/null", "bs=1M", "count=2048")
+	if errors.Is(err, executil.ErrTimeout) {
+		return nil // dd cortado por el contexto: el parpadeo ya cumplió su función
+	}
+	if err != nil {
+		return fmt.Errorf("identificar disco: %w", err)
+	}
+	return nil
+}
+
 // --- tareas del sistema (vía helper root confinado easyzfs-sysd) ---
 
 // sysdHelper — única vía de escritura sobre /etc/cron* y /etc/systemd.

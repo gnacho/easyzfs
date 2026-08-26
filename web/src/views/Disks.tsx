@@ -107,6 +107,19 @@ export default function Disks() {
     } catch (e) { const m = errorMessage(e, t); setMsg(m); notify(m, 'err'); }
   };
 
+  // Identificar disco: parpadeo del LED de actividad de la bahía (lectura I/O).
+  const [ident, setIdent] = useState('');
+  const identify = async (dev: string) => {
+    if (ident) return;
+    setIdent(dev); setMsg('');
+    try {
+      await getProvider().identifyDisk(dev);
+      setMsg(`${t('dk_identify_started', { dev })}`);
+      notify(t('toast_disk_identify'), 'ok');
+    } catch (e) { const m = errorMessage(e, t); setMsg(m); notify(m, 'err'); }
+    setIdent('');
+  };
+
   return (
     <div className="view">
       {loading && !data && <Spinner label={t('loading')} />}
@@ -166,7 +179,11 @@ export default function Disks() {
                 <td className="actions">
                   <span className="testbtns">
                     <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_short_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'short'); }}>{t('dk_test_short')}</button>{' '}
-                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_long_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'long'); }}>{t('dk_test_long')}</button>
+                    <button className="btn sm" disabled={d.smart === 'unknown'} title={t('dk_test_long_hint')} onClick={(e) => { e.stopPropagation(); test(d.dev, 'long'); }}>{t('dk_test_long')}</button>{' '}
+                    <button className="btn sm" disabled={!isAdmin || ident === d.dev} title={!isAdmin ? t('no_permission') : t('dk_identify_hint')}
+                      onClick={(e) => { e.stopPropagation(); identify(d.dev); }}>
+                      {ident === d.dev ? '…' : t('dk_identify')}
+                    </button>
                   </span>{' '}
                   {(d.pool === '—' || d.pool === '') && !d.in_use && (
                     <button className={`btn sm ${arm === d.dev ? 'danger' : ''}`} disabled={!isAdmin}

@@ -228,6 +228,7 @@ export class HttpProvider implements DataProvider {
   getRecommendations = () => get<Recommendation[]>('/recommendations');
   smartTest = (dev: string, type: 'short' | 'long') => post<void>(`/disks/${enc(dev)}/smart-test`, { type });
   poweroffDisk = (dev: string) => post<void>(`/disks/${enc(dev)}/poweroff`, {});
+  identifyDisk = (dev: string) => post<void>(`/disks/${enc(dev)}/identify`, {});
 
   getPushVapidKey = () => get<{ publicKey: string }>('/push/vapid-public-key');
   pushSubscribe = (sub: PushSubscriptionJSON, lang: 'es' | 'en') =>

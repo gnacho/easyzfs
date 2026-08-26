@@ -25,7 +25,9 @@ func newTestService(t *testing.T) (*Service, string) {
 	zpool := "#!/bin/sh\necho \"$@\" >> " + logFile + "\nexit 0\n"
 	// sudo falso: executil antepone 'sudo -n' cuando no somos root; lo ignora.
 	sudo := "#!/bin/sh\nwhile [ $# -gt 0 ]; do case \"$1\" in -*) shift;; *) break;; esac; done\nexec \"$@\"\n"
-	for name, body := range map[string]string{"zpool": zpool, "sudo": sudo} {
+	// dd falso: anota los args y sale 0 (IdentifyDisk).
+	dd := "#!/bin/sh\necho \"$@\" >> " + logFile + "\nexit 0\n"
+	for name, body := range map[string]string{"zpool": zpool, "sudo": sudo, "dd": dd} {
 		p := filepath.Join(dir, name)
 		if err := os.WriteFile(p, []byte(body), 0o755); err != nil {
 			t.Fatal(err)
@@ -123,5 +125,42 @@ func TestPoolCreateAshiftInvalido(t *testing.T) {
 	if err := svc.PoolCreate(context.Background(), "tester", "tank", "mirror",
 		[]string{"sda", "sdb"}, 17, true); !errors.Is(err, ErrInvalidInput) {
 		t.Errorf("ashift=17 = %v, esperaba ErrInvalidInput", err)
+	}
+}
+
+func TestIdentifyDisk(t *testing.T) {
+	svc, logFile := newTestService(t)
+
+	if err := svc.IdentifyDisk(context.Background(), "tester", "sda"); err != nil {
+		t.Fatalf("IdentifyDisk: %v", err)
+	}
+	out, err := os.ReadFile(logFile)
+	if err != nil {
+		t.Fatalf("el fake dd no registró la llamada: %v", err)
+	}
+	want := "if=/dev/sda of=/dev/null bs=1M count=2048"
+	if got := strings.TrimSpace(string(out)); got != want {
+		t.Fatalf("argv de dd = %q, esperaba %q", got, want)
+	}
+
+	// Auditoría: acción disk.identify, sin confirm (no destructiva).
+	var action, actor string
+	var confirmed int
+	err = svc.db.QueryRow(
+		"SELECT action, actor, confirmed FROM audit_log WHERE target='sda'").Scan(&action, &actor, &confirmed)
+	if err != nil {
+		t.Fatalf("audit_log: %v", err)
+	}
+	if action != "disk.identify" || actor != "tester" || confirmed != 0 {
+		t.Fatalf("audit = (%q,%q,%d), esperaba (disk.identify,tester,0)", action, actor, confirmed)
+	}
+}
+
+func TestIdentifyDiskDevInvalido(t *testing.T) {
+	svc, _ := newTestService(t)
+	for _, bad := range []string{"", "/dev/sda", "sda;rm", "s d", "../sda", "sda/part1"} {
+		if err := svc.IdentifyDisk(context.Background(), "tester", bad); !errors.Is(err, ErrInvalidDev) {
+			t.Errorf("IdentifyDisk(%q) = %v, esperaba ErrInvalidDev", bad, err)
+		}
 	}
 }

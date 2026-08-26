@@ -270,7 +270,7 @@ export interface DiffEntry {
   new_path?: string;
 }
 
-export type JobType = 'snapshot' | 'scrub' | 'trim' | 'smart_short' | 'smart_long' | 'poweroff' | 'replication';
+export type JobType = 'snapshot' | 'scrub' | 'trim' | 'smart_short' | 'smart_long' | 'poweroff' | 'replication' | 'identify';
 
 // Job de replicación ZFS send/recv (GET /api/replication).
 export interface ReplicationJob {

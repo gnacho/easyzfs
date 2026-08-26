@@ -218,6 +218,7 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("GET /api/disks/{dev}/smart", s.diskSmart)
 	a.HandleFunc("GET /api/disks/{dev}/smart-log", s.diskSmartLog)
 	a.HandleFunc("POST /api/disks/{dev}/poweroff", s.auth.RequireAdmin(s.powerOff))
+	a.HandleFunc("POST /api/disks/{dev}/identify", s.auth.RequireAdmin(s.identifyDisk))
 	// notificaciones push (Web Push; 503 push_not_configured sin claves VAPID)
 	a.HandleFunc("GET /api/push/vapid-public-key", s.getPushVapidKey)
 	a.HandleFunc("POST /api/push/subscribe", s.postPushSubscribe)
