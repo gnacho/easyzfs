@@ -500,23 +500,48 @@ table.data td.modelcell{white-space:normal;min-width:130px}
 table.data td.modelcell .mono{white-space:normal;overflow-wrap:anywhere}
 table.data td.actions{white-space:normal}
 table.data td.actions .btn{margin:2px 4px 2px 0}
-/* ≥1100px: Test corto/largo siempre en la misma línea (Apagar baja si hace
-   falta; solo los tests van en el span nowrap). */
-@media(min-width:1100px){ table.data td.actions .testbtns{white-space:nowrap} }
+/* Acciones de disco en una sola línea: flex con gap (Apagar ya no baja).
+   En móvil el texto se oculta y quedan solo los iconos (#112-114). */
+table.data td.actions .disk-actions{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+table.data td.actions .disk-actions .btn{display:inline-flex;align-items:center;gap:5px;margin:0}
+/* 700-1099px: los tres botones con texto no caben y empujan la tabla (overflow
+   horizontal); en ese rango se ocultan los labels y quedan solo los iconos. */
+@media(max-width:1099px){
+  table.data td.actions .disk-actions .lbl{display:none}
+  table.data td.actions .disk-actions .btn{padding:4px 8px}
+}
 /* Columnas prescindibles según ancho (evita el scroll horizontal en
    pantallas medianas/pequeñas). */
 @media(max-width:1299px){ .hide-md{display:none} }
 /* Tabla responsive: en pantalla estrecha las filas pasan a bloques
-   apilados (sin scroll horizontal y sin perder columnas). */
+   apilados (sin scroll horizontal y sin perder columnas). La info se agrupa
+   en una cuadrícula compacta para no dejar hueco a la derecha. */
 @media(max-width:699px){
   table.data.responsive, table.data.responsive tbody, table.data.responsive tr, table.data.responsive td{display:block}
   table.data.responsive thead{display:none}
-  table.data.responsive tr{padding:11px 14px}
+  /* tr flex-wrap: cada celda ocupa el ancho, pero las que forman la
+     cuadrícula se reparten en columnas (modelo+serie, tamaño+temp, y el
+     pool con las acciones en la última línea). */
+  table.data.responsive tr{display:flex;flex-wrap:wrap;padding:11px 14px;gap:2px 10px}
   table.data.responsive td{padding:2px 0;border-bottom:none;white-space:normal}
   table.data.responsive td.num{text-align:left}
   table.data.responsive td.smartcell{min-width:0;max-width:none}
   table.data.responsive td.hide-md{display:block} /* apilado hay sitio: se muestran */
   table.data.responsive td[data-l]::before{content:attr(data-l) ': ';color:var(--text2);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+  /* Línea 1: dev (nombre) + model (serie) — model ocupa el resto del ancho. */
+  table.data.responsive td.mono{flex:0 0 auto;font-weight:650}
+  table.data.responsive td.modelcell{flex:1 1 auto}
+  /* Línea 2: tamaño y temperatura en dos columnas. */
+  table.data.responsive td.cell-size,
+  table.data.responsive td.cell-temp{flex:0 0 calc(50% - 5px)}
+  /* Línea 3: salud SMART a ancho completo (badge + pista de recomendación). */
+  table.data.responsive td.smartcell{flex:1 1 100%}
+  /* Última línea: pool + acciones compartidas, a la izquierda. */
+  table.data.responsive tr td:nth-last-child(1),
+  table.data.responsive tr td:nth-last-child(2){flex:0 0 auto}
+  table.data.responsive td.actions{padding:2px 0}
+  table.data.responsive td.actions .disk-actions{display:inline-flex;align-items:center;gap:8px}
+  table.data.responsive td.actions .disk-actions .btn{min-width:44px;justify-content:center;padding:8px 12px}
 }
 tr.clickable{cursor:pointer} tr.clickable:hover td{background:var(--surface2)}
 table.data th.num,table.data td.num{text-align:right;font-variant-numeric:tabular-nums}
@@ -563,11 +588,17 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
 .modal .m-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
 
 /* ---- Update wizard (asistente de actualización) ---- */
-.uz-versions{display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 0 0}
-.uz-ver{font-family:var(--font-mono);font-size:13px;color:var(--text2)}
-.uz-arrow{color:var(--text3);font-size:13px}
+.uz-versions{display:flex;align-items:center;justify-content:center;gap:16px;margin:10px 0 0}
+.uz-ver-col{display:flex;flex-direction:column;align-items:center;gap:2px}
+.uz-ver-label{font-size:10.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.05em}
+.uz-ver{font-family:var(--font-mono);font-size:14px;color:var(--text2)}
+.uz-arrow{color:var(--text3);font-size:14px;margin-top:10px}
 .uz-latest{font-weight:600;color:var(--accent)}
-.uz-notes{margin:12px 0 0;font-size:12.5px;color:var(--text3);line-height:1.55}
+.uz-notes{margin:14px 0 0;border:1px solid var(--border);border-radius:8px;padding:10px 12px;background:var(--surface2);display:flex;flex-direction:column;gap:6px;min-width:0}
+.uz-notes-title{font-size:12px;font-weight:600;color:var(--text)}
+.uz-notes-body{font-size:12.5px;color:var(--text3);line-height:1.55;white-space:pre-line;max-height:200px;overflow:auto}
+.uz-link{font-size:12px;color:var(--accent);text-decoration:none;align-self:flex-start;display:inline-flex;align-items:center;gap:3px}
+.uz-link:hover{text-decoration:underline}
 .uz-checks{display:flex;flex-direction:column;gap:4px;margin:12px 0 0;font-size:12.5px;line-height:1.5;color:var(--err)}
 .uz-down{display:flex;gap:8px;align-items:flex-start;margin:14px 0 2px;font-size:12.5px;line-height:1.5;color:var(--warn)}
 .uz-down input{margin:2px 0 0;width:auto;padding:0;flex-shrink:0;accent-color:var(--warn)}

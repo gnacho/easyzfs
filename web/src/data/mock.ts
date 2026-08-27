@@ -952,12 +952,15 @@ export class MockProvider implements DataProvider {
   smartTest = async (dev: string, type: 'short' | 'long') => {    await delay(200);
     this.history.unshift({ ts: iso(new Date()), tipo: type === 'short' ? 'smart_short' : 'smart_long', target: dev, ok: true, detail: 'test iniciado' });
   };
-  poweroffDisk = async (dev: string) => {
+  poweroffDisk = async (dev: string, confirm?: string) => {
     await delay(300);
     const d = this.disks.find((x) => x.dev === dev);
     if (!d) throw new ApiError(404, 'not_found', 'Disco no encontrado');
-    if (d.pool !== '—' && d.pool !== '') throw new ApiError(409, 'dev_in_use', `el disco pertenece al pool '${d.pool}'`);
-    if (d.in_use) throw new ApiError(409, 'dev_mounted', 'el disco tiene particiones montadas o swap activo');
+    if (d.pool !== '—' && d.pool !== '') {
+      if (confirm !== dev) throw new ApiError(400, 'confirm_required', `requiere {"confirm":"${dev}"}`);
+    } else if (d.in_use) {
+      throw new ApiError(409, 'dev_mounted', 'el disco tiene particiones montadas o swap activo');
+    }
     this.history.unshift({ ts: iso(new Date()), tipo: 'poweroff', target: dev, ok: true, detail: 'disco apagado' });
   };
   identifyDisk = async (dev: string) => {
