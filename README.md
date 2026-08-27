@@ -359,6 +359,11 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.19
+
+- **Live update wizard with streaming progress (#115)**: applying an update now opens a wizard instead of a bare polling row. It starts with a confirmation step (current version, release notes when the release provides them, any failed readiness checks and an explicit downtime acknowledgment), then shows the real stages as they happen (download, install, restart) with a progress bar fed live over a server-pushed stream (`GET /api/update/stream`), and finally waits for the service to come back and reloads the app. Progress is pushed by the server rather than polled, and the readiness checks from `GET /api/update/plan` still block the Apply button when something fails.
+- **Availability check is cached on the server (no GitHub rate-limit)**: `GET /api/update/status` now returns a cached result instead of hitting GitHub on every request. The updater checks once at startup and every 24 hours, and the manual "Check for updates" button forces a fresh check via `POST /api/update/check`. This keeps the unauthenticated GitHub API limit (60 requests/hour per IP) from being exhausted on a shared IP. The update ribbon in the interface also reads that server status, so the browser no longer queries GitHub. Optionally, a `GITHUB_TOKEN` in the environment raises the limit further.
+
 ### v2.9.18
 
 - **Identify a physical disk by blinking its bay activity LED (#81)**: an "Identify" action runs a short read-only I/O burst against the disk (`dd` to /dev/null, about 8-9 seconds), which makes the bay activity LED blink so the physical slot holding a device is obvious before pulling it out, for example right before a replace. It works on hardware without software-controllable locate LEDs (no SES/SGPIO enclosure), requires no confirmation and is safe for pool members too (it is a direct read). Available on every disk row, in the SMART detail modal and in the replace dialog next to the disk being replaced. The restricted sudoers allowlist gained a single-purpose `dd` rule.

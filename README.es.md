@@ -367,6 +367,11 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.19
+
+- **Asistente de actualización en vivo con progreso en streaming (#115)**: aplicar una actualización ahora abre un asistente en vez de una fila de polling. Empieza con un paso de confirmación (versión actual, notas de release cuando la release las aporta, las comprobaciones de readiness que fallen y un aviso explícito de caída del servicio), luego muestra las etapas reales según ocurren (descargando, instalando, reiniciando) con una barra de progreso alimentada en vivo por un stream del servidor (`GET /api/update/stream`), y por último espera a que el servicio vuelva y recarga la app. El progreso lo empuja el servidor en lugar de sondeárselo, y las comprobaciones de `GET /api/update/plan` siguen bloqueando el botón Aplicar cuando algo falla.
+- **La comprobación de disponibilidad se cachea en el servidor (sin rate-limit de GitHub)**: `GET /api/update/status` ahora devuelve un resultado en caché en lugar de llamar a GitHub en cada petición. El updater comprueba una vez al arrancar y cada 24 horas, y el botón "Comprobar actualizaciones" fuerza una comprobación con `POST /api/update/check`. Así no se agota el límite sin autenticar de la API de GitHub (60 peticiones/hora por IP) en una IP compartida. El ribbon de actualización de la interfaz también lee ese estado del servidor, de modo que el navegador ya no consulta GitHub. Opcionalmente, un `GITHUB_TOKEN` en el entorno eleva aún más el límite.
+
 ### v2.9.18
 
 - **Identificar un disco físico haciendo parpadear el LED de actividad de su bahía (#81)**: una acción "Identificar" ejecuta una ráfaga de I/O de solo lectura contra el disco (`dd` a /dev/null, unos 8-9 segundos), lo que hace parpadear el LED de actividad de la bahía y deja claro qué ranura ocupa el dispositivo antes de extraerlo, por ejemplo justo antes de un replace. Funciona en hardware sin LED de localización controlable por software (sin encierro SES/SGPIO), no requiere confirmación y es segura también para miembros de pool (es una lectura directa). Disponible en cada fila de discos, en el modal de detalle SMART y en el diálogo de replace, junto al disco que se va a sustituir. La lista sudoers restringida ganó una regla `dd` de un solo uso.
