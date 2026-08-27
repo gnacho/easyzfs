@@ -43,7 +43,7 @@ func setupUpdateServer(t *testing.T) (http.Handler, *http.Cookie) {
 	}
 	am := auth.NewManager(d, secret, false)
 
-	up := updater.New("2.9.18", t.TempDir())
+	up := updater.New("2.9.18", t.TempDir(), "")
 	srv := NewServer(Deps{
 		Cfg:     &config.Config{Mock: true},
 		DB:      d,

@@ -12,7 +12,7 @@ func TestIsRestartConfigured(t *testing.T) {
 	pathUnit := filepath.Join(tmp, "easyzfs-update.path")
 	svcUnit := filepath.Join(tmp, "easyzfs-update.service")
 
-	u := New("2.9.9", tmp)
+	u := New("2.9.9", tmp, "")
 	u.restartPathUnit = pathUnit
 	u.restartServiceUnit = svcUnit
 
@@ -40,7 +40,7 @@ func TestPlanRestartReady(t *testing.T) {
 	pathUnit := filepath.Join(tmp, "easyzfs-update.path")
 	svcUnit := filepath.Join(tmp, "easyzfs-update.service")
 
-	u := New("2.9.9", tmp)
+	u := New("2.9.9", tmp, "")
 	u.restartPathUnit = pathUnit
 	u.restartServiceUnit = svcUnit
 
@@ -85,7 +85,7 @@ func TestStatusIncludesRestartConfigured(t *testing.T) {
 	pathUnit := filepath.Join(tmp, "easyzfs-update.path")
 	svcUnit := filepath.Join(tmp, "easyzfs-update.service")
 
-	u := New("2.9.9", tmp)
+	u := New("2.9.9", tmp, "")
 	u.restartPathUnit = pathUnit
 	u.restartServiceUnit = svcUnit
 
@@ -106,7 +106,7 @@ func TestStatusIncludesRestartConfigured(t *testing.T) {
 }
 
 func TestSubscribeBroadcastProgress(t *testing.T) {
-	u := New("2.9.18", t.TempDir())
+	u := New("2.9.18", t.TempDir(), "")
 	ch, cancel := u.Subscribe()
 	defer cancel()
 

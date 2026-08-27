@@ -74,6 +74,7 @@ type Progress struct {
 type Updater struct {
 	current string   // versión local (inyectada por ldflags), sin 'v'
 	dataDir string   // DATA_DIR; el binario nuevo y el flag viven en dataDir/update/
+	ghToken string   // GITHUB_TOKEN: eleva el límite de GitHub a 5000/h (autenticado)
 
 	// Rutas de las units systemd de reinicio. Inyectables para tests.
 	restartPathUnit    string
@@ -93,11 +94,13 @@ type Updater struct {
 	subs map[chan Status]struct{}
 }
 
-// New crea el updater. current es la versión del binario (main.version).
-func New(current, dataDir string) *Updater {
+// New crea el updater. current es la versión del binario (main.version) y
+// ghToken un token GitHub opcional que eleva el límite de la API a 5000/h.
+func New(current, dataDir, ghToken string) *Updater {
 	return &Updater{
 		current:            stripV(current),
 		dataDir:            dataDir,
+		ghToken:            ghToken,
 		restartPathUnit:    restartPathUnit,
 		restartServiceUnit: restartServiceUnit,
 		subs:               make(map[chan Status]struct{}),
@@ -109,6 +112,21 @@ func stripV(v string) string {
 		return v[1:]
 	}
 	return v
+}
+
+// newUpdater crea una instancia de go-selfupdate con el checksum validator. Si
+// hay token, usa un source GitHub autenticado (límite 5000/h); si no, el
+// anónimo (60/h). Así el chequeo del servidor no depende del rate-limit.
+func (u *Updater) newUpdater() (*selfupdate.Updater, error) {
+	cfg := selfupdate.Config{Validator: &selfupdate.ChecksumValidator{UniqueFilename: checksumsFile}}
+	if u.ghToken != "" {
+		src, err := selfupdate.NewGitHubSource(selfupdate.GitHubConfig{APIToken: u.ghToken})
+		if err != nil {
+			return nil, fmt.Errorf("updater: source: %w", err)
+		}
+		cfg.Source = src
+	}
+	return selfupdate.NewUpdater(cfg)
 }
 
 func truncateReleaseNotes(body string) string {
@@ -261,9 +279,7 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 	u.inProgress = false // un check no es un apply
 	u.mu.Unlock()
 
-	up, err := selfupdate.NewUpdater(selfupdate.Config{
-		Validator: &selfupdate.ChecksumValidator{UniqueFilename: checksumsFile},
-	})
+	up, err := u.newUpdater()
 	if err != nil {
 		return Status{Current: u.current}, fmt.Errorf("updater: config: %w", err)
 	}
@@ -322,9 +338,7 @@ func (u *Updater) Apply(ctx context.Context) error {
 		u.mu.Unlock()
 	}()
 
-	up, err := selfupdate.NewUpdater(selfupdate.Config{
-		Validator: &selfupdate.ChecksumValidator{UniqueFilename: checksumsFile},
-	})
+	up, err := u.newUpdater()
 	if err != nil {
 		return fmt.Errorf("updater: config: %w", err)
 	}

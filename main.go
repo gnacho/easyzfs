@@ -158,7 +158,7 @@ func main() {
 
 	// Updater: detecta releases semver y prepara el apply (el swap lo hace la
 	// unit easyzfs-update.path). Inerte si version=dev o sin DATA_DIR escribible.
-	updaterSvc := updater.New(version, cfg.DataDir())
+	updaterSvc := updater.New(version, cfg.DataDir(), os.Getenv("GITHUB_TOKEN"))
 
 	// Versión de OpenZFS del host (una vez, al arranque).
 	zfsVersion := "mock"
