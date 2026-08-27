@@ -16,7 +16,6 @@ import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
 import { APIKeysPanel } from '../components/APIKeysPanel';
-import { UpdateWizard } from '../components/UpdateWizard';
 import { usePush } from '../data/push';
 import { useReleaseCheck } from '../ui/releasecheck';
 import { ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion } from '../ui/theme';
@@ -113,10 +112,10 @@ function ReleaseIcon({ version }: { version: string | undefined }) {
 // resultado inline: al día, nueva versión, aplicando o error.
 function UpdateCheckRow({ version }: { version: string | undefined }) {
   const { t } = useApp();
+  const { openModal } = useModal();
   const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [plan, setPlan] = useState<{ canApply: boolean; checks: { id: string; status: string; title: string; summary: string }[] } | null>(null);
-  const [showWizard, setShowWizard] = useState(false);
 
   const check = async () => {
     setState('checking');
@@ -143,7 +142,7 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
         </span>
         <span className="upd-actions">
           {state === 'available' && (
-            <button className="btn sm primary" onClick={() => setShowWizard(true)}>
+            <button className="btn sm primary" onClick={() => openModal('updatewizard')}>
               {t('upd_rel_upd')}
             </button>
           )}
@@ -166,9 +165,6 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
           <b>{t('ab_upd_norestart')}</b><br />
           {t('ab_upd_norestart_d')}
         </div>
-      )}
-      {showWizard && status && plan && (
-        <UpdateWizard status={status} plan={plan} onClose={() => setShowWizard(false)} />
       )}
     </div>
   );

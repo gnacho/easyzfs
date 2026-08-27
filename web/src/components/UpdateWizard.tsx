@@ -1,8 +1,9 @@
 // UpdateWizard — asistente de actualización multi-paso con barra de progreso
-// (UX del actualizador de NetPulse): confirmación → pasos (download → install
-// → restart) → reinicio → recarga. Estado en vivo por SSE (/api/update/stream)
-// con fallback a polling, y recarga solo cuando responde un proceso distinto
-// (uptime_sec menor que el baseline previo al apply).
+// (UX del actualizador de NetPulse). Autosuficiente: consulta el estado y el
+// plan al abrir, y lo abre tanto el ribbon como la fila de Ajustes. Fases:
+// confirmación → pasos (download → install → restart) → reinicio → recarga.
+// Estado en vivo por SSE (/api/update/stream) con fallback a polling, y
+// recarga solo cuando responde un proceso distinto (uptime_sec menor).
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ModalBox } from './Modal';
 import { useApp } from '../ui/store';
@@ -18,8 +19,6 @@ interface PlanCheck {
 }
 
 interface UpdateWizardProps {
-  status: UpdateStatus;
-  plan: { canApply: boolean; checks: PlanCheck[] };
   onClose: () => void;
 }
 
@@ -28,8 +27,11 @@ const STEP_ORDER = ['downloading', 'installing', 'restarting'] as const;
 
 type Phase = 'confirm' | 'progress' | 'restarting' | 'error';
 
-export function UpdateWizard({ status: initialStatus, plan, onClose }: UpdateWizardProps) {
+export function UpdateWizard({ onClose }: UpdateWizardProps) {
   const { t } = useApp();
+  const [status, setStatus] = useState<UpdateStatus | null>(null);
+  const [plan, setPlan] = useState<{ canApply: boolean; checks: PlanCheck[] } | null>(null);
+  const [loading, setLoading] = useState(true);
   const [phase, setPhase] = useState<Phase>('confirm');
   const [step, setStep] = useState<string>('downloading');
   const [pct, setPct] = useState(0);
@@ -46,6 +48,23 @@ export function UpdateWizard({ status: initialStatus, plan, onClose }: UpdateWiz
     phaseRef.current = p;
     setPhase(p);
   };
+
+  // Estado + plan al abrir (autosuficiente: sirve para ribbon y Ajustes).
+  useEffect(() => {
+    let alive = true;
+    Promise.all([getProvider().getUpdateStatus(), getProvider().getUpdatePlan()])
+      .then(([st, pl]) => {
+        if (!alive) return;
+        setStatus(st);
+        setPlan(pl);
+        // Ya hay un update en curso: adoptarlo en fase de progreso.
+        if (st.inProgress) setPhaseBoth('progress');
+      })
+      .catch(() => { /* sin sesión/red: se muestra el error en confirm */ })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const closeStream = useCallback(() => {
     if (esRef.current) { esRef.current.close(); esRef.current = null; }
@@ -135,7 +154,7 @@ export function UpdateWizard({ status: initialStatus, plan, onClose }: UpdateWiz
   }, [closeStream, handleStatus, startPolling, waitAndReload, step]);
 
   const apply = async () => {
-    if (!ackDown || !plan.canApply) return;
+    if (!ackDown || !plan?.canApply) return;
     setPhaseBoth('progress');
     startStream();
     try {
@@ -155,11 +174,34 @@ export function UpdateWizard({ status: initialStatus, plan, onClose }: UpdateWiz
   };
 
   const busy = phase === 'progress' || phase === 'restarting';
-  const activeIdx = STEP_ORDER.indexOf(step as (typeof STEP_ORDER)[number]);
-  const failChecks = plan.checks.filter((c) => c.status === 'fail');
 
   // No permitir cerrar mientras el update está en vuelo (Esc/overlay).
   const handleClose = () => { if (!busy) onClose(); };
+
+  const loadingNode = (
+    <ModalBox onClose={handleClose} label={t('uz_title')}>
+      <h3>{t('uz_title')}</h3>
+      <div className="empty" role="status">{t('loading')}</div>
+    </ModalBox>
+  );
+
+  if (loading) return loadingNode;
+  if (!status || !plan) {
+    return (
+      <ModalBox onClose={handleClose} label={t('uz_title')}>
+        <h3>{t('uz_title')}</h3>
+        <div className="uz-error">
+          <div className="uz-error-title">{t('ab_upderr')}</div>
+          <div className="m-actions">
+            <button type="button" className="btn" onClick={onClose}>{t('uz_close')}</button>
+          </div>
+        </div>
+      </ModalBox>
+    );
+  }
+
+  const failChecks = plan.checks.filter((c) => c.status === 'fail');
+  const activeIdx = STEP_ORDER.indexOf(step as (typeof STEP_ORDER)[number]);
 
   return (
     <ModalBox onClose={handleClose} label={t('uz_title')}>
@@ -169,12 +211,12 @@ export function UpdateWizard({ status: initialStatus, plan, onClose }: UpdateWiz
         <>
           <p className="desc">{t('uz_confirm')}</p>
           <div className="uz-versions">
-            <span className="uz-ver">{initialStatus.current || ''}</span>
+            <span className="uz-ver">{status.current || ''}</span>
             <span className="uz-arrow" aria-hidden="true">→</span>
-            <span className="uz-ver uz-latest">{initialStatus.latest || ''}</span>
+            <span className="uz-ver uz-latest">{status.latest || ''}</span>
           </div>
-          {initialStatus.releaseNotes && (
-            <p className="uz-notes">{initialStatus.releaseNotes}</p>
+          {status.releaseNotes && (
+            <p className="uz-notes">{status.releaseNotes}</p>
           )}
           {failChecks.length > 0 && (
             <div className="uz-checks" role="alert">
@@ -190,7 +232,7 @@ export function UpdateWizard({ status: initialStatus, plan, onClose }: UpdateWiz
           <div className="m-actions">
             <button type="button" className="btn" onClick={onClose}>{t('uz_cancel')}</button>
             <button type="button" className="btn primary" disabled={!ackDown || !plan.canApply} onClick={() => { void apply(); }}>
-              <IconDownload size={14} /> {t('uz_start', { v: initialStatus.latest || '' })}
+              <IconDownload size={14} /> {t('uz_start', { v: status.latest || '' })}
             </button>
           </div>
         </>

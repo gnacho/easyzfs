@@ -5,7 +5,7 @@ import { Suspense, useEffect, useRef, useState } from 'react';
 import type { ComponentType } from 'react';
 import { AppProvider, useApp, alertTargetView } from './ui/store';
 import type { ViewId } from './ui/store';
-import { ModalProvider, ModalHost } from './components/ModalHost';
+import { ModalProvider, ModalHost, useModal } from './components/ModalHost';
 import { ToastHost } from './components/Toast';
 import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconMonitor, IconChev, IconFoldLeft, IconFoldRight, IconUser, IconList } from './components/icons';
 import { Spinner } from './components/ui';
@@ -120,6 +120,7 @@ function AlertsPanel({ onClose }: { onClose: () => void }) {
 
 function Shell() {
   const { t, route, navigate, demo, exitDemo, user, isAdmin, ready, themeMode, themeEff, setTheme } = useApp();
+  const { openModal } = useModal();
   const [showAlerts, setShowAlerts] = useState(false);
   const [hasPending, setHasPending] = useState(false);
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem(COLLAPSED_KEY) === '1');
@@ -130,7 +131,6 @@ function Shell() {
   // enlaza a la release.
   const [version, setVersion] = useState('');
   const [relDismissed, setRelDismissed] = useState(getReleaseDismissed());
-  const [applyingRel, setApplyingRel] = useState(false);
   const [updateToast, setUpdateToast] = useState('');
   const rel = useReleaseCheck(version || undefined, ready && !!user && !demo && isAdmin);
   useEffect(() => {
@@ -144,12 +144,6 @@ function Shell() {
     }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, user, demo]);
-
-  const applyRel = async () => {
-    setApplyingRel(true);
-    try { await getProvider().applyUpdate(); } catch { /* error silencioso: recarga en el reinicio */ }
-    finally { setApplyingRel(false); }
-  };
 
   const toggleCollapsed = () => {
     setCollapsed((c) => {
@@ -272,9 +266,8 @@ function Shell() {
                 {rel.notes && <span className="relbar-notes">{rel.notes}</span>}
                 <div className="relbar-actions">
                   <a href={rel.url} target="_blank" rel="noreferrer" className="btn sm">{t('ab_upd_new')}</a>
-                  <button className="btn sm primary" disabled={applyingRel}
-                    onClick={() => { void applyRel(); }}>
-                    {applyingRel ? t('ab_updapp') : t('upd_rel_upd')}
+                  <button className="btn sm primary" onClick={() => openModal('updatewizard')}>
+                    {t('upd_rel_upd')}
                   </button>
                   <button className="btn sm"
                     onClick={() => { dismissRelease(rel.version); setRelDismissed(rel.version); }}>

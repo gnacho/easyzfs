@@ -6,6 +6,7 @@ import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, fmtDateTime, fmtDuration, parseSize } from '../ui/format';
 import { statusLabel } from '../ui/labels';
 import { ModalBox, useModal } from './Modal';
+import { UpdateWizard } from './UpdateWizard';
 import { Badge, Seg, InfoBubble, Spinner } from './ui';
 import { SYS_SCHED_DEFAULT, buildSysSchedule, parseSysSchedule } from '../ui/syssched';
 import type { SysSchedState } from '../ui/syssched';
@@ -85,6 +86,7 @@ export function ModalHost() {
     case 'mypass': return <MyPasswdModal onClose={closeModal} />;
     case 'passwd': return <PasswdModal user={p.user as string} onClose={closeModal} />;
     case 'deluser': return <DeleteUserModal user={p.user as string} onClose={closeModal} />;
+    case 'updatewizard': return <UpdateWizard onClose={closeModal} />;
     case 'rollback': return <RollbackModal full={p.full as string} onClose={closeModal} />;
     case 'delsnap': return <DeleteSnapModal full={p.full as string} onClose={closeModal} />;
     default: return null;
