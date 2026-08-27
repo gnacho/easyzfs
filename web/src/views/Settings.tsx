@@ -17,7 +17,7 @@ import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
 import { APIKeysPanel } from '../components/APIKeysPanel';
 import { usePush } from '../data/push';
-import { useReleaseCheck } from '../ui/releasecheck';
+import { useReleaseCheck, refreshUpdateState } from '../ui/releasecheck';
 import { ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion } from '../ui/theme';
 import type { AccentId, Density, ThemeMode } from '../ui/theme';
 import type { I18nKey } from '../ui/i18n';
@@ -126,6 +126,7 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
       setStatus(st);
       setPlan(plan);
       setState(st.available ? 'available' : 'uptodate');
+      refreshUpdateState(); // que el ribbon global se actualice tras el check manual
     } catch {
       setState('error');
     }
