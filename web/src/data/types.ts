@@ -83,6 +83,8 @@ export interface UpdateStatus {
   inProgress?: boolean;
   progress?: { step: string; percentage: number };
   restartConfigured?: boolean;
+  releaseNotes?: string; // notas del release (changelog) truncadas
+  releaseUrl?: string;   // enlace a la release en GitHub
 }
 
 // Capacidades derivadas de la versión de OpenZFS (feature-gating, lote A).

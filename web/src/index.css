@@ -326,6 +326,7 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
   color:var(--text3);
 }
 .ptr-spin{animation:ptr-rot .8s linear infinite}
+.spin{animation:ptr-rot .8s linear infinite}
 @keyframes ptr-rot{to{transform:rotate(360deg)}}
 
 
