@@ -211,12 +211,26 @@ export function UpdateWizard({ onClose }: UpdateWizardProps) {
         <>
           <p className="desc">{t('uz_confirm')}</p>
           <div className="uz-versions">
-            <span className="uz-ver">{status.current || ''}</span>
+            <div className="uz-ver-col">
+              <span className="uz-ver-label">{t('uz_current')}</span>
+              <span className="uz-ver">{status.current || ''}</span>
+            </div>
             <span className="uz-arrow" aria-hidden="true">→</span>
-            <span className="uz-ver uz-latest">{status.latest || ''}</span>
+            <div className="uz-ver-col">
+              <span className="uz-ver-label">{t('uz_latest')}</span>
+              <span className="uz-ver uz-latest">{status.latest || ''}</span>
+            </div>
           </div>
           {status.releaseNotes && (
-            <p className="uz-notes">{status.releaseNotes}</p>
+            <div className="uz-notes">
+              <div className="uz-notes-title">{t('uz_notes_title')}</div>
+              <div className="uz-notes-body">{status.releaseNotes}</div>
+              {status.releaseUrl && (
+                <a className="uz-link" href={status.releaseUrl} target="_blank" rel="noopener noreferrer">
+                  {t('uz_release_url')} ↗
+                </a>
+              )}
+            </div>
           )}
           {failChecks.length > 0 && (
             <div className="uz-checks" role="alert">
