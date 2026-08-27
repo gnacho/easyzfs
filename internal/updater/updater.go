@@ -301,7 +301,7 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 	u.currentAvailable = available
 	u.mu.Unlock()
 
-	return Status{Current: u.current, Latest: latestV, Available: available, ReleaseNotes: notes, ReleaseURL: releaseURL}, nil
+	return Status{Current: u.current, Latest: latestV, Available: available, ReleaseNotes: notes, ReleaseURL: releaseURL, RestartConfigured: u.isRestartConfigured()}, nil
 }
 
 // Apply descarga+valida el binario nuevo a $DATA_DIR/update/easyzfs.new y toca
