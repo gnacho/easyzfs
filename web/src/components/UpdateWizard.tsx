@@ -158,88 +158,81 @@ export function UpdateWizard({ status: initialStatus, plan, onClose }: UpdateWiz
   const activeIdx = STEP_ORDER.indexOf(step as (typeof STEP_ORDER)[number]);
   const failChecks = plan.checks.filter((c) => c.status === 'fail');
 
+  // No permitir cerrar mientras el update está en vuelo (Esc/overlay).
+  const handleClose = () => { if (!busy) onClose(); };
+
   return (
-    <ModalBox onClose={onClose} label={t('uz_title')}>
-      <div className="modal-head">
-        <h3>{t('uz_title')}</h3>
-        {!busy && <button className="iconbtn" onClick={onClose} aria-label="Cerrar">×</button>}
-      </div>
+    <ModalBox onClose={handleClose} label={t('uz_title')}>
+      <h3>{t('uz_title')}</h3>
 
       {phase === 'confirm' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
-            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', color: 'var(--text3)' }}>{initialStatus.current || ''}</span>
-            <span aria-hidden="true">→</span>
-            <span style={{ fontSize: 13, fontFamily: 'var(--font-mono)', fontWeight: 600, color: 'var(--accent)' }}>{initialStatus.latest || ''}</span>
+        <>
+          <p className="desc">{t('uz_confirm')}</p>
+          <div className="uz-versions">
+            <span className="uz-ver">{initialStatus.current || ''}</span>
+            <span className="uz-arrow" aria-hidden="true">→</span>
+            <span className="uz-ver uz-latest">{initialStatus.latest || ''}</span>
           </div>
           {initialStatus.releaseNotes && (
-            <div style={{ fontSize: 12.5, color: 'var(--text3)' }}>{initialStatus.releaseNotes}</div>
+            <p className="uz-notes">{initialStatus.releaseNotes}</p>
           )}
           {failChecks.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12.5, color: 'var(--err)' }}>
+            <div className="uz-checks" role="alert">
               {failChecks.map((c) => (
                 <div key={c.id}>✗ {c.summary}</div>
               ))}
             </div>
           )}
-          <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 12.5, color: 'var(--warn)' }}>
-            <input type="checkbox" checked={ackDown} onChange={(e) => setAckDown(e.target.checked)} />
+          <div className="uz-down">
+            <input type="checkbox" id="uz-ack" aria-label={t('uz_down')} checked={ackDown} onChange={(e) => setAckDown(e.target.checked)} />
             <span>{t('uz_down')}</span>
-          </label>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 6 }}>
-            <button className="btn" onClick={onClose}>{t('uz_cancel')}</button>
-            <button
-              className="btn sm primary"
-              disabled={!ackDown || !plan.canApply}
-              onClick={() => { void apply(); }}
-            >
-              <IconDownload size={14} />
-              {t('uz_start', { v: initialStatus.latest || '' })}
+          </div>
+          <div className="m-actions">
+            <button type="button" className="btn" onClick={onClose}>{t('uz_cancel')}</button>
+            <button type="button" className="btn primary" disabled={!ackDown || !plan.canApply} onClick={() => { void apply(); }}>
+              <IconDownload size={14} /> {t('uz_start', { v: initialStatus.latest || '' })}
             </button>
           </div>
-        </div>
+        </>
       )}
 
       {phase === 'progress' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} role="status">
-          <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="uz-progress" role="status">
+          <ul className="uz-steps">
             {STEP_ORDER.map((s) => {
-              const done = activeIdx > STEP_ORDER.indexOf(s) || step === 'restarting';
-              const active = activeIdx === STEP_ORDER.indexOf(s) && step !== 'restarting';
+              const idx = STEP_ORDER.indexOf(s);
+              const done = activeIdx > idx || step === 'restarting';
+              const active = activeIdx === idx && step !== 'restarting';
               return (
-                <li key={s} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
-                  {done ? <IconCheck size={13} /> : active ? <IconRefresh size={13} className="spin" /> : <span style={{ opacity: .35 }}>○</span>}
-                  <span style={{ opacity: done || active ? 1 : .55 }}>{t(`uz_step_${s}`)}</span>
+                <li key={s} className={done ? 'done' : active ? 'active' : ''}>
+                  {done ? <IconCheck size={13} /> : active ? <IconRefresh size={13} className="spin" /> : <span className="uz-step-dot">○</span>}
+                  <span>{t(`uz_step_${s}`)}</span>
                 </li>
               );
             })}
           </ul>
-          <div>
-            <div style={{ fontSize: 12, marginBottom: 4, color: 'var(--text3)' }}>
-              {t(`uz_step_${step}`)} · {pct}%
-            </div>
-            <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${pct}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width .3s' }} />
-            </div>
+          <div className="uz-bar-label">{t(`uz_step_${step}`)} · {pct}%</div>
+          <div className="uz-bar">
+            <div className="uz-bar-fill" style={{ width: `${pct}%` }} />
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text3)', textAlign: 'center' }}>{t('uz_close_hint')}</div>
+          <p className="uz-hint">{t('uz_close_hint')}</p>
         </div>
       )}
 
       {phase === 'restarting' && (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, padding: '12px 0' }} role="status">
+        <div className="uz-restarting" role="status">
           <IconRefresh size={30} className="spin" />
-          <span style={{ fontSize: 13.5, fontWeight: 600 }}>{t('uz_restarting')}</span>
-          <span style={{ fontSize: 12, color: 'var(--text3)' }}>{t('uz_reload')}</span>
+          <span className="uz-restart-title">{t('uz_restarting')}</span>
+          <span className="uz-hint">{t('uz_reload')}</span>
         </div>
       )}
 
       {phase === 'error' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <div style={{ fontSize: 13.5, fontWeight: 600, color: 'var(--err)' }}>{t('uz_failed')}</div>
-          {errorCode && <div style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text3)' }}>{errorCode}</div>}
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <button className="btn" onClick={onClose}>{t('uz_close')}</button>
+        <div className="uz-error">
+          <div className="uz-error-title">{t('uz_failed')}</div>
+          {errorCode && <div className="uz-error-code">{errorCode}</div>}
+          <div className="m-actions">
+            <button type="button" className="btn" onClick={onClose}>{t('uz_close')}</button>
           </div>
         </div>
       )}
