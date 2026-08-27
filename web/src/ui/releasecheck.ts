@@ -6,6 +6,7 @@
 // (solo admin; fuerza la consulta al momento). Incluye las release notes
 // (primeros ~600 caracteres del body) para mostrar un resumen de novedades.
 import { useEffect, useState } from 'react';
+import { getProvider } from '../data';
 
 const REPO = 'gnacho/easyzfs';
 export const RELEASES_URL = `https://github.com/${REPO}/releases`;
@@ -49,28 +50,28 @@ function truncateNotes(body: string): string {
 }
 
 async function fetchLatest(): Promise<Cache> {
-  let res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
-  let tag = '';
-  let url = RELEASES_URL;
-  let notes = '';
-  if (res.ok) {
-    const j = await res.json();
-    tag = j.tag_name ?? '';
-    url = j.html_url ?? url;
-    notes = truncateNotes(j.body ?? '');
-  } else if (res.status === 404) {
-    // Sin release publicada: fallback al último tag
-    res = await fetch(`https://api.github.com/repos/${REPO}/tags?per_page=1`);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const tags = await res.json();
-    tag = tags?.[0]?.name ?? '';
-    url = `${RELEASES_URL}/tag/${tag}`;
-  } else {
-    throw new Error(`HTTP ${res.status}`); // 403 = rate-limit 60/h por IP
+  // El servidor es la fuente de verdad (patrón Pulse): consulta
+  // /api/update/status, que usa un token GitHub si está configurado y así no
+  // depende del rate-limit del navegador (60/h por IP compartida).
+  const prev = readCache();
+  try {
+    const st = await getProvider().getUpdateStatus();
+    let tag = '';
+    let url = RELEASES_URL;
+    let notes = '';
+    if (st && st.available && st.latest) {
+      tag = st.latest;
+      url = st.releaseUrl || RELEASES_URL;
+      notes = truncateNotes(st.releaseNotes || '');
+    }
+    const c: Cache = { ts: Date.now(), tag, url, notes };
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* sin storage */ }
+    return c;
+  } catch {
+    // Sin sesión, red o rate-limit: conservar la caché previa (si hay).
+    if (prev) return prev;
+    throw new Error(`update check failed`);
   }
-  const c: Cache = { ts: Date.now(), tag, url, notes };
-  try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* sin storage */ }
-  return c;
 }
 
 function toState(c: Cache | null, currentVersion: string | undefined): ReleaseState {
