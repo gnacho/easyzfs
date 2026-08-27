@@ -83,9 +83,14 @@ type Updater struct {
 	currentLatest    string // última versión detectada (cache del último Check)
 	currentNotes     string
 	currentURL       string
+	currentAvailable bool   // disponible calculado en el último Check
 	inProgress       bool
 	progressStep     string
 	progressPct      int
+
+	// Suscriptores del stream /api/update/stream. Notificados en cada cambio
+	// de paso/progreso o fin de actualización.
+	subs map[chan Status]struct{}
 }
 
 // New crea el updater. current es la versión del binario (main.version).
@@ -95,6 +100,7 @@ func New(current, dataDir string) *Updater {
 		dataDir:            dataDir,
 		restartPathUnit:    restartPathUnit,
 		restartServiceUnit: restartServiceUnit,
+		subs:               make(map[chan Status]struct{}),
 	}
 }
 
@@ -199,11 +205,53 @@ func (u *Updater) isRestartConfigured() bool { return u.IsRestartConfigured() }
 func (u *Updater) Status() Status {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	s := Status{Current: u.current, Latest: u.currentLatest, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL, RestartConfigured: u.isRestartConfigured()}
+	return u.statusLocked()
+}
+
+// statusLocked construye el Status sin adquirir el mutex. Llamar con mu.
+func (u *Updater) statusLocked() Status {
+	s := Status{Current: u.current, Latest: u.currentLatest, Available: u.currentAvailable, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL, RestartConfigured: u.isRestartConfigured()}
 	if u.inProgress && u.progressStep != "" {
 		s.Progress = &Progress{Step: u.progressStep, Percentage: u.progressPct}
 	}
 	return s
+}
+
+// Subscribe registra un canal para recibir el Status en cada cambio del
+// update en curso (progreso SSE). El cancel devuelto lo retira.
+func (u *Updater) Subscribe() (<-chan Status, func()) {
+	ch := make(chan Status, 8)
+	u.mu.Lock()
+	u.subs[ch] = struct{}{}
+	u.mu.Unlock()
+	cancel := func() {
+		u.mu.Lock()
+		delete(u.subs, ch)
+		u.mu.Unlock()
+	}
+	return ch, cancel
+}
+
+// broadcastLocked emite el estado a todos los suscriptores sin bloquear
+// (un cliente lento pierde el evento; el siguiente lo corrige). Llamar con mu.
+func (u *Updater) broadcastLocked() {
+	st := u.statusLocked()
+	for ch := range u.subs {
+		select {
+		case ch <- st:
+		default:
+		}
+	}
+}
+
+// setProgress fija el paso y porcentaje del apply y notifica a los
+// suscriptores SSE (si los hay).
+func (u *Updater) setProgress(step string, pct int) {
+	u.mu.Lock()
+	u.progressStep = step
+	u.progressPct = pct
+	u.broadcastLocked()
+	u.mu.Unlock()
 }
 
 // Check consulta GitHub y devuelve si hay una release semver más reciente.
@@ -250,6 +298,7 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 	u.currentLatest = latestV
 	u.currentNotes = notes
 	u.currentURL = releaseURL
+	u.currentAvailable = available
 	u.mu.Unlock()
 
 	return Status{Current: u.current, Latest: latestV, Available: available, ReleaseNotes: notes, ReleaseURL: releaseURL}, nil
@@ -269,6 +318,7 @@ func (u *Updater) Apply(ctx context.Context) error {
 	defer func() {
 		u.mu.Lock()
 		u.inProgress = false
+		u.broadcastLocked()
 		u.mu.Unlock()
 	}()
 
@@ -324,10 +374,7 @@ func (u *Updater) Apply(ctx context.Context) error {
 	}
 
 	// Progreso: descargando + validando (go-selfupdate hace todo en UpdateTo)
-	u.mu.Lock()
-	u.progressStep = "downloading"
-	u.progressPct = 30
-	u.mu.Unlock()
+	u.setProgress("downloading", 30)
 
 	if err := up.UpdateTo(ctx, latest, u.NewBinary()); err != nil {
 		return fmt.Errorf("updater: apply: %w", err)
@@ -337,10 +384,7 @@ func (u *Updater) Apply(ctx context.Context) error {
 	}
 
 	// Progreso: instalando (binario descargado y verificado)
-	u.mu.Lock()
-	u.progressStep = "installing"
-	u.progressPct = 70
-	u.mu.Unlock()
+	u.setProgress("installing", 70)
 
 	flag := u.RestartFlag()
 	if err := os.WriteFile(flag, []byte(time.Now().Format(time.RFC3339)), 0o644); err != nil {
@@ -348,10 +392,7 @@ func (u *Updater) Apply(ctx context.Context) error {
 	}
 
 	// Progreso: listo (el .path hará el restart)
-	u.mu.Lock()
-	u.progressStep = "restarting"
-	u.progressPct = 100
-	u.mu.Unlock()
+	u.setProgress("restarting", 100)
 
 	log.Printf("[easyzfs] actualización %s descargada y validada → %s (flag .restart-me)", stripV(latest.Version()), u.NewBinary())
 	return nil
