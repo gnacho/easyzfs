@@ -73,6 +73,7 @@ export class HttpProvider implements DataProvider {
 
   getVersion = () => get<VersionInfo>('/version');
   getUpdateStatus = () => get<UpdateStatus>('/update/status');
+  checkUpdate = () => post<UpdateStatus>('/update/check');
   getUpdatePlan = () => get<{canApply: boolean; checks: {id:string;status:string;title:string;summary:string}[]}>('/update/plan');
   applyUpdate = async () => { await post<UpdateStatus>('/update/apply'); };
   getSettings = () => get<Settings>('/settings');

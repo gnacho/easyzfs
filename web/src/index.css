@@ -326,6 +326,7 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
   color:var(--text3);
 }
 .ptr-spin{animation:ptr-rot .8s linear infinite}
+.spin{animation:ptr-rot .8s linear infinite}
 @keyframes ptr-rot{to{transform:rotate(360deg)}}
 
 
@@ -560,6 +561,33 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
 .modal h3{font-size:17px;font-weight:700;margin-bottom:4px}
 .modal .desc{font-size:13px;color:var(--text2)}
 .modal .m-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
+
+/* ---- Update wizard (asistente de actualización) ---- */
+.uz-versions{display:flex;align-items:center;justify-content:center;gap:10px;margin:6px 0 0}
+.uz-ver{font-family:var(--font-mono);font-size:13px;color:var(--text2)}
+.uz-arrow{color:var(--text3);font-size:13px}
+.uz-latest{font-weight:600;color:var(--accent)}
+.uz-notes{margin:12px 0 0;font-size:12.5px;color:var(--text3);line-height:1.55}
+.uz-checks{display:flex;flex-direction:column;gap:4px;margin:12px 0 0;font-size:12.5px;line-height:1.5;color:var(--err)}
+.uz-down{display:flex;gap:8px;align-items:flex-start;margin:14px 0 2px;font-size:12.5px;line-height:1.5;color:var(--warn)}
+.uz-down input{margin:2px 0 0;width:auto;padding:0;flex-shrink:0;accent-color:var(--warn)}
+.uz-progress{display:flex;flex-direction:column;gap:12px}
+.uz-steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.uz-steps li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text3)}
+.uz-steps li svg{flex-shrink:0}
+.uz-steps li.done{color:var(--text2)}
+.uz-steps li.active{color:var(--text);font-weight:600}
+.uz-steps li .uz-step-dot{opacity:.4}
+.uz-bar-label{font-size:12px;color:var(--text3)}
+.uz-bar{height:4px;border-radius:2px;background:var(--border);overflow:hidden}
+.uz-bar-fill{height:100%;background:var(--accent);border-radius:2px;transition:width .3s}
+.uz-hint{margin:0;font-size:12px;color:var(--text3);text-align:center}
+.uz-restarting{display:flex;flex-direction:column;align-items:center;gap:10px;padding:12px 0}
+.uz-restart-title{font-size:13.5px;font-weight:600}
+.uz-error{display:flex;flex-direction:column;gap:10px}
+.uz-error-title{font-size:13.5px;font-weight:600;color:var(--err)}
+.uz-error-code{font-family:var(--font-mono);font-size:12px;color:var(--text3)}
+
 
 /* ---- Diálogo de recorte de avatar (crop cuadrado 1:1) ---- */
 .crop-wrap{display:flex;flex-direction:column;gap:12px}

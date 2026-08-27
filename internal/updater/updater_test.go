@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestIsRestartConfigured(t *testing.T) {
@@ -11,7 +12,7 @@ func TestIsRestartConfigured(t *testing.T) {
 	pathUnit := filepath.Join(tmp, "easyzfs-update.path")
 	svcUnit := filepath.Join(tmp, "easyzfs-update.service")
 
-	u := New("2.9.9", tmp)
+	u := New("2.9.9", tmp, "")
 	u.restartPathUnit = pathUnit
 	u.restartServiceUnit = svcUnit
 
@@ -39,7 +40,7 @@ func TestPlanRestartReady(t *testing.T) {
 	pathUnit := filepath.Join(tmp, "easyzfs-update.path")
 	svcUnit := filepath.Join(tmp, "easyzfs-update.service")
 
-	u := New("2.9.9", tmp)
+	u := New("2.9.9", tmp, "")
 	u.restartPathUnit = pathUnit
 	u.restartServiceUnit = svcUnit
 
@@ -84,7 +85,7 @@ func TestStatusIncludesRestartConfigured(t *testing.T) {
 	pathUnit := filepath.Join(tmp, "easyzfs-update.path")
 	svcUnit := filepath.Join(tmp, "easyzfs-update.service")
 
-	u := New("2.9.9", tmp)
+	u := New("2.9.9", tmp, "")
 	u.restartPathUnit = pathUnit
 	u.restartServiceUnit = svcUnit
 
@@ -101,5 +102,39 @@ func TestStatusIncludesRestartConfigured(t *testing.T) {
 
 	if !u.Status().RestartConfigured {
 		t.Error("expected RestartConfigured=true when units are present")
+	}
+}
+
+func TestSubscribeBroadcastProgress(t *testing.T) {
+	u := New("2.9.18", t.TempDir(), "")
+	ch, cancel := u.Subscribe()
+	defer cancel()
+
+	// Apply fija inProgress=true antes de setProgress; replicamos ese estado.
+	u.mu.Lock()
+	u.inProgress = true
+	u.mu.Unlock()
+
+	u.setProgress("downloading", 30)
+	select {
+	case st := <-ch:
+		if !st.InProgress {
+			t.Fatal("esperaba inProgress=true al aplicar")
+		}
+		if st.Progress == nil || st.Progress.Step != "downloading" || st.Progress.Percentage != 30 {
+			t.Fatalf("progreso inesperado: %+v", st.Progress)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("no llegó el evento de progreso tras setProgress")
+	}
+
+	// Tras cancel no deben llegar más eventos (el suscriptor se retira).
+	cancel()
+	u.setProgress("installing", 70)
+	u.setProgress("restarting", 100)
+	select {
+	case st := <-ch:
+		t.Fatalf("no debería llegar tras cancel: %+v", st)
+	default:
 	}
 }

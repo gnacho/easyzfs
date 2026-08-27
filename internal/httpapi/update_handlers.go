@@ -7,6 +7,8 @@ package httpapi
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -14,13 +16,27 @@ import (
 	"easyzfs/internal/updater"
 )
 
-// getUpdateStatus — GET /api/update/status (admin).
+// getUpdateStatus — GET /api/update/status (admin). Devuelve el estado CACHEADO
+// (sin tocar GitHub): el ticker del updater refresca la disponibilidad 1 vez
+// al día, así la API no llega al límite de 60/h. El check forzado es
+// POST /api/update/check.
 func (s *Server) getUpdateStatus(w http.ResponseWriter, r *http.Request) {
 	if s.updater == nil {
 		writeErr(w, http.StatusServiceUnavailable, "update_unavailable", "actualizaciones desactivadas (sin DATA_DIR)")
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
+	writeJSON(w, http.StatusOK, s.updater.Status())
+}
+
+// postUpdateCheck — POST /api/update/check (admin). Fuerza un chequeo contra
+// GitHub (llamada manual "Comprobar actualizaciones") y devuelve el estado.
+// Es la única vía que consulta la red bajo demanda.
+func (s *Server) postUpdateCheck(w http.ResponseWriter, r *http.Request) {
+	if s.updater == nil {
+		writeErr(w, http.StatusServiceUnavailable, "update_unavailable", "actualizaciones desactivadas (sin DATA_DIR)")
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
 	st, err := s.updater.Check(ctx)
 	if err != nil {
@@ -62,6 +78,51 @@ func (s *Server) postUpdateApply(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true, "restarting": true})
 }
 
+// getUpdateStream — GET /api/update/stream (admin). SSE con el estado del
+// update en cada cambio de paso/progreso: evento inicial con el estado
+// completo y luego un evento por cambio. Heartbeat de 15 s mantiene la
+// conexión viva. El stream MUERE con el proceso en el reinicio final, así
+// que el cliente debe tratarlo como fase "restarting" y sondear /api/health.
+func (s *Server) getUpdateStream(w http.ResponseWriter, r *http.Request) {
+	if s.updater == nil {
+		writeErr(w, http.StatusServiceUnavailable, "update_unavailable", "actualizaciones desactivadas (sin DATA_DIR)")
+		return
+	}
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeErr(w, http.StatusInternalServerError, "streaming_unsupported", "SSE no soportado por el servidor")
+		return
+	}
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("X-Accel-Buffering", "no")
+	ch, cancel := s.updater.Subscribe()
+	defer cancel()
+	writeEvent := func(st updater.Status) {
+		raw, err := json.Marshal(st)
+		if err != nil {
+			return
+		}
+		fmt.Fprintf(w, "event: update\ndata: %s\n\n", raw)
+		flusher.Flush()
+	}
+	writeEvent(s.updater.Status())
+	heartbeat := time.NewTicker(15 * time.Second)
+	defer heartbeat.Stop()
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-heartbeat.C:
+			// Comentario SSE: mantiene viva la conexión sin evento.
+			fmt.Fprint(w, ": ping\n\n")
+			flusher.Flush()
+		case st := <-ch:
+			writeEvent(st)
+		}
+	}
+}
+
 // postUpdateRollback — POST /api/update/rollback (admin). Restaura el binario
 // anterior (.old) y toca el flag para que easyzfs-update.path reinicie.
 func (s *Server) postUpdateRollback(w http.ResponseWriter, r *http.Request) {
@@ -82,6 +143,8 @@ func (s *Server) wireUpdater(a *http.ServeMux) {
 		return
 	}
 	a.HandleFunc("GET /api/update/status", s.auth.RequireAdmin(s.getUpdateStatus))
+	a.HandleFunc("POST /api/update/check", s.auth.RequireAdmin(s.postUpdateCheck))
+	a.HandleFunc("GET /api/update/stream", s.auth.RequireAdmin(s.getUpdateStream))
 	a.HandleFunc("GET /api/update/plan", s.auth.RequireAdmin(s.getUpdatePlan))
 	a.HandleFunc("GET /api/updates/history", s.auth.RequireAdmin(s.getUpdateHistory))
 	a.HandleFunc("POST /api/update/apply", s.auth.RequireAdmin(s.postUpdateApply))

@@ -20,6 +20,7 @@ export interface DataProvider {
 
   // Actualizaciones (admin; el apply reinicia el servicio vía easyzfs-update.path)
   getUpdateStatus(): Promise<UpdateStatus>;
+  checkUpdate(): Promise<UpdateStatus>;
   getUpdatePlan(): Promise<{canApply: boolean; checks: {id:string;status:string;title:string;summary:string}[]}>;
   applyUpdate(): Promise<void>;
 

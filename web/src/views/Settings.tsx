@@ -17,13 +17,13 @@ import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
 import { APIKeysPanel } from '../components/APIKeysPanel';
 import { usePush } from '../data/push';
-import { useReleaseCheck } from '../ui/releasecheck';
+import { useReleaseCheck, refreshUpdateState } from '../ui/releasecheck';
 import { ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion } from '../ui/theme';
 import type { AccentId, Density, ThemeMode } from '../ui/theme';
 import type { I18nKey } from '../ui/i18n';
 import type {
   BackupStatus, Lang, PushAlertTipo, PushPreference,
-  Settings as SettingsData,
+  Settings as SettingsData, UpdateStatus,
 } from '../data/types';
 
 // Evento beforeinstallprompt (PWA), no tipado en lib.dom
@@ -112,53 +112,23 @@ function ReleaseIcon({ version }: { version: string | undefined }) {
 // resultado inline: al día, nueva versión, aplicando o error.
 function UpdateCheckRow({ version }: { version: string | undefined }) {
   const { t } = useApp();
+  const { openModal } = useModal();
   const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
-  const [applying, setApplying] = useState(false);
-  const [latest, setLatest] = useState('');
-  const [checks, setChecks] = useState<{id:string;status:string;title:string;summary:string}[]>([]);
-  const [canApply, setCanApply] = useState(true);
-  const [progress, setProgress] = useState<{step:string;percentage:number}|null>(null);
-  const [restartConfigured, setRestartConfigured] = useState(true);
+  const [status, setStatus] = useState<UpdateStatus | null>(null);
+  const [plan, setPlan] = useState<{ canApply: boolean; checks: { id: string; status: string; title: string; summary: string }[] } | null>(null);
 
   const check = async () => {
     setState('checking');
-    setChecks([]);
+    setStatus(null);
+    setPlan(null);
     try {
-      const [st, plan] = await Promise.all([getProvider().getUpdateStatus(), getProvider().getUpdatePlan()]);
-      setChecks(plan.checks);
-      setCanApply(plan.canApply);
-      setRestartConfigured(st.restartConfigured ?? true);
-      if (st.available) {
-        setLatest(st.latest);
-        setState('available');
-      } else {
-        setState('uptodate');
-      }
+      const [st, plan] = await Promise.all([getProvider().checkUpdate(), getProvider().getUpdatePlan()]);
+      setStatus(st);
+      setPlan(plan);
+      setState(st.available ? 'available' : 'uptodate');
+      refreshUpdateState(); // que el ribbon global se actualice tras el check manual
     } catch {
       setState('error');
-    }
-  };
-
-  const apply = async () => {
-    setApplying(true);
-    setProgress(null);
-    try {
-      void getProvider().applyUpdate();
-      // Poll progress while the update runs
-      const poll = async () => {
-        try {
-          const st = await getProvider().getUpdateStatus();
-          if (st.progress) setProgress(st.progress);
-          if (st.inProgress && applying) setTimeout(poll, 1500);
-        } catch { /* stop polling */ }
-      };
-      setTimeout(poll, 1000);
-      setState('uptodate');
-    } catch {
-      setState('error');
-    } finally {
-      setApplying(false);
-      setProgress(null);
     }
   };
 
@@ -166,43 +136,32 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
     <div className="upd-widget">
       <div className="upd-line">
         <span className="upd-status">
-          {state === 'available' ? t('ab_newver', { v: latest })
+          {state === 'available' ? t('ab_newver', { v: status?.latest ?? '' })
             : state === 'error' ? t('ab_upderr')
             : state === 'uptodate' ? t('ab_uptodate', { v: version ?? '' })
             : null}
         </span>
         <span className="upd-actions">
           {state === 'available' && (
-            <button className="btn sm primary" disabled={applying || !canApply} onClick={() => { void apply(); }}>
-              {applying ? t('ab_updapp') : t('upd_rel_upd')}
+            <button className="btn sm primary" onClick={() => openModal('updatewizard')}>
+              {t('upd_rel_upd')}
             </button>
           )}
-          <button className="btn sm" disabled={state === 'checking' || applying} onClick={() => { void check(); }}>
+          <button className="btn sm" disabled={state === 'checking'} onClick={() => { void check(); }}>
             {state === 'checking' ? t('ab_checking') : state === 'error' ? t('ab_retry') : t('ab_checkupd')}
           </button>
         </span>
       </div>
-      {progress && (
+      {plan?.checks && plan.checks.length > 0 && state === 'available' && (
         <div style={{ marginTop: 6 }}>
-          <div className="d" style={{ fontSize: 12, marginBottom: 4 }}>
-            {progress.step === 'downloading' ? 'Downloading...' : progress.step === 'installing' ? 'Installing...' : 'Restarting...'}
-            {' '}{progress.percentage}%
-          </div>
-          <div style={{ height: 4, borderRadius: 2, background: 'var(--border)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${progress.percentage}%`, background: 'var(--accent)', borderRadius: 2, transition: 'width .3s' }} />
-          </div>
-        </div>
-      )}
-      {checks.length > 0 && state === 'available' && (
-        <div style={{ marginTop: 6 }}>
-          {checks.map((c) => (
+          {plan.checks.map((c) => (
             <div key={c.id} className="d" style={{ fontSize: 12, opacity: c.status === 'pass' ? .7 : 1, color: c.status === 'fail' ? 'var(--err)' : c.status === 'warn' ? 'var(--warn)' : 'inherit' }}>
               {c.status === 'fail' ? '✗ ' : c.status === 'warn' ? '⚠ ' : '✓ '}{c.summary}
             </div>
           ))}
         </div>
       )}
-      {!restartConfigured && (
+      {status?.restartConfigured === false && (
         <div className="form-err" role="alert" style={{ marginTop: 8, fontSize: 12.5 }}>
           <b>{t('ab_upd_norestart')}</b><br />
           {t('ab_upd_norestart_d')}
