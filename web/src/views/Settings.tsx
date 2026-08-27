@@ -123,7 +123,7 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
     setStatus(null);
     setPlan(null);
     try {
-      const [st, plan] = await Promise.all([getProvider().getUpdateStatus(), getProvider().getUpdatePlan()]);
+      const [st, plan] = await Promise.all([getProvider().checkUpdate(), getProvider().getUpdatePlan()]);
       setStatus(st);
       setPlan(plan);
       setState(st.available ? 'available' : 'uptodate');

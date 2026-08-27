@@ -320,6 +320,30 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 	return Status{Current: u.current, Latest: latestV, Available: available, ReleaseNotes: notes, ReleaseURL: releaseURL, RestartConfigured: u.isRestartConfigured()}, nil
 }
 
+// Start lanza el chequeo inicial y un ticker de 24 h (patrón NetPulse/Pulse):
+// el estado se cachea y /api/update/status lo lee sin tocar GitHub, de modo
+// que el límite de 60/h de la API no se agota. El ticker muere con ctx.
+func (u *Updater) Start(ctx context.Context) {
+	go func() {
+		doCheck := func() {
+			checkCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+			u.Check(checkCtx)
+		}
+		doCheck()
+		t := time.NewTicker(24 * time.Hour)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				doCheck()
+			}
+		}
+	}()
+}
+
 // Apply descarga+valida el binario nuevo a $DATA_DIR/update/easyzfs.new y toca
 // el flag .restart-me. Devuelve error si ya hay un apply en curso. El proceso
 // NO se reinicia a sí mismo: la unit systemd .path hace install+restart.
