@@ -63,6 +63,10 @@ async function fetchLatest(): Promise<Cache> {
       tag = st.latest;
       url = st.releaseUrl || RELEASES_URL;
       notes = truncateNotes(st.releaseNotes || '');
+    } else {
+      // Check con éxito pero sin versión nueva: cachear 'uptodate' (tag=actual),
+      // nunca un tag vacío, que toState mapearía a 'unknown' (ribbon atascado).
+      tag = st?.current || '';
     }
     const c: Cache = { ts: Date.now(), tag, url, notes };
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(c)); } catch { /* sin storage */ }
@@ -115,7 +119,10 @@ export function useReleaseCheck(currentVersion: string | undefined, enabled: boo
   useEffect(() => {
     if (!enabled) return;
     const c = readCache();
-    if (c && Date.now() - c.ts < WEEK_MS) { setCache(c); return; }
+    // Solo se confía en una caché fresca si representa un resultado real
+    // (tag no vacío); una caché 'unknown' (tag vacío) se re-consulta para
+    // no quedarse sin aviso por un resultado previo sin versión.
+    if (c && c.tag && Date.now() - c.ts < WEEK_MS) { setCache(c); return; }
     let alive = true;
     fetchLatest().then((n) => { if (alive) setCache(n); }).catch(() => {
       // Sin red/rate-limit: conserva la caché anterior (si la hay)
