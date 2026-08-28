@@ -823,7 +823,7 @@ configure_env() {
     existing_vapid_pub="$(sed -n 's/^VAPID_PUBLIC_KEY=//p' "$ENV_FILE" | head -1)"
     existing_vapid_priv="$(sed -n 's/^VAPID_PRIVATE_KEY=//p' "$ENV_FILE" | head -1)"
     existing_vapid_sub="$(sed -n 's/^VAPID_SUBJECT=//p' "$ENV_FILE" | head -1)"
-    existing_wbhook="$(sed -n 's/^WEBHOOK_SECRET=//p' "$ENV_FILE" | head -1)"
+    existing_webhook="$(sed -n 's/^WEBHOOK_SECRET=//p' "$ENV_FILE" | head -1)"
   fi
   # Prioridad del puerto: --port > puerto del env existente > defecto (8080)
   if [ "$PORT_FROM_FLAG" = "0" ] && [ -n "$existing_port" ]; then
@@ -924,7 +924,7 @@ configure_env() {
 
   # WEBHOOK_SECRET: firma HMAC para webhooks salientes. Generar UNA vez;
   # idempotente: en upgrades se conserva.
-  local wbhook="$existing_wbhook"
+  local wbhook="$(sed -n '/^WEBHOOK_SECRET=/p' "$ENV_FILE" | sed 's/^WEBHOOK_SECRET=//' | head -1)"
   if [ -z "$wbhook" ]; then
     if [ "$DRY_RUN" = "1" ]; then
       wbhook="dry-run-webhook-secret"
