@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -105,6 +106,21 @@ func Load() *Config {
 	if cfg.Demo {
 		cfg.Mock = true // demo implica colectores mock
 	}
+	// Placeholder detection (30-Ago-2026, leccion Yuvomi)
+	placeholderMarkers := []string{"cambia", "changeme", "change-me", "example", "placeholder", "your-secret", "replace_me", "xxx"}
+	for _, kv := range []struct{ key, val string }{
+		{"ADMIN_PASSWORD", cfg.AdminPassword},
+		{"WEBHOOK_SECRET", cfg.WebhookSecret},
+		{"SMTP_PASS", cfg.SMTPPass},
+	} {
+		low := strings.ToLower(kv.val)
+		for _, m := range placeholderMarkers {
+			if kv.val != "" && strings.Contains(low, m) {
+				log.Fatalf("config: %s contiene un valor de ejemplo del .env.example; genera un secreto real", kv.key)
+			}
+		}
+	}
+
 	secret := os.Getenv("SESSION_SECRET")
 	if secret == "" {
 		b := make([]byte, 32)
