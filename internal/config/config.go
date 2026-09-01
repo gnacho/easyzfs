@@ -50,6 +50,10 @@ type Config struct {
 	SyslogPort     int    // SYSLOG_PORT (def 514)
 	SyslogProto    string // SYSLOG_PROTO: udp | tcp (def udp)
 	SyslogFacility int    // SYSLOG_FACILITY (def 1 = user)
+
+	// Intervalo del colector principal de ZFS (#124). Valores altos reducen
+	// el numero de comandos sudo y el volumen de logs de auditoria.
+	ZpoolInterval time.Duration // EASYZFS_ZPOOL_INTERVAL en segundos (def 60)
 }
 
 // DataDir — directorio de datos del daemon (deriva de DB_PATH): ahí viven la
@@ -102,6 +106,8 @@ func Load() *Config {
 		SyslogPort:     envInt("SYSLOG_PORT", 514),
 		SyslogProto:    env("SYSLOG_PROTO", "udp"),
 		SyslogFacility: envInt("SYSLOG_FACILITY", 1),
+
+		ZpoolInterval: time.Duration(envInt("EASYZFS_ZPOOL_INTERVAL", 60)) * time.Second,
 	}
 	if cfg.Demo {
 		cfg.Mock = true // demo implica colectores mock

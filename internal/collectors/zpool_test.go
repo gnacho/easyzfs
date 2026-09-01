@@ -1,10 +1,13 @@
-// zpool_test.go — parseo de status y resolución de vdevs UUID→dispositivo.
+// zpool_test.go — parseo de status y resolucion de vdevs UUID→dispositivo.
 package collectors
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"easyzfs/internal/model"
 )
@@ -19,9 +22,9 @@ func TestParseStatusJSONVdevs(t *testing.T) {
 		}}
 	}}}}`)
 	p := &model.Pool{Name: "tank", Vdevs: []model.Vdev{}}
-	c := &ZpoolCollector{}
+	c := &ZpoolCollector{lastPropsAt: map[string]time.Time{}}
 	if !c.parseStatusJSON(out, p) {
-		t.Fatal("parseStatusJSON devolvió false")
+		t.Fatal("parseStatusJSON devolvio false")
 	}
 	if len(p.Vdevs) != 2 {
 		t.Fatalf("vdevs=%d, esperaba 2", len(p.Vdevs))
@@ -35,7 +38,7 @@ func TestParseStatusJSONVdevs(t *testing.T) {
 }
 
 func TestResolveVdevPaths(t *testing.T) {
-	c := &ZpoolCollector{}
+	c := &ZpoolCollector{lastPropsAt: map[string]time.Time{}}
 	p := &model.Pool{Name: "tank", Vdevs: []model.Vdev{
 		{Dev: "sdb1", Status: "ONLINE"},
 		{Dev: "nvme0n1p2", Status: "ONLINE"},
@@ -68,9 +71,9 @@ func TestParseStatusJSONResilver(t *testing.T) {
 	},
 	"scan_stats":{"function":"RESILVER","state":"SCANNING","to_examine":"35.2T","examined":"3.52T","pass_start":"1785606676","errors":"0"}}}}`)
 	p := &model.Pool{Name: "tank", Vdevs: []model.Vdev{}}
-	c := &ZpoolCollector{}
+	c := &ZpoolCollector{lastPropsAt: map[string]time.Time{}}
 	if !c.parseStatusJSON(out, p) {
-		t.Fatal("parseStatusJSON devolvió false")
+		t.Fatal("parseStatusJSON devolvio false")
 	}
 	if p.Scrub.State != "running" || p.Scrub.Kind != "resilver" {
 		t.Fatalf("scrub=%+v, esperaba running resilver", p.Scrub)
@@ -92,7 +95,7 @@ func TestParseHumanSize(t *testing.T) {
 		}
 	}
 	if _, ok := parseHumanSize("-"); ok {
-		t.Error("'-' no debería parsear")
+		t.Error("'-' no deberia parsear")
 	}
 }
 
@@ -104,5 +107,107 @@ func TestReUUID(t *testing.T) {
 		if reUUID.MatchString(no) {
 			t.Fatalf("falso positivo UUID: %q", no)
 		}
+	}
+}
+
+// fakePoolBin crea un zpool/zfs falso que cuenta invocaciones en un log.
+func fakePoolBin(t *testing.T) (dir, logFile string) {
+	t.Helper()
+	dir = t.TempDir()
+	logFile = filepath.Join(dir, "calls.log")
+
+	// zpool falso: anota los args y sale 0.
+	zpool := "#!/bin/sh\necho \"$@\" >> " + logFile + "\nexit 0\n"
+	// zfs falso: anota los args y sale 0.
+	zfs := "#!/bin/sh\necho \"$@\" >> " + logFile + "\nexit 0\n"
+	// sudo falso: executil antepone 'sudo -n'; lo ignoramos.
+	sudo := "#!/bin/sh\nwhile [ $# -gt 0 ]; do case \"$1\" in -*) shift;; *) break;; esac; done\nexec \"$@\"\n"
+	for name, body := range map[string]string{"zpool": zpool, "zfs": zfs, "sudo": sudo} {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(body), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return dir, logFile
+}
+
+func readCalls(t *testing.T, logFile string) []string {
+	t.Helper()
+	b, err := os.ReadFile(logFile)
+	if err != nil {
+		return nil
+	}
+	return strings.Split(strings.TrimSpace(string(b)), "\n")
+}
+
+func TestFillPoolPropsTTL(t *testing.T) {
+	_, logFile := fakePoolBin(t)
+	c := &ZpoolCollector{lastPropsAt: map[string]time.Time{}}
+	p := &model.Pool{Name: "tank"}
+	now := time.Now()
+
+	c.fillPoolProps(context.Background(), p, now)
+	if len(readCalls(t, logFile)) != 1 {
+		t.Fatalf("esperaba 1 llamada, hay %d", len(readCalls(t, logFile)))
+	}
+
+	// Segunda llamada inmediata: no deberia ejecutar zpool por TTL.
+	c.fillPoolProps(context.Background(), p, now)
+	if calls := readCalls(t, logFile); len(calls) != 1 {
+		t.Fatalf("esperaba 1 llamada tras TTL, hay %d", len(calls))
+	}
+
+	// Tras TTL: deberia volver a llamar.
+	c.lastPropsAt["props:tank"] = now.Add(-propTTL - time.Second)
+	c.fillPoolProps(context.Background(), p, now.Add(propTTL+time.Second))
+	if calls := readCalls(t, logFile); len(calls) != 2 {
+		t.Fatalf("esperaba 2 llamadas tras expirar TTL, hay %d", len(calls))
+	}
+}
+
+func TestFillCompressRatioTTL(t *testing.T) {
+	_, logFile := fakePoolBin(t)
+	c := &ZpoolCollector{lastPropsAt: map[string]time.Time{}}
+	p := &model.Pool{Name: "tank"}
+	now := time.Now()
+
+	c.fillCompressRatio(context.Background(), p, now)
+	if len(readCalls(t, logFile)) != 1 {
+		t.Fatalf("esperaba 1 llamada, hay %d", len(readCalls(t, logFile)))
+	}
+
+	c.fillCompressRatio(context.Background(), p, now)
+	if calls := readCalls(t, logFile); len(calls) != 1 {
+		t.Fatalf("esperaba 1 llamada tras TTL, hay %d", len(calls))
+	}
+
+	c.lastPropsAt["compress:tank"] = now.Add(-propTTL - time.Second)
+	c.fillCompressRatio(context.Background(), p, now.Add(propTTL+time.Second))
+	if calls := readCalls(t, logFile); len(calls) != 2 {
+		t.Fatalf("esperaba 2 llamadas tras expirar TTL, hay %d", len(calls))
+	}
+}
+
+func TestFillTrimTTL(t *testing.T) {
+	_, logFile := fakePoolBin(t)
+	c := &ZpoolCollector{lastPropsAt: map[string]time.Time{}}
+	p := &model.Pool{Name: "ssd"}
+	now := time.Now()
+
+	c.fillTrim(context.Background(), p, now)
+	if len(readCalls(t, logFile)) != 1 {
+		t.Fatalf("esperaba 1 llamada, hay %d", len(readCalls(t, logFile)))
+	}
+
+	c.fillTrim(context.Background(), p, now)
+	if calls := readCalls(t, logFile); len(calls) != 1 {
+		t.Fatalf("esperaba 1 llamada tras TTL, hay %d", len(calls))
+	}
+
+	c.lastPropsAt["trim:ssd"] = now.Add(-trimTTL - time.Second)
+	c.fillTrim(context.Background(), p, now.Add(trimTTL+time.Second))
+	if calls := readCalls(t, logFile); len(calls) != 2 {
+		t.Fatalf("esperaba 2 llamadas tras expirar TTL, hay %d", len(calls))
 	}
 }

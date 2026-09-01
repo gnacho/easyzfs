@@ -359,6 +359,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.20
+
+- **Reduce sudo/journald log volume from periodic collectors (#124)**: the EasyZFS service generated tens of thousands of sudo log entries per day because every `zpool`/`zfs` command run by the collectors was logged by `sudo` as an allowed command. Add `Defaults:easyzfs !pam_session, !log_allowed` to the sudoers file so allowed commands are no longer logged; failed attempts still are. Complement this with TTL caches in `ZpoolCollector` for stable pool properties (`autotrim`, `checkpoint`, `compressratio`) and for `zpool status -t`, plus a new `EASYZFS_ZPOOL_INTERVAL` environment variable (default 60 s) to control the collector tick interval. Validated on real Proxmox nodes: `journalctl -g 'easyzfs :'` drops from thousands of entries per day to near zero while pool status, datasets and snapshots keep updating.
+
 ### v2.9.19
 - **Installer fix: unbound variable error resolved**: the installer script no longer fails with an "existing_webhook: unbound variable" error during configuration. The WEBHOOK_SECRET is now correctly read from the env file.
 
