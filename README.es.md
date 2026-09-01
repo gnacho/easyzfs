@@ -367,6 +367,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.20
+
+- **Reduce el volumen de logs sudo/journald de los colectores periódicos (#124)**: el servicio de EasyZFS generaba decenas de miles de entradas sudo al día porque cada comando `zpool`/`zfs` que ejecutaban los colectores se logueaba en `sudo` como comando permitido. Se añade `Defaults:easyzfs !pam_session, !log_allowed` al sudoers para que los comandos permitidos no se logueen; los intentos fallidos siguen registrándose. Se complementa con cachés TTL en `ZpoolCollector` para propiedades estables del pool (`autotrim`, `checkpoint`, `compressratio`) y para `zpool status -t`, y una nueva variable de entorno `EASYZFS_ZPOOL_INTERVAL` (60 s por defecto) para controlar el intervalo del colector. Validado en nodos reales de Proxmox: `journalctl -g 'easyzfs :'` pasa de miles de entradas al día a casi cero mientras el estado de pools, datasets y snapshots sigue actualizándose.
+
 ### v2.9.19
 
 - **Fix del instalador: error de variable no definida resuelto**: el script de instalación ya no falla con el error "existing_webhook: unbound variable" durante la configuración. El WEBHOOK_SECRET ahora se lee correctamente del archivo env.
