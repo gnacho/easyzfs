@@ -88,6 +88,28 @@ func TestHubCloseSignalsSubscribers(t *testing.T) {
 	}
 }
 
+func TestHubSubscriberCount(t *testing.T) {
+	h := NewHub()
+	defer h.Close()
+
+	if h.SubscriberCount() != 0 {
+		t.Fatalf("sin suscriptores esperaba 0, got %d", h.SubscriberCount())
+	}
+	ch1 := h.Subscribe("u1")
+	ch2 := h.Subscribe("u2")
+	if h.SubscriberCount() != 2 {
+		t.Fatalf("con 2 suscriptores esperaba 2, got %d", h.SubscriberCount())
+	}
+	h.Unsubscribe(ch1)
+	if h.SubscriberCount() != 1 {
+		t.Fatalf("tras quitar uno esperaba 1, got %d", h.SubscriberCount())
+	}
+	h.Unsubscribe(ch2)
+	if h.SubscriberCount() != 0 {
+		t.Fatalf("sin suscriptores esperaba 0, got %d", h.SubscriberCount())
+	}
+}
+
 func TestHubUserActive(t *testing.T) {
 	h := NewHub()
 	defer h.Close()

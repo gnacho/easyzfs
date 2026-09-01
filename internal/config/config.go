@@ -51,9 +51,13 @@ type Config struct {
 	SyslogProto    string // SYSLOG_PROTO: udp | tcp (def udp)
 	SyslogFacility int    // SYSLOG_FACILITY (def 1 = user)
 
-	// Intervalo del colector principal de ZFS (#124). Valores altos reducen
-	// el numero de comandos sudo y el volumen de logs de auditoria.
-	ZpoolInterval time.Duration // EASYZFS_ZPOOL_INTERVAL en segundos (def 60)
+	// Intervalos del colector principal de ZFS (#124/#126).
+	// ZpoolInterval = ritmo con la UI abierta (full collect).
+	// ZpoolAlertInterval = heartbeat de salud/alertas con la UI cerrada.
+	// ZpoolIdleInterval = full collect con la UI cerrada.
+	ZpoolInterval      time.Duration // EASYZFS_ZPOOL_INTERVAL en segundos (def 10)
+	ZpoolAlertInterval time.Duration // EASYZFS_ZPOOL_ALERT_INTERVAL en segundos (def 60)
+	ZpoolIdleInterval  time.Duration // EASYZFS_ZPOOL_IDLE_INTERVAL en segundos (def 300)
 }
 
 // DataDir — directorio de datos del daemon (deriva de DB_PATH): ahí viven la
@@ -85,6 +89,7 @@ func Load() *Config {
 		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:    env("VAPID_SUBJECT", "mailto:easyzfs@localhost"),
 
+
 		WebhookSecret:  os.Getenv("WEBHOOK_SECRET"),
 		WebhookTimeout: time.Duration(envInt("WEBHOOK_TIMEOUT", 10)) * time.Second,
 		WebhookRetries: envInt("WEBHOOK_RETRIES", 3),
@@ -107,7 +112,9 @@ func Load() *Config {
 		SyslogProto:    env("SYSLOG_PROTO", "udp"),
 		SyslogFacility: envInt("SYSLOG_FACILITY", 1),
 
-		ZpoolInterval: time.Duration(envInt("EASYZFS_ZPOOL_INTERVAL", 60)) * time.Second,
+		ZpoolInterval:      time.Duration(envInt("EASYZFS_ZPOOL_INTERVAL", 10)) * time.Second,
+		ZpoolAlertInterval: time.Duration(envInt("EASYZFS_ZPOOL_ALERT_INTERVAL", 60)) * time.Second,
+		ZpoolIdleInterval:  time.Duration(envInt("EASYZFS_ZPOOL_IDLE_INTERVAL", 300)) * time.Second,
 	}
 	if cfg.Demo {
 		cfg.Mock = true // demo implica colectores mock

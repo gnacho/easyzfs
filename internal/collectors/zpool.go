@@ -23,13 +23,15 @@ import (
 )
 
 const (
-	zpoolIntervalDef = 60 * time.Second
-	zpoolMaxBackoff  = 5 * time.Minute
-	seriesInterval   = 10 * time.Minute // persistir series con esta cadencia minima
-	historyTTL       = 10 * time.Minute // re-leer 'zpool history' como maximo con esta cadencia
-	historyTimeout   = 90 * time.Second // historiales grandes (bigtank: ~20 s / 275 MB)
-	propTTL          = 5 * time.Minute // propiedades estables: autotrim, checkpoint, compressratio
-	trimTTL          = 2 * time.Minute // estado TRIM no cambia tan rapido; reduce llamadas -t
+	zpoolIntervalDef  = 10 * time.Second  // full collect con la UI abierta (#126)
+	zpoolAlertDef     = 60 * time.Second  // heartbeat de salud con la UI cerrada
+	zpoolIdleDef      = 5 * time.Minute   // full collect con la UI cerrada
+	zpoolMaxBackoff   = 5 * time.Minute
+	seriesInterval    = 10 * time.Minute // persistir series con esta cadencia minima
+	historyTTL        = 10 * time.Minute // re-leer 'zpool history' como maximo con esta cadencia
+	historyTimeout    = 90 * time.Second // historiales grandes (bigtank: ~20 s / 275 MB)
+	propTTL           = 5 * time.Minute  // propiedades estables: autotrim, checkpoint, compressratio
+	trimTTL           = 2 * time.Minute  // estado TRIM no cambia tan rapido; reduce llamadas -t
 )
 
 // ZpoolCollector — caché de pools, datasets y snapshots.
@@ -51,8 +53,12 @@ type ZpoolCollector struct {
 	prevPct    map[string]int
 	lastSeries map[string]time.Time
 
-	// Intervalo entre recolectas periodicas (configurable; #124).
-	interval time.Duration
+	// Intervalos dinamicos segun presencia de UI (#126).
+	activeInterval time.Duration // full collect con UI abierta
+	alertInterval  time.Duration // heartbeat de salud con UI cerrada
+	idleInterval   time.Duration // full collect con UI cerrada
+	lastFull       time.Time
+	presenceFn     func() int // suscriptores SSE; 0 = nadie con la UI abierta
 
 	// Cache de propiedades estables y de trim para no repetir comandos en
 	// cada tick del colector.
@@ -64,23 +70,35 @@ type ZpoolCollector struct {
 	refreshCh chan struct{}
 }
 
-// NewZpoolCollector crea el colector. interval=0 usa el default de 60 s.
-func NewZpoolCollector(d *sql.DB, h *hub.Hub, al *alerts.Alerter, interval time.Duration) *ZpoolCollector {
-	if interval <= 0 {
-		interval = zpoolIntervalDef
+// NewZpoolCollector crea el colector. Cero en cualquier intervalo usa su default.
+// presenceFn devuelve el numero de suscriptores SSE; se inyecta desde Build.
+func NewZpoolCollector(d *sql.DB, h *hub.Hub, al *alerts.Alerter,
+	activeInterval, alertInterval, idleInterval time.Duration,
+	presenceFn func() int) *ZpoolCollector {
+	if activeInterval <= 0 {
+		activeInterval = zpoolIntervalDef
+	}
+	if alertInterval <= 0 {
+		alertInterval = zpoolAlertDef
+	}
+	if idleInterval <= 0 {
+		idleInterval = zpoolIdleDef
 	}
 	return &ZpoolCollector{
-		db:          d,
-		h:           h,
-		al:          al,
-		interval:    interval,
-		prevStatus:  map[string]string{},
-		prevPct:     map[string]int{},
-		lastSeries:  map[string]time.Time{},
-		lastPropsAt: map[string]time.Time{},
-		history:     map[string][]model.HistoryEntry{},
-		historyAt:   map[string]time.Time{},
-		refreshCh:   make(chan struct{}, 1),
+		db:             d,
+		h:              h,
+		al:             al,
+		activeInterval: activeInterval,
+		alertInterval:  alertInterval,
+		idleInterval:   idleInterval,
+		presenceFn:     presenceFn,
+		prevStatus:     map[string]string{},
+		prevPct:        map[string]int{},
+		lastSeries:     map[string]time.Time{},
+		lastPropsAt:    map[string]time.Time{},
+		history:        map[string][]model.HistoryEntry{},
+		historyAt:      map[string]time.Time{},
+		refreshCh:      make(chan struct{}, 1),
 	}
 }
 
@@ -98,28 +116,45 @@ func (c *ZpoolCollector) RefreshSoon() {
 	}
 }
 
-// Run — bucle con ticker, backoff tras 3 fallos seguidos (patrón del skill).
+// Run — bucle con ticker dinamico: full collect con UI abierta, heartbeat
+// ligero con UI cerrada, y backoff tras 3 fallos seguidos.
 func (c *ZpoolCollector) Run(ctx context.Context) {
-	interval := c.interval
-	t := time.NewTicker(interval)
-	defer t.Stop()
-	if err := c.collectOnce(ctx); err != nil {
+	// Primera pasada completa para llenar la caché antes de que nadie abra la UI.
+	if err := c.fullCollect(ctx); err != nil {
 		log.Printf("zpool: %v", err)
 		c.fails++
 	}
+
+	interval := c.nextInterval(false)
+	t := time.NewTicker(interval)
+	defer t.Stop()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-c.refreshCh:
-			// Refresco bajo demanda (mutación reciente): recolecta y
-			// reinicia el tick periódico desde este momento.
-			if err := c.collectOnce(ctx); err != nil {
+			// Refresco bajo demanda (mutacion reciente): recolecta completa y
+			// reinicia el tick periodico desde este momento.
+			if err := c.fullCollect(ctx); err != nil {
 				log.Printf("zpool refresh: %v", err)
+				c.fails++
+			} else {
+				c.fails = 0
 			}
-			t.Reset(interval)
+			t.Reset(c.nextInterval(c.presenceFn() > 0))
 		case <-t.C:
-			if err := c.collectOnce(ctx); err != nil {
+			active := c.presenceFn() > 0
+			var err error
+			if active || time.Since(c.lastFull) >= c.idleInterval {
+				err = c.fullCollect(ctx)
+				if err == nil {
+					c.lastFull = time.Now()
+				}
+			} else {
+				err = c.lightCollect(ctx)
+			}
+			if err != nil {
 				log.Printf("zpool: %v", err)
 				c.fails++
 			} else {
@@ -132,13 +167,20 @@ func (c *ZpoolCollector) Run(ctx context.Context) {
 				c.stale = true
 				interval = min(2*interval, zpoolMaxBackoff)
 				t.Reset(interval)
-			} else if interval != c.interval {
+			} else {
 				c.stale = false
-				interval = c.interval
-				t.Reset(interval)
+				t.Reset(c.nextInterval(active))
 			}
 		}
 	}
+}
+
+// nextInterval elige el siguiente intervalo segun haya UI abierta.
+func (c *ZpoolCollector) nextInterval(active bool) time.Duration {
+	if active {
+		return c.activeInterval
+	}
+	return c.alertInterval
 }
 
 // Pools — caché de pools (copia defensiva).
@@ -183,7 +225,7 @@ func (c *ZpoolCollector) SnapshotGroups() []model.SnapGroup {
 }
 
 // collectOnce — una pasada completa: list → status por pool → datasets → snapshots.
-func (c *ZpoolCollector) collectOnce(ctx context.Context) error {
+func (c *ZpoolCollector) fullCollect(ctx context.Context) error {
 	pools, err := c.listPools(ctx)
 	if err != nil {
 		return err
@@ -241,8 +283,34 @@ func (c *ZpoolCollector) collectOnce(ctx context.Context) error {
 	c.mu.Unlock()
 
 	c.publishChanges(pools)
-	c.al.EvaluatePools(ctx, pools)
+	if c.al != nil {
+		c.al.EvaluatePools(ctx, pools)
+	}
 	c.persistSeries(ctx, pools)
+	return nil
+}
+
+// lightCollect — heartbeat con la UI cerrada: solo list + status + alertas.
+// No ejecuta datasets, snapshots, historial ni series, reduciendo el numero de
+// comandos sudo a lo estrictamente necesario para alertas (#126).
+func (c *ZpoolCollector) lightCollect(ctx context.Context) error {
+	pools, err := c.listPools(ctx)
+	if err != nil {
+		return err
+	}
+	for i := range pools {
+		c.fillStatus(ctx, &pools[i])
+		c.resolveVdevPaths(ctx, &pools[i])
+	}
+
+	c.mu.Lock()
+	c.pools = pools
+	c.mu.Unlock()
+
+	c.publishChanges(pools)
+	if c.al != nil {
+		c.al.EvaluatePools(ctx, pools)
+	}
 	return nil
 }
 
@@ -952,6 +1020,9 @@ func (c *ZpoolCollector) publishChanges(pools []model.Pool) {
 
 // persistSeries guarda pool.<name>.used_pct cada seriesInterval (con retención).
 func (c *ZpoolCollector) persistSeries(ctx context.Context, pools []model.Pool) {
+	if c.db == nil {
+		return
+	}
 	now := time.Now()
 	for _, p := range pools {
 		key := "pool." + p.Name + ".used_pct"

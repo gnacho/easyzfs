@@ -263,6 +263,9 @@ The service reads `/etc/easyzfs/env`:
 | `COOKIE_SECURE` | - | `1` = Secure cookie (behind TLS proxy) |
 | `EASYZFS_SUDO` | auto | `1`/`0` forces or disables `sudo -n` on zpool/zfs/smartctl/lsblk/crontab |
 | `RETENTION_DAYS` | `30` | Series retention (daily purge 03:30) |
+| `EASYZFS_ZPOOL_INTERVAL` | `10` | Full collection interval (seconds) while the web UI is open |
+| `EASYZFS_ZPOOL_ALERT_INTERVAL` | `60` | Health/alert heartbeat interval (seconds) while the UI is closed |
+| `EASYZFS_ZPOOL_IDLE_INTERVAL` | `300` | Full collection interval (seconds) while the UI is closed |
 | `VAPID_PUBLIC_KEY` | - | Web Push public key (installer-generated) |
 | `VAPID_PRIVATE_KEY` | - | Web Push private key (server only; push disabled if missing) |
 | `VAPID_SUBJECT` | `mailto:easyzfs@localhost` | VAPID contact (`mailto:`, required by Safari) |
@@ -358,6 +361,10 @@ Go dependencies (kept to 2 on purpose):
 - [API contract](docs/api-contract.md).
 
 ## Changelog
+
+### v2.9.21
+
+- **Throttle ZFS collector when no UI is connected (#126)**: the web UI keeps an SSE stream open to `/api/events`, so the `ZpoolCollector` now uses the hub's subscriber count as a presence signal. While the UI is open it runs a full collection every `EASYZFS_ZPOOL_INTERVAL` (default 10 s). When the UI is closed it falls back to a cheap health/alert heartbeat every `EASYZFS_ZPOOL_ALERT_INTERVAL` (default 60 s) and only runs a full collection every `EASYZFS_ZPOOL_IDLE_INTERVAL` (default 300 s). Background alerts (DEGRADED, scrub, capacity) keep firing at least every minute, and capacity series still persist every 10 minutes, while idle nodes issue dramatically fewer `zpool`/`zfs` commands.
 
 ### v2.9.20
 
