@@ -23,11 +23,13 @@ import (
 )
 
 const (
-	zpoolInterval   = 30 * time.Second
-	zpoolMaxBackoff = 5 * time.Minute
-	seriesInterval  = 10 * time.Minute // persistir series con esta cadencia mínima
-	historyTTL      = 10 * time.Minute // re-leer 'zpool history' como máximo con esta cadencia
-	historyTimeout  = 90 * time.Second // historiales grandes (bigtank: ~20 s / 275 MB)
+	zpoolIntervalDef = 60 * time.Second
+	zpoolMaxBackoff  = 5 * time.Minute
+	seriesInterval   = 10 * time.Minute // persistir series con esta cadencia minima
+	historyTTL       = 10 * time.Minute // re-leer 'zpool history' como maximo con esta cadencia
+	historyTimeout   = 90 * time.Second // historiales grandes (bigtank: ~20 s / 275 MB)
+	propTTL          = 5 * time.Minute // propiedades estables: autotrim, checkpoint, compressratio
+	trimTTL          = 2 * time.Minute // estado TRIM no cambia tan rapido; reduce llamadas -t
 )
 
 // ZpoolCollector — caché de pools, datasets y snapshots.
@@ -49,24 +51,36 @@ type ZpoolCollector struct {
 	prevPct    map[string]int
 	lastSeries map[string]time.Time
 
-	// refreshCh despierta el bucle Run tras una mutación (autotrim, trim…):
-	// sin él la UI vería el valor antiguo hasta el próximo tick de 30 s.
-	// Buffer 1 = debounce: una ráfaga de mutaciones produce UNA recolecta.
+	// Intervalo entre recolectas periodicas (configurable; #124).
+	interval time.Duration
+
+	// Cache de propiedades estables y de trim para no repetir comandos en
+	// cada tick del colector.
+	lastPropsAt map[string]time.Time
+
+	// refreshCh despierta el bucle Run tras una mutacion (autotrim, trim...):
+	// sin el la UI veria el valor antiguo hasta el proximo tick.
+	// Buffer 1 = debounce: una rafaga de mutaciones produce UNA recolecta.
 	refreshCh chan struct{}
 }
 
-// NewZpoolCollector crea el colector.
-func NewZpoolCollector(d *sql.DB, h *hub.Hub, al *alerts.Alerter) *ZpoolCollector {
+// NewZpoolCollector crea el colector. interval=0 usa el default de 60 s.
+func NewZpoolCollector(d *sql.DB, h *hub.Hub, al *alerts.Alerter, interval time.Duration) *ZpoolCollector {
+	if interval <= 0 {
+		interval = zpoolIntervalDef
+	}
 	return &ZpoolCollector{
-		db:         d,
-		h:          h,
-		al:         al,
-		prevStatus: map[string]string{},
-		prevPct:    map[string]int{},
-		lastSeries: map[string]time.Time{},
-		history:    map[string][]model.HistoryEntry{},
-		historyAt:  map[string]time.Time{},
-		refreshCh:  make(chan struct{}, 1),
+		db:          d,
+		h:           h,
+		al:          al,
+		interval:    interval,
+		prevStatus:  map[string]string{},
+		prevPct:     map[string]int{},
+		lastSeries:  map[string]time.Time{},
+		lastPropsAt: map[string]time.Time{},
+		history:     map[string][]model.HistoryEntry{},
+		historyAt:   map[string]time.Time{},
+		refreshCh:   make(chan struct{}, 1),
 	}
 }
 
@@ -86,7 +100,7 @@ func (c *ZpoolCollector) RefreshSoon() {
 
 // Run — bucle con ticker, backoff tras 3 fallos seguidos (patrón del skill).
 func (c *ZpoolCollector) Run(ctx context.Context) {
-	interval := zpoolInterval
+	interval := c.interval
 	t := time.NewTicker(interval)
 	defer t.Stop()
 	if err := c.collectOnce(ctx); err != nil {
@@ -118,9 +132,9 @@ func (c *ZpoolCollector) Run(ctx context.Context) {
 				c.stale = true
 				interval = min(2*interval, zpoolMaxBackoff)
 				t.Reset(interval)
-			} else if interval != zpoolInterval {
+			} else if interval != c.interval {
 				c.stale = false
-				interval = zpoolInterval
+				interval = c.interval
 				t.Reset(interval)
 			}
 		}
@@ -174,11 +188,12 @@ func (c *ZpoolCollector) collectOnce(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	now := time.Now()
 	for i := range pools {
 		c.fillStatus(ctx, &pools[i]) // tolerante: degrada, no falla la pasada
-		c.fillTrim(ctx, &pools[i])   // progreso de TRIM (zpool status -t)
-		c.fillCompressRatio(ctx, &pools[i])
-		c.fillPoolProps(ctx, &pools[i])
+		c.fillTrim(ctx, &pools[i], now)
+		c.fillCompressRatio(ctx, &pools[i], now)
+		c.fillPoolProps(ctx, &pools[i], now)
 		c.resolveVdevPaths(ctx, &pools[i])
 	}
 	history := map[string][]model.HistoryEntry{}
@@ -265,7 +280,12 @@ func (c *ZpoolCollector) listPools(ctx context.Context) ([]model.Pool, error) {
 // fillPoolProps — propiedades del pool autotrim y checkpoint
 // ('zpool get -Hp -o property,value autotrim,checkpoint <pool>').
 // checkpoint vale "-" cuando no hay checkpoint activo.
-func (c *ZpoolCollector) fillPoolProps(ctx context.Context, p *model.Pool) {
+// Estas propiedades cambian muy poco: se cachean con TTL para reducir sudo.
+func (c *ZpoolCollector) fillPoolProps(ctx context.Context, p *model.Pool, now time.Time) {
+	key := "props:" + p.Name
+	if time.Since(c.lastPropsAt[key]) < propTTL {
+		return
+	}
 	out, err := executil.Run(ctx, 5*time.Second, "zpool", "get", "-Hp",
 		"-o", "property,value", "autotrim,checkpoint", p.Name)
 	if err != nil {
@@ -283,6 +303,7 @@ func (c *ZpoolCollector) fillPoolProps(ctx context.Context, p *model.Pool) {
 			p.Checkpoint = f[1] != "-" && f[1] != ""
 		}
 	}
+	c.lastPropsAt[key] = now
 }
 
 // fetchHistory — 'zpool history -i <pool>' parseado EN STREAMING (nil si
@@ -322,7 +343,12 @@ func (c *ZpoolCollector) History(name string) []model.HistoryEntry {
 }
 
 // fillCompressRatio — compressratio del dataset raíz del pool como ratio del pool.
-func (c *ZpoolCollector) fillCompressRatio(ctx context.Context, p *model.Pool) {
+// Propiedad estable: se cachea con TTL para reducir llamadas a zfs get.
+func (c *ZpoolCollector) fillCompressRatio(ctx context.Context, p *model.Pool, now time.Time) {
+	key := "compress:" + p.Name
+	if time.Since(c.lastPropsAt[key]) < propTTL {
+		return
+	}
 	out, err := executil.Run(ctx, 5*time.Second, "zfs", "get", "-Hp", "-o", "value",
 		"compressratio", p.Name)
 	if err != nil {
@@ -332,6 +358,7 @@ func (c *ZpoolCollector) fillCompressRatio(ctx context.Context, p *model.Pool) {
 	if n, err := strconv.ParseFloat(v, 64); err == nil {
 		p.CompRatio = n
 	}
+	c.lastPropsAt[key] = now
 }
 
 // --- zpool status: JSON (OpenZFS ≥2.2) con fallback a texto ---
@@ -667,12 +694,18 @@ func (c *ZpoolCollector) parseStatusText(out string, p *model.Pool) {
 // fillTrim — progreso de TRIM ('zpool status -t <pool>'; la salida normal no
 // lo muestra). Solo rellena Scrub si el pool no tiene scrub/resilver en curso
 // (el scan de datos manda sobre el trim en la representación unificada).
-func (c *ZpoolCollector) fillTrim(ctx context.Context, p *model.Pool) {
+// Se ejecuta con TTL: reduce llamadas sudo cuando no hay trim activo.
+func (c *ZpoolCollector) fillTrim(ctx context.Context, p *model.Pool, now time.Time) {
+	key := "trim:" + p.Name
+	if time.Since(c.lastPropsAt[key]) < trimTTL {
+		return
+	}
 	out, err := executil.Run(ctx, 15*time.Second, "zpool", "status", "-t", p.Name)
 	if err != nil {
 		return
 	}
 	c.parseTrimStatus(string(out), p)
+	c.lastPropsAt[key] = now
 }
 
 // parseTrimStatus — líneas 'scan:' de 'zpool status -t':

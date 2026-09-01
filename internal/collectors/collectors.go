@@ -63,7 +63,7 @@ func Build(cfg *config.Config, d *sql.DB, h *hub.Hub, al *alerts.Alerter) (*Prov
 		m := NewMock(h, al)
 		return &Providers{Pools: m, Disks: m, SysTimers: m, Perf: m, Caps: m}, []Collector{m, mant}
 	}
-	zc := NewZpoolCollector(d, h, al)
+	zc := NewZpoolCollector(d, h, al, cfg.ZpoolInterval)
 	sc := NewSensorsCollector(h)
 	smc := NewSmartCollector(d, h, al, sc)
 	ssc := NewSchedSysCollector()
