@@ -2,17 +2,23 @@
 # El servicio corre como usuario 'easyzfs' (sin root) y necesita elevar solo
 # estos binarios (executil antepone `sudo -n` cuando euid != 0).
 #
-# Argumentos restringidos al uso real del código:
+# Argumentos restringidos al uso real del codigo:
 #   crontab   → solo `-l` (lectura del crontab de root en la vista Tareas);
-#               sin args, `crontab -e` permitiría ejecutar código como root.
+#               sin args, `crontab -e` permitiria ejecutar codigo como root.
 #   hdparm    → solo `-y /dev/*` (standby de disco en acciones).
 #   udisksctl → solo `power-off -b /dev/*` (apagado de disco; fallback de hdparm).
 #   dd        → solo lectura de disco a /dev/null (parpadeo del LED de la
-#               bahía por actividad I/O; el count fijo evita lecturas largas).
+#               bahia por actividad I/O; el count fijo evita lecturas largas).
 # zpool/zfs/smartctl/lsblk necesitan libertad de argumentos (son la API del
 # almacenamiento); el confinamiento extra vive en easyzfs-sysd y la unit.
 #
-# Instalación:
+# Los comandos automatizados del colector generan miles de entradas de sudo al
+# dia. EasyZFS ya guarda su propia auditoria en la BD (tabla audit), asi que
+# suprimimos aqui el log repetitivo de PAM y el de comandos permitidos para
+# no saturar journald. Los intentos fallidos siguen logueandose.
+Defaults:easyzfs !pam_session, !log_allowed
+#
+# Instalacion:
 #   install -m 0440 -o root -g root deploy/easyzfs.sudoers /etc/sudoers.d/easyzfs
 #   visudo -cf /etc/sudoers.d/easyzfs    # validar sintaxis antes de recargar
 easyzfs ALL=(root) NOPASSWD: /usr/sbin/zpool, /usr/sbin/zfs, /usr/sbin/smartctl, /usr/bin/lsblk, /usr/bin/crontab -l, /usr/sbin/hdparm -y /dev/*, /usr/bin/udisksctl power-off -b /dev/*, /usr/bin/dd if=/dev/* of=/dev/null bs=1M count=2048, /usr/local/libexec/easyzfs-sysd
