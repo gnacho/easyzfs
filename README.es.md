@@ -269,6 +269,9 @@ El servicio lee `/etc/easyzfs/env`:
 | `COOKIE_SECURE` | - | `1` = cookie Secure (tras proxy TLS) |
 | `EASYZFS_SUDO` | auto | `1`/`0` fuerza o desactiva `sudo -n` en zpool/zfs/smartctl/lsblk/crontab |
 | `RETENTION_DAYS` | `30` | Retención de series (purga diaria 03:30) |
+| `EASYZFS_ZPOOL_INTERVAL` | `10` | Intervalo de recolección completa (segundos) con la web UI abierta |
+| `EASYZFS_ZPOOL_ALERT_INTERVAL` | `60` | Intervalo del heartbeat de salud/alertas (segundos) con la UI cerrada |
+| `EASYZFS_ZPOOL_IDLE_INTERVAL` | `300` | Intervalo de recolección completa (segundos) con la UI cerrada |
 | `VAPID_PUBLIC_KEY` | - | Clave pública Web Push (generada por el instalador) |
 | `VAPID_PRIVATE_KEY` | - | Clave privada Web Push (solo servidor; push desactivado si falta) |
 | `VAPID_SUBJECT` | `mailto:easyzfs@localhost` | Contacto VAPID (`mailto:`, requerido por Safari) |
@@ -366,6 +369,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 - [Contrato API](docs/api-contract.md).
 
 ## Registro de cambios
+
+### v2.9.21
+
+- **Reduce la recolección de ZFS cuando la UI está cerrada (#126)**: la web UI mantiene un stream SSE abierto contra `/api/events`, así que `ZpoolCollector` usa el número de suscriptores del hub como señal de presencia. Con la UI abierta ejecuta una recolección completa cada `EASYZFS_ZPOOL_INTERVAL` (10 s por defecto). Con la UI cerrada pasa a un heartbeat ligero de salud/alertas cada `EASYZFS_ZPOOL_ALERT_INTERVAL` (60 s por defecto) y solo hace una recolección completa cada `EASYZFS_ZPOOL_IDLE_INTERVAL` (300 s por defecto). Las alertas en segundo plano (DEGRADED, scrub, capacidad) siguen evaluándose al menos cada minuto, y las series de capacidad siguen persistiendo cada 10 minutos, mientras que los nodos en reposo emiten muchísimos menos comandos `zpool`/`zfs`.
 
 ### v2.9.20
 

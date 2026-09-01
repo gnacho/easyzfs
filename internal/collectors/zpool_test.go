@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"easyzfs/internal/hub"
 	"easyzfs/internal/model"
 )
 
@@ -209,5 +210,79 @@ func TestFillTrimTTL(t *testing.T) {
 	c.fillTrim(context.Background(), p, now.Add(trimTTL+time.Second))
 	if calls := readCalls(t, logFile); len(calls) != 2 {
 		t.Fatalf("esperaba 2 llamadas tras expirar TTL, hay %d", len(calls))
+	}
+}
+
+// fakePoolWithData crea zpool/zfs falsos que devuelven un pool simple para
+// poder probar lightCollect/fullCollect sin depender del host real.
+func fakePoolWithData(t *testing.T) (dir, logFile string) {
+	t.Helper()
+	dir = t.TempDir()
+	logFile = filepath.Join(dir, "calls.log")
+
+	zpool := `#!/bin/sh
+echo "$@" >> ` + logFile + `
+case "$1" in
+list)
+  printf 'tank\t123456789\t12345678\t0\tONLINE\n'
+  ;;
+status)
+  printf '{"pools":{"tank":{"name":"tank","state":"ONLINE","vdevs":{"tank":{"name":"tank","vdev_type":"root","state":"ONLINE","vdevs":{}}}}}}'
+  ;;
+esac
+exit 0
+`
+	zfs := `#!/bin/sh
+echo "$@" >> ` + logFile + `
+exit 0
+`
+	sudo := `#!/bin/sh
+while [ $# -gt 0 ]; do case "$1" in -*) shift;; *) break;; esac; done
+exec "$@"
+`
+	for name, body := range map[string]string{"zpool": zpool, "zfs": zfs, "sudo": sudo} {
+		p := filepath.Join(dir, name)
+		if err := os.WriteFile(p, []byte(body), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	t.Setenv("PATH", dir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	return dir, logFile
+}
+
+func TestLightCollectFewerCommandsThanFull(t *testing.T) {
+	_, logFile := fakePoolWithData(t)
+
+	c := NewZpoolCollector(nil, hub.NewHub(), nil, 0, 0, 0, func() int { return 0 })
+	ctx := context.Background()
+
+	if err := c.lightCollect(ctx); err != nil {
+		t.Fatalf("lightCollect: %v", err)
+	}
+	lightCalls := len(readCalls(t, logFile))
+	if lightCalls == 0 {
+		t.Fatal("lightCollect no genero llamadas")
+	}
+
+	if err := c.fullCollect(ctx); err != nil {
+		t.Fatalf("fullCollect: %v", err)
+	}
+	fullCalls := len(readCalls(t, logFile))
+
+	if fullCalls <= lightCalls {
+		t.Fatalf("fullCollect deberia generar mas llamadas que lightCollect (full=%d light=%d)", fullCalls, lightCalls)
+	}
+}
+
+func TestNextInterval(t *testing.T) {
+	c := NewZpoolCollector(nil, nil, nil,
+		100*time.Millisecond, 200*time.Millisecond, 5*time.Second,
+		func() int { return 0 })
+
+	if got := c.nextInterval(true); got != 100*time.Millisecond {
+		t.Fatalf("active: esperaba 100ms, got %v", got)
+	}
+	if got := c.nextInterval(false); got != 200*time.Millisecond {
+		t.Fatalf("idle: esperaba 200ms, got %v", got)
 	}
 }

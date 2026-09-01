@@ -64,6 +64,13 @@ func (h *Hub) Subscribe(userID string) chan Event {
 	return ch
 }
 
+// SubscriberCount devuelve el numero de conexiones SSE activas (UI abierta).
+func (h *Hub) SubscriberCount() int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return len(h.subs)
+}
+
 // UserActive — ¿tiene este usuario alguna conexión SSE abierta (app abierta)?
 func (h *Hub) UserActive(userID string) bool {
 	if userID == "" {

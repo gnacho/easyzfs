@@ -966,7 +966,7 @@ DEMO=1"
     info "MODO DEMO activado (DEMO=1): datos de muestra; las mutaciones responden 403 demo_mode."
     info "Para pasar a producción: quita DEMO=1 de ${ENV_FILE} y reinicia el servicio."
   else
-    info "Opcionales que puedes añadir: COOKIE_SECURE=1 (tras proxy TLS), RETENTION_DAYS=30, EASYZFS_ZPOOL_INTERVAL=60 (segundos), DEMO=1, MOCK=1."
+    info "Opcionales que puedes añadir: COOKIE_SECURE=1 (tras proxy TLS), RETENTION_DAYS=30, EASYZFS_ZPOOL_INTERVAL=10 (segundos con UI abierta), EASYZFS_ZPOOL_ALERT_INTERVAL=60 (heartbeat cerrada), EASYZFS_ZPOOL_IDLE_INTERVAL=300 (full collect cerrada), DEMO=1, MOCK=1."
   fi
 }
 
