@@ -176,14 +176,15 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 }
 
 /* ---- Apariencia: layout horizontal (tema izq ~50% + controles der) ---- */
-.aprow{display:flex;flex-direction:column;gap:18px}
-@media(min-width:700px){.aprow{flex-direction:row;gap:28px}}
-.ap-theme{flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;min-width:0}
-@media(min-width:700px){.ap-theme{width:50%}}
-.ap-controls{flex:1;display:flex;flex-direction:column;gap:16px;min-width:0}
-.ap-accent-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.ap-accent-row .lbl{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text2);margin-bottom:6px;display:block}
-.ap-anim{margin-left:auto;display:flex;align-items:center;gap:9px;min-width:0}
+.aprow{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-end}
+.ap-field{display:flex;flex-direction:column;gap:8px;min-width:0}
+.ap-field .lbl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)}
+.ap-theme{flex:2;min-width:200px}
+.ap-mode{flex:1.3;min-width:190px}
+.ap-density{flex:1;min-width:190px}
+.ap-accent{display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:1.4;min-width:190px}
+.ap-accent .lbl{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--text2)}
+.ap-anim{display:flex;align-items:center;gap:9px;min-width:0}
 .ap-anim .lbl{font-size:13px;color:var(--text2);white-space:nowrap}
 
 /* tiles de tema (mini-preview con variables reales) */
@@ -397,10 +398,10 @@ header.top .sub{font-size:13px;color:var(--text2);margin-top:2px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
 .card.pad{--cp:16px;padding:var(--cp)}
 .kpi{padding:15px 16px}
-.kpi .lbl{font-size:12px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
-.kpi .val{font-size:24px;font-weight:700;margin-top:5px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.kpi .val small{font-size:13px;font-weight:500;color:var(--text2)}
-.kpi .foot{font-size:12px;color:var(--text2);margin-top:4px}
+.kpi .lbl{font-size:13px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.kpi .val{font-size:26px;font-weight:700;margin-top:5px;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.kpi .val small{font-size:14px;font-weight:500;color:var(--text2)}
+.kpi .foot{font-size:13px;color:var(--text2);margin-top:4px}
 
 /* Select propio (listbox) — el nativo pinta el popup con el tema del SO */
 .sel{position:relative}
@@ -443,9 +444,9 @@ header.top .sub{font-size:13px;color:var(--text2);margin-top:2px}
 .rowitem{display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid var(--border)}
 .rowitem:last-child{border-bottom:none}
 .rowitem .grow{flex:1;min-width:0}
-.rowitem .t1{font-weight:600;font-size:14.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.rowitem .t2{font-size:12.5px;color:var(--text2);margin-top:2px}
-.mono{font-family:var(--font-mono);font-size:12.5px}
+.rowitem .t1{font-weight:600;font-size:15.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rowitem .t2{font-size:13.5px;color:var(--text2);margin-top:2px}
+.mono{font-family:var(--font-mono);font-size:13.5px}
 
 /* botones */
 .btn{
@@ -465,7 +466,7 @@ header.top .sub{font-size:13px;color:var(--text2);margin-top:2px}
 
 /* sección */
 .sect{margin-top:22px}
-.sect h2{font-size:15px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.sect h2{font-size:16.5px;font-weight:700;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .sect h2 .actions{display:flex;gap:7px}
 
 /* pool card */
@@ -486,11 +487,11 @@ header.top .sub{font-size:13px;color:var(--text2);margin-top:2px}
 
 /* tabla */
 .tblwrap{overflow-x:auto}
-table.data{width:100%;border-collapse:collapse;font-size:13.5px}
+table.data{width:100%;border-collapse:collapse;font-size:14.5px}
 /* columna "elástica": absorbe el espacio sobrante en pantallas anchas en
    vez de repartir huecos entre TODAS las columnas */
 table.data th.slack{width:100%}
-table.data th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
+table.data th{text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--text2);padding:10px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
 table.data td{padding:11px 14px;border-bottom:1px solid var(--border);white-space:nowrap}
 table.data tr:last-child td{border-bottom:none}
 /* Discos: la celda SMART rompe a 2 líneas en vez de ensanchar toda la tabla
@@ -520,7 +521,7 @@ table.data td.actions .btn{margin:2px 4px 2px 0}
 }
 tr.clickable{cursor:pointer} tr.clickable:hover td{background:var(--surface2)}
 table.data th.num,table.data td.num{text-align:right;font-variant-numeric:tabular-nums}
-table.data td.num{font-family:var(--font-mono);font-size:12.5px}
+table.data td.num{font-family:var(--font-mono);font-size:13.5px}
 
 /* snapshot tree: cada dataset es una tarjeta; en pantalla ancha las
    tarjetas se disponen en grid (filas cortas → varias por horizontal) */
@@ -642,7 +643,7 @@ table.data td.num{font-family:var(--font-mono);font-size:12.5px}
 .rp-warn{margin-top:10px;padding:10px 12px;border:1px solid var(--warn);border-left-width:3px;border-radius:10px;background:var(--warn-soft);color:var(--text);font-size:12.5px;font-weight:600}
 
 /* alertas */
-.alert{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);font-size:13.5px}
+.alert{display:flex;gap:12px;padding:13px 16px;border-bottom:1px solid var(--border);font-size:14.5px}
 .alert:last-child{border-bottom:none}
 .alert .ico{flex-shrink:0;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-weight:700}
 .alert .btn.sm{white-space:nowrap}
@@ -817,7 +818,7 @@ a.abouttile:hover svg{color:var(--accent)}
 .chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px}
 .chip{padding:6px 13px;border-radius:99px;border:1px solid var(--border);background:var(--surface);font-size:12.5px;font-weight:600;color:var(--text2)}
 .chip.on{background:var(--accent-soft);color:var(--accent);border-color:transparent}
-.empty{padding:34px 20px;text-align:center;color:var(--text2);font-size:13.5px}
+.empty{padding:34px 20px;text-align:center;color:var(--text2);font-size:14px}
 svg{flex-shrink:0}
 
 /* panel de alertas (popover) */
@@ -835,7 +836,7 @@ svg{flex-shrink:0}
 .splash{min-height:100vh;display:grid;place-items:center;color:var(--text2);font-size:14px;gap:10px}
 
 /* clases de apoyo reutilizables */
-.muted{font-size:12.5px;color:var(--text2)}
+.muted{font-size:13.5px;color:var(--text2)}
 .checklabel{display:flex;align-items:center;gap:9px;text-transform:none;font-size:13.5px;font-weight:500;color:var(--text)}
 .checklabel input{width:auto}
 
@@ -947,3 +948,213 @@ html.reduce-motion *{transition:none!important;animation:none!important}
 }
 .toast .toast-x:hover{color:var(--text);background:var(--surface2)}
 @keyframes toast-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ================================================================
+   SKINS — temas completos con identidad propia.
+   Cada skin define TODOS los tokens del sistema + una capa
+   estructural gated por [data-theme="<skin>"] (tipografía, radios,
+   bordes, sombras, materiales). Los componentes no se modifican.
+   El picker de acento no aplica a los skins: el acento es parte de
+   la identidad de cada uno (ver ui/theme.ts).
+   ================================================================ */
+
+/* ==================== MODERN-DARK ==================== */
+[data-theme="modern-dark"]{
+  color-scheme:dark;
+  --bg:#0d0e12; --surface:#15171d; --surface2:#1b1e26; --border:#262a36;
+  --text:#e8eaf0; --text2:#8b90a0; --text3:#565b6a;
+  --accent:#7c5cfc; --accent-soft:rgba(124,92,252,.16);
+  --ok:#2bd97c; --warn:#f5a524; --warn-soft:rgba(245,165,36,.14);
+  --err:#f2555a; --err-soft:rgba(242,85,90,.14);
+  --info:#38bdf8; --info-soft:rgba(56,189,248,.14);
+  --on-accent:#ffffff;
+  --radius:14px; --radius-sm:10px;
+  --shadow:0 12px 32px rgba(0,0,0,.42);
+}
+/* ==================== MODERN-LIGHT (gemelo) ==================== */
+[data-theme="modern-light"]{
+  color-scheme:light;
+  --bg:#f4f5f8; --surface:#ffffff; --surface2:#eef0f5; --border:#e2e4ec;
+  --text:#16181f; --text2:#66707f; --text3:#a4aab6;
+  --accent:#6d3df5; --accent-soft:rgba(109,61,245,.10);
+  --ok:#12a15c; --warn:#c47d0a; --warn-soft:rgba(196,125,10,.12);
+  --err:#dd3542; --err-soft:rgba(221,53,66,.10);
+  --info:#0b8fd4; --info-soft:rgba(11,143,212,.10);
+  --on-accent:#ffffff;
+  --radius:14px; --radius-sm:10px;
+  --shadow:0 1px 2px rgba(18,20,28,.05), 0 12px 28px rgba(18,20,28,.09);
+}
+/* capa estructural modern (ambos): halo de acento, cards SIN borde con
+   elevación por sombra, nav activo sólido, glow en primarios y foco */
+[data-theme="modern-dark"] body,
+[data-theme="modern-light"] body{
+  background-image:radial-gradient(ellipse 70% 40% at 50% -10%, var(--accent-soft), transparent 65%);
+  background-repeat:no-repeat;
+}
+[data-theme="modern-dark"] .card,
+[data-theme="modern-light"] .card{border-color:transparent;box-shadow:0 1px 2px rgba(10,12,18,.06), 0 10px 28px rgba(10,12,18,.12)}
+[data-theme="modern-dark"] .card{box-shadow:0 10px 28px rgba(0,0,0,.28)}
+[data-theme="modern-dark"] .btn.primary,
+[data-theme="modern-light"] .btn.primary{box-shadow:0 4px 16px var(--accent-soft), 0 2px 6px rgba(0,0,0,.18)}
+[data-theme="modern-dark"] aside.sidebar nav a.active,
+[data-theme="modern-light"] aside.sidebar nav a.active{
+  background:var(--accent);color:var(--on-accent);
+  box-shadow:0 4px 14px var(--accent-soft);
+}
+[data-theme="modern-dark"] input:focus,
+[data-theme="modern-dark"] select:focus,
+[data-theme="modern-light"] input:focus,
+[data-theme="modern-light"] select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+/* banner de rebuild en Modern: acento azul (info) en vez de ámbar (warn) */
+[data-theme="modern-dark"] .rebuildbar,
+[data-theme="modern-light"] .rebuildbar{
+  background:var(--info-soft);color:var(--info);
+  border-color:color-mix(in srgb,var(--info) 35%,transparent);
+}
+
+/* ==================== PHOSPHOR (terminal CRT) ==================== */
+[data-theme="phosphor"]{
+  color-scheme:dark;
+  --bg:#050810; --surface:#0c1220; --surface2:#101828; --border:#1a2540;
+  --text:#c9d6e8; --text2:#5b6b85; --text3:#33415c;
+  --accent:#00f48e; --accent-soft:rgba(0,244,142,.08);
+  --ok:#00f48e; --warn:#fbbf24; --warn-soft:rgba(251,191,36,.10);
+  --err:#f87171; --err-soft:rgba(248,113,113,.10);
+  --info:#22d3ee; --info-soft:rgba(34,211,238,.10);
+  --on-accent:#00120a;
+  --radius:0; --radius-sm:0;
+  --shadow:none;
+}
+/* tipografía: TODO mono */
+[data-theme="phosphor"] body,
+[data-theme="phosphor"] button,
+[data-theme="phosphor"] input,
+[data-theme="phosphor"] select,
+[data-theme="phosphor"] textarea{font-family:var(--font-mono)}
+/* scanlines CRT */
+[data-theme="phosphor"] body::after{
+  content:"";position:fixed;inset:0;z-index:9000;pointer-events:none;
+  background:repeating-linear-gradient(0deg, rgba(0,0,0,.10) 0 1px, transparent 1px 3px);
+}
+/* rejilla tenue de fondo */
+[data-theme="phosphor"] body{
+  background-image:
+    linear-gradient(rgba(26,37,64,.20) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(26,37,64,.20) 1px, transparent 1px);
+  background-size:44px 44px;
+}
+/* esquinas HUD en cards */
+[data-theme="phosphor"] .card{position:relative;background:linear-gradient(180deg,var(--surface),#070c16)}
+[data-theme="phosphor"] .card::before,
+[data-theme="phosphor"] .card::after{
+  content:"";position:absolute;width:14px;height:14px;pointer-events:none;z-index:2;
+}
+[data-theme="phosphor"] .card::before{top:-1px;left:-1px;border-top:1px solid var(--accent);border-left:1px solid var(--accent)}
+[data-theme="phosphor"] .card::after{bottom:-1px;right:-1px;border-bottom:1px solid var(--accent);border-right:1px solid var(--accent)}
+/* nav activo: bloque de acento invertido con glow */
+[data-theme="phosphor"] aside.sidebar nav a{border-radius:0;border-left:2px solid transparent}
+[data-theme="phosphor"] aside.sidebar nav a.active{
+  background:var(--accent);color:var(--on-accent);font-weight:700;
+  box-shadow:0 0 18px rgba(0,244,142,.4);
+}
+[data-theme="phosphor"] .sideactions a{border-radius:0}
+[data-theme="phosphor"] .sideactions a.active{background:var(--accent);color:var(--on-accent);box-shadow:0 0 18px rgba(0,244,142,.4)}
+/* medidores segmentados tipo terminal */
+[data-theme="phosphor"] .meter{border-radius:0;height:12px;border:1px solid var(--border);background:#080e1c}
+[data-theme="phosphor"] .meter>i{
+  border-radius:0;
+  background:repeating-linear-gradient(90deg, var(--ok) 0 7px, transparent 7px 10px);
+}
+[data-theme="phosphor"] .meter.warn>i{background:repeating-linear-gradient(90deg, var(--warn) 0 7px, transparent 7px 10px)}
+[data-theme="phosphor"] .meter.crit>i{background:repeating-linear-gradient(90deg, var(--err) 0 7px, transparent 7px 10px)}
+/* badges: etiquetas técnicas, no pills */
+[data-theme="phosphor"] .badge{
+  border-radius:0;border:1px solid currentColor;background:transparent;
+  text-transform:uppercase;letter-spacing:.12em;font-weight:700;
+}
+/* botones como comandos [ BOTÓN ] */
+[data-theme="phosphor"] .btn{
+  border-radius:0;text-transform:uppercase;letter-spacing:.14em;font-weight:700;font-size:12px;
+}
+[data-theme="phosphor"] .btn:hover{border-color:var(--accent);color:var(--accent);box-shadow:0 0 12px rgba(0,244,142,.25);background:transparent}
+[data-theme="phosphor"] .btn.primary{box-shadow:none}
+[data-theme="phosphor"] .btn.primary:hover{box-shadow:0 0 18px rgba(0,244,142,.55);color:var(--on-accent);background:var(--accent)}
+[data-theme="phosphor"] .btn.danger:hover{border-color:var(--err);box-shadow:0 0 12px rgba(248,113,113,.3)}
+/* inputs y selects terminales */
+[data-theme="phosphor"] input,
+[data-theme="phosphor"] select,
+[data-theme="phosphor"] .sel-btn{border-radius:0}
+[data-theme="phosphor"] input:focus,
+[data-theme="phosphor"] select:focus{outline:1px solid var(--accent);outline-offset:-1px;box-shadow:0 0 10px rgba(0,244,142,.25)}
+/* KPIs con glow de fósforo */
+[data-theme="phosphor"] .kpi .val{text-shadow:0 0 14px rgba(0,244,142,.35)}
+/* seg control cuadrado */
+[data-theme="phosphor"] .seg{border-radius:0}
+[data-theme="phosphor"] .seg button{border-radius:0}
+[data-theme="phosphor"] .seg button.on{background:var(--accent);color:var(--on-accent);box-shadow:none}
+
+/* ==================== BRUTALIST ==================== */
+[data-theme="brutalist"]{
+  color-scheme:light;
+  --bg:#f2ede1; --surface:#fffdf5; --surface2:#f7f2e4; --border:#141414;
+  --text:#141414; --text2:#5c5648; --text3:#9a917d;
+  --accent:#2b59ff; --accent-soft:rgba(43,89,255,.12);
+  --ok:#0a8f4d; --warn:#c98a00; --warn-soft:rgba(201,138,0,.14);
+  --err:#e5352b; --err-soft:rgba(229,53,43,.10);
+  --info:#0f7fd4; --info-soft:rgba(15,127,212,.10);
+  --on-accent:#ffffff;
+  --radius:0; --radius-sm:0;
+  --shadow:5px 5px 0 #141414;
+}
+/* papel punteado */
+[data-theme="brutalist"] body{
+  background-image:radial-gradient(rgba(20,20,20,.10) 1px, transparent 1px);
+  background-size:22px 22px;
+}
+/* bordes gruesos + sombra dura en cards */
+[data-theme="brutalist"] .card{border-width:2px;box-shadow:5px 5px 0 #141414}
+/* botones pegatina */
+[data-theme="brutalist"] .btn{
+  border-width:2px;border-color:#141414;box-shadow:3px 3px 0 #141414;
+  text-transform:uppercase;letter-spacing:.05em;font-weight:700;font-size:12.5px;
+  transition:transform .1s, box-shadow .1s;
+}
+[data-theme="brutalist"] .btn:hover{transform:translate(-1px,-1px);box-shadow:4px 4px 0 #141414;background:var(--surface)}
+[data-theme="brutalist"] .btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #141414}
+[data-theme="brutalist"] .btn.primary{background:#ffd23f;color:#141414;border-color:#141414}
+[data-theme="brutalist"] .btn.danger{color:var(--err);border-color:var(--err)}
+[data-theme="brutalist"] .btn.solid-danger{background:var(--err);color:#fff;border-color:#141414}
+/* badges etiqueta */
+[data-theme="brutalist"] .badge{border-radius:0;border:2px solid currentColor;background:transparent;font-weight:700}
+/* inputs y selects */
+[data-theme="brutalist"] input,
+[data-theme="brutalist"] select,
+[data-theme="brutalist"] .sel-btn{border-width:2px;border-color:#141414}
+[data-theme="brutalist"] input:focus,
+[data-theme="brutalist"] select:focus{outline:3px solid #ffd23f;outline-offset:-1px}
+/* nav activo: bloque negro con texto señal */
+[data-theme="brutalist"] aside.sidebar{border-right:2px solid #141414}
+[data-theme="brutalist"] aside.sidebar nav a{border-radius:0}
+[data-theme="brutalist"] aside.sidebar nav a.active{background:#141414;color:#ffd23f}
+[data-theme="brutalist"] .sideactions a{border-radius:0}
+[data-theme="brutalist"] .sideactions a.active{background:#141414;color:#ffd23f}
+/* medidores con borde */
+[data-theme="brutalist"] .meter{border-radius:0;border:2px solid #141414;height:12px}
+[data-theme="brutalist"] .meter>i{border-radius:0}
+/* seg control */
+[data-theme="brutalist"] .seg{border-radius:0;border:2px solid #141414}
+[data-theme="brutalist"] .seg button{border-radius:0}
+[data-theme="brutalist"] .seg button.on{background:#141414;color:#ffd23f;box-shadow:none}
+/* títulos de card con subrayado marcador */
+[data-theme="brutalist"] .cardtitle{
+  display:inline-block;background:linear-gradient(transparent 62%, #ffd23f 62%);
+  padding:0 4px;text-transform:uppercase;letter-spacing:.01em;
+}
+
+/* ---------- selector de tema: rejilla flexible para 7 tiles ---------- */
+.ap-theme{grid-template-columns:repeat(auto-fit,minmax(104px,1fr))}
+/* previews de skin: el scope ya lo da [data-theme] global, solo hay que
+   asegurar que el tile muestra UNA variante a ancho completo */
+.tpv-scope:only-child{flex:1}
+/* nota en lugar del picker de acento cuando hay skin activo */
+.accent-note{font-size:12px;color:var(--text3);font-style:italic}

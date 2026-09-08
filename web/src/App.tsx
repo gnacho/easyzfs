@@ -119,7 +119,7 @@ function AlertsPanel({ onClose }: { onClose: () => void }) {
 }
 
 function Shell() {
-  const { t, route, navigate, demo, exitDemo, user, isAdmin, ready, themeMode, themeEff, setTheme } = useApp();
+  const { t, route, navigate, demo, exitDemo, user, isAdmin, ready, family, mode, themeEff, setMode } = useApp();
   const { openModal } = useModal();
   const [showAlerts, setShowAlerts] = useState(false);
   const [hasPending, setHasPending] = useState(false);
@@ -301,23 +301,27 @@ function Shell() {
                 <IconBell />
                 {hasPending && <span className="ping" />}
               </button>
-              <button type="button" className="iconbtn theme-toggle-mobile"
-                aria-label={themeEff === 'dark' ? t('s_theme_toLight') : t('s_theme_toDark')}
-                title={themeEff === 'dark' ? t('s_theme_toLight') : t('s_theme_toDark')}
-                onClick={() => setTheme(themeEff === 'dark' ? 'light' : 'dark')}>
-                {themeEff === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
-              </button>
-              <div className="theme-pill" role="radiogroup" aria-label={t('s_theme')}>
-                {([['auto', IconMonitor], ['light', IconSun], ['dark', IconMoon]] as const).map(([m, Icon]) => (
-                  <button key={m} type="button" role="radio" aria-checked={themeMode === m}
-                    className={themeMode === m ? 'active' : ''}
-                    title={t(`s_theme_${m}` as never)}
-                    onClick={() => setTheme(m)}>
-                    <Icon size={14} />
-                    <span className="plbl">{t(`s_theme_${m}` as never)}</span>
+              {(family === 'classic' || family === 'modern') && (
+                <>
+                  <button type="button" className="iconbtn theme-toggle-mobile"
+                    aria-label={themeEff === 'dark' ? t('s_theme_toLight') : t('s_theme_toDark')}
+                    title={themeEff === 'dark' ? t('s_theme_toLight') : t('s_theme_toDark')}
+                    onClick={() => setMode(themeEff === 'dark' ? 'light' : 'dark')}>
+                    {themeEff === 'dark' ? <IconSun size={16} /> : <IconMoon size={16} />}
                   </button>
-                ))}
-              </div>
+                  <div className="theme-pill" role="radiogroup" aria-label={t('s_theme')}>
+                    {([['system', IconMonitor], ['light', IconSun], ['dark', IconMoon]] as const).map(([m, Icon]) => (
+                      <button key={m} type="button" role="radio" aria-checked={mode === m}
+                        className={mode === m ? 'active' : ''}
+                        title={t(m === 'system' ? 's_theme_auto' : (`s_theme_${m}` as never))}
+                        onClick={() => setMode(m)}>
+                        <Icon size={14} />
+                        <span className="plbl">{t(m === 'system' ? 's_theme_auto' : (`s_theme_${m}` as never))}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
               <button type="button" className={`topuser${active === 'settings' ? ' active' : ''}`}
                 onClick={() => navigate('settings')}
                 aria-label={user.display_name || user.user}

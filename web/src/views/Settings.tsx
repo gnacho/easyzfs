@@ -11,15 +11,15 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconSun, IconMoon, IconMonitor, IconLanguages } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconLanguages } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
 import { APIKeysPanel } from '../components/APIKeysPanel';
 import { usePush } from '../data/push';
 import { useReleaseCheck, refreshUpdateState } from '../ui/releasecheck';
-import { ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion } from '../ui/theme';
-import type { AccentId, Density, ThemeMode } from '../ui/theme';
+import { FAMILY_ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion, currentFamilyAccentId } from '../ui/theme';
+import type { Density, ThemeFamily, ThemeMode } from '../ui/theme';
 import type { I18nKey } from '../ui/i18n';
 import type {
   BackupStatus, Lang, PushAlertTipo, PushPreference,
@@ -39,29 +39,6 @@ function isIOS(): boolean {
 function isStandalone(): boolean {
   return window.matchMedia('(display-mode: standalone)').matches
     || (navigator as { standalone?: boolean }).standalone === true;
-}
-
-// Mini-preview de tema con las VARIABLES CSS REALES scopeadas por data-theme
-// (cero hex duplicados). Mismo patrón que el asset webapp-shell.
-function ThemePreview({ mode }: { mode: ThemeMode }) {
-  const half = (
-    <div className="tpv-half">
-      <div className="tpv-top" />
-      <div className="tpv-row">
-        <div className="tpv-side" />
-        <div className="tpv-main">
-          <div className="tpv-accent" />
-          <div className="tpv-block" />
-        </div>
-      </div>
-    </div>
-  );
-  return (
-    <div className="tpv" aria-hidden="true">
-      {mode !== 'dark' && <div className="tpv-scope" data-theme="light">{half}</div>}
-      {mode !== 'light' && <div className="tpv-scope" data-theme="dark">{half}</div>}
-    </div>
-  );
 }
 
 // Etiqueta traducida de cada tipo de alerta (exhaustivo sobre PushAlertTipo).
@@ -715,14 +692,14 @@ function ProfileCard() {
 }
 
 export default function Settings() {
-  const { t, themeMode, themeEff, setTheme, isAdmin, user, refresh, reloadUser, logout, setLang, notify } = useApp();
+  const { t, family, mode, themeEff, setFamily, setMode, isAdmin, user, refresh, reloadUser, logout, setLang, notify } = useApp();
   const { openModal } = useModal();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [users, setUsers] = useState<Awaited<ReturnType<ReturnType<typeof getProvider>['getUsers']>> | null>(null);
   const [version, setVersion] = useState<Awaited<ReturnType<ReturnType<typeof getProvider>['getVersion']>> | null>(null);
   const [msg, setMsg] = useState('');
   const [err, setErr] = useState('');
-  const [accent, setAccentState] = useState<AccentId>(getAccent());
+  const [accent, setAccentState] = useState<string>(getAccent());
   const [density, setDensityState] = useState<Density>(getDensity());
   const [reduceMotion, setReduceMotionState] = useState(getReduceMotion());
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -733,6 +710,14 @@ export default function Settings() {
   const [threshSaved, setThreshSaved] = useState<{ cap_warn_pct: number; cap_crit_pct: number; disk_temp_c: number } | null>(null);
   const [threshMsg, setThreshMsg] = useState('');
   const [threshErr, setThreshErr] = useState('');
+
+  // El acento seleccionado depende del tema: en familias no-classic vale el
+  // override por familia (easyzfs-accent-<familia>) o ninguno (usa el acento
+  // identidad de su CSS); en clásico vale el acento guardado.
+  useEffect(() => {
+    setAccentState(family !== 'classic' ? currentFamilyAccentId(family) : getAccent());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [family]);
 
   useEffect(() => {
     let alive = true;
@@ -799,11 +784,19 @@ export default function Settings() {
     && settings.disk_temp_c >= 20 && settings.disk_temp_c <= 90;
   const threshOk = capOk && tempOk;
 
-  const themeOpts: { v: ThemeMode; label: string; icon: typeof IconSun }[] = [
-    { v: 'light', label: t('s_theme_light'), icon: IconSun },
-    { v: 'dark', label: t('s_theme_dark'), icon: IconMoon },
-    { v: 'auto', label: t('s_theme_auto'), icon: IconMonitor },
+  const themeOpts: { v: ThemeFamily; label: string }[] = [
+    { v: 'classic', label: t('s_theme_clasico') },
+    { v: 'modern', label: t('s_theme_modern') },
+    { v: 'phosphor', label: t('s_theme_phosphor') },
+    { v: 'brutalist', label: t('s_theme_brutalist') },
   ];
+  const modeOpts: { v: ThemeMode; label: string }[] = [
+    { v: 'system', label: t('s_theme_auto') },
+    { v: 'light', label: t('s_theme_light') },
+    { v: 'dark', label: t('s_theme_dark') },
+  ];
+  // El modo (claro/oscuro/sistema) solo aplica a familias con variante.
+  const modeApplies = family === 'classic' || family === 'modern';
 
   return (
     <div className="view">
@@ -844,54 +837,55 @@ export default function Settings() {
       <div className="card pad">
         <h3 className="cardtitle">{t('s_appear')}</h3>
         <div className="aprow">
-          {/* Tiles de tema (izquierda ~50%) */}
-          <div className="ap-theme" role="radiogroup" aria-label={t('s_theme')}>
-            {themeOpts.map((o) => {
-              const Ico = o.icon;
-              return (
-                <button key={o.v} type="button" role="radio" aria-checked={themeMode === o.v}
-                  className={`themecard${themeMode === o.v ? ' sel' : ''}`}
-                  onClick={() => setTheme(o.v)}>
-                  <ThemePreview mode={o.v} />
-                  <span className="lbl"><Ico size={13} />{o.label}</span>
-                  {themeMode === o.v && <span className="check"><IconCheck /></span>}
-                </button>
-              );
-            })}
+          {/* Tema (familia) */}
+          <div className="ap-field ap-theme">
+            <span className="lbl">{t('s_theme')}</span>
+            <Select value={family} ariaLabel={t('s_theme')}
+              onChange={(f) => setFamily(f)}
+              options={themeOpts} />
           </div>
 
-          {/* Controles (derecha, flex-1) */}
-          <div className="ap-controls">
-            <div>
-              <span className="lbl">{t('s_accent')}</span>
-              <div className="ap-accent-row">
-                <div className="swatches" role="group" aria-label={t('s_accent')}>
-                  {(Object.keys(ACCENTS) as AccentId[]).map((id) => (
-                    <button key={id} type="button" title={t(`acc_${id}`)} aria-label={t(`acc_${id}`)}
-                      className={`swatch${accent === id ? ' sel' : ''}`}
-                      aria-pressed={accent === id}
-                      onClick={() => { setAccent(id); setAccentState(id); }}>
-                      <span style={{ background: ACCENTS[id][themeEff][0] }} />
-                    </button>
-                  ))}
-                </div>
-                <div className="ap-anim">
-                  <span className="lbl">{t('s_rm')}</span>
-                  <Switch checked={!reduceMotion} ariaLabel={t('s_rm')}
-                    onChange={(v) => { setReduceMotion(!v); setReduceMotionState(!v); }} />
-                </div>
-              </div>
+          {/* Modo (solo si la familia tiene variante claro/oscuro) */}
+          {modeApplies && (
+            <div className="ap-field ap-mode">
+              <span className="lbl">{t('s_theme_mode')}</span>
+              <Seg value={mode} ariaLabel={t('s_theme_mode')}
+                onChange={(m) => setMode(m)}
+                options={modeOpts} />
             </div>
+          )}
 
-            <div>
-              <span className="lbl">{t('s_density')}</span>
-              <Seg value={density} ariaLabel={t('s_density')}
-                onChange={(d) => { setDensity(d); setDensityState(d); }}
-                options={[
-                  { v: 'cozy', label: t('s_density_cozy') },
-                  { v: 'compact', label: t('s_density_compact') },
-                ]} />
+          {/* Acento de color — cada familia ofrece su propia paleta */}
+          <div className="ap-accent">
+            <span className="lbl">{t('s_accent')}</span>
+            <div className="swatches" role="group" aria-label={t('s_accent')}>
+              {FAMILY_ACCENTS[family].options.map((opt) => (
+                <button key={opt.v} type="button" title={t(opt.labelKey as I18nKey)} aria-label={t(opt.labelKey as I18nKey)}
+                  className={`swatch${accent === opt.v ? ' sel' : ''}`}
+                  aria-pressed={accent === opt.v}
+                  onClick={() => { setAccent(opt.v); setAccentState(opt.v); }}>
+                  <span style={{ background: opt[themeEff][0] }} />
+                </button>
+              ))}
             </div>
+          </div>
+
+          {/* Activar animaciones */}
+          <div className="ap-anim">
+            <span className="lbl">{t('s_rm')}</span>
+            <Switch checked={!reduceMotion} ariaLabel={t('s_rm')}
+              onChange={(v) => { setReduceMotion(!v); setReduceMotionState(!v); }} />
+          </div>
+
+          {/* Densidad */}
+          <div className="ap-field ap-density">
+            <span className="lbl">{t('s_density')}</span>
+            <Seg value={density} ariaLabel={t('s_density')}
+              onChange={(d) => { setDensity(d); setDensityState(d); }}
+              options={[
+                { v: 'cozy', label: t('s_density_cozy') },
+                { v: 'compact', label: t('s_density_compact') },
+              ]} />
           </div>
         </div>
       </div>

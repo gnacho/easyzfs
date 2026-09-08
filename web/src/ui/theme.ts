@@ -1,25 +1,39 @@
-// Apariencia: tema claro/oscuro/sistema, color de acento, densidad y
+// Apariencia: tema (familia), modo claro/oscuro/sistema, acento, densidad y
 // reducción de animaciones.
-// - Tema: 'light' | 'dark' | 'auto' (= sigue prefers-color-scheme del SO).
+// - Tema (familia): 'classic' | 'modern' | 'phosphor' | 'brutalist'.
+// - Modo: 'light' | 'dark' | 'system' (= sigue prefers-color-scheme del SO).
+//   Aplica a classic y modern; phosphor y brutalist son fijos (ignoran el modo).
 // - Acento: 4 colores con valores distintos para claro/oscuro; se aplican
-//   como variables CSS (--accent, --accent-soft) en <html>.
+//   como variables CSS (--accent, --accent-soft) en <html>. Disponible para
+//   todos los temas (en no-classic se persiste por familia).
 // - Densidad: 'cozy' | 'compact' (compacta = html font-size 13.5px + zoom).
 // - Reduce-motion: clase .reduce-motion en <html> (además de la media query
 //   prefers-reduced-motion del SO, ya cubierta en index.css).
-// Persistencia canónica webapp-shell (<slug>-*): easyzfs-theme-mode,
-// easyzfs-accent, easyzfs-density, easyzfs-reduce-motion. Las claves legacy
-// zfc-* (era zfsctl) se migran una vez y se borran.
-export type ThemeMode = 'auto' | 'light' | 'dark';
+// Persistencia canónica webapp-shell (<slug>-*): easyzfs-theme (familia),
+// easyzfs-theme-mode (modo), easyzfs-accent, easyzfs-density,
+// easyzfs-reduce-motion. Las claves legacy zfc-* (era zfsctl) migran una vez.
+export type ThemeFamily = 'classic' | 'modern' | 'phosphor' | 'brutalist';
+export type ThemeMode = 'light' | 'dark' | 'system';
 export type AccentId = 'cyan' | 'steel' | 'emerald' | 'amber';
 export type Density = 'cozy' | 'compact';
 
-const THEME_KEY = 'easyzfs-theme-mode';
+export const FAMILIES: readonly ThemeFamily[] = ['classic', 'modern', 'phosphor', 'brutalist'];
+// Fondo de cada data-theme para el meta theme-color / anti-FOUC.
+export const SKIN_BG: Record<string, string> = {
+  'modern-dark': '#0d0e12',
+  'modern-light': '#f4f5f8',
+  phosphor: '#050810',
+  brutalist: '#f2ede1',
+};
+
+const THEME_KEY = 'easyzfs-theme';       // familia
+const THEMODE_KEY = 'easyzfs-theme-mode'; // modo (clave legacy reutilizada)
 const ACCENT_KEY = 'easyzfs-accent';
 const DENSITY_KEY = 'easyzfs-density';
 const RM_KEY = 'easyzfs-reduce-motion';
 // Legacy (pre-rebrand zfsctl): leer una vez y migrar.
 const LEGACY: Record<string, string> = {
-  [THEME_KEY]: 'zfc-theme',
+  [THEMODE_KEY]: 'zfc-theme',
   [ACCENT_KEY]: 'zfc-accent',
   [DENSITY_KEY]: 'zfc-density',
 };
@@ -40,6 +54,24 @@ function getKey(key: string): string | null {
   return null;
 }
 
+// Migración un-time desde el modelo combinado anterior (easyzfs-theme-mode
+// guardaba 'auto'|'light'|'dark'|'modern-dark'|'modern-light'|'phosphor'|
+// 'brutalist'). Una vez migrado, easyzfs-theme = familia y
+// easyzfs-theme-mode = modo limpio.
+function migrateLegacy(): void {
+  if (localStorage.getItem(THEME_KEY) !== null) return;
+  const legacy = getKey(THEMODE_KEY);
+  let family: ThemeFamily = 'modern';
+  let mode: ThemeMode = 'system';
+  if (legacy === 'light' || legacy === 'dark' || legacy === 'auto') {
+    family = 'classic'; mode = legacy === 'auto' ? 'system' : legacy;
+  } else if (legacy === 'modern-dark') { family = 'modern'; mode = 'dark'; }
+  else if (legacy === 'modern-light') { family = 'modern'; mode = 'light'; }
+  else if (legacy === 'phosphor' || legacy === 'brutalist') { family = legacy; mode = 'system'; }
+  localStorage.setItem(THEME_KEY, family);
+  localStorage.setItem(THEMODE_KEY, mode);
+}
+
 const subs = new Set<() => void>();
 
 // [color, soft] por tema. emerald = verde original de la app.
@@ -50,40 +82,107 @@ export const ACCENTS: Record<AccentId, { light: [string, string]; dark: [string,
   amber:   { light: ['#a8741f', '#f6ecd9'], dark: ['#d9a84e', '#33291a'] },
 };
 
-// ---- Tema ----
-export function getThemeMode(): ThemeMode {
-  const v = getKey(THEME_KEY);
-  return v === 'light' || v === 'dark' ? v : 'auto';
+// Acento por familia: cada tema ofrece su propia paleta con un acento por
+// defecto (su identidad). Para 'classic' se reutilizan ACCENTS. El label es
+// una clave i18n que Settings resuelve con t().
+export interface AccentOption { v: string; light: [string, string]; dark: [string, string]; labelKey: string }
+export const FAMILY_ACCENTS: Record<ThemeFamily, { default: string; options: AccentOption[] }> = {
+  classic: {
+    default: 'emerald',
+    options: [
+      { v: 'cyan', light: ACCENTS.cyan.light, dark: ACCENTS.cyan.dark, labelKey: 'acc_cyan' },
+      { v: 'steel', light: ACCENTS.steel.light, dark: ACCENTS.steel.dark, labelKey: 'acc_steel' },
+      { v: 'emerald', light: ACCENTS.emerald.light, dark: ACCENTS.emerald.dark, labelKey: 'acc_emerald' },
+      { v: 'amber', light: ACCENTS.amber.light, dark: ACCENTS.amber.dark, labelKey: 'acc_amber' },
+    ],
+  },
+  modern: {
+    default: 'violet',
+    options: [
+      { v: 'violet', light: ['#6d3df5', 'rgba(109,61,245,.11)'], dark: ['#7c5cfc', 'rgba(124,92,252,.15)'], labelKey: 'acc_violet' },
+      { v: 'emerald', light: ACCENTS.emerald.light, dark: ACCENTS.emerald.dark, labelKey: 'acc_emerald' },
+      { v: 'cyan', light: ACCENTS.cyan.light, dark: ACCENTS.cyan.dark, labelKey: 'acc_cyan' },
+      { v: 'amber', light: ACCENTS.amber.light, dark: ACCENTS.amber.dark, labelKey: 'acc_amber' },
+    ],
+  },
+  phosphor: {
+    default: 'green',
+    options: [
+      { v: 'green', light: ['#00f48e', 'rgba(0,244,142,.08)'], dark: ['#00f48e', 'rgba(0,244,142,.08)'], labelKey: 'acc_green' },
+      { v: 'amber', light: ['#ffb000', 'rgba(255,176,0,.12)'], dark: ['#ffb000', 'rgba(255,176,0,.12)'], labelKey: 'acc_amber' },
+      { v: 'cyan', light: ['#22d3ee', 'rgba(34,211,238,.12)'], dark: ['#22d3ee', 'rgba(34,211,238,.12)'], labelKey: 'acc_cyan' },
+    ],
+  },
+  brutalist: {
+    default: 'blue',
+    options: [
+      { v: 'blue', light: ['#2b59ff', 'rgba(43,89,255,.12)'], dark: ['#2b59ff', 'rgba(43,89,255,.12)'], labelKey: 'acc_blue' },
+      { v: 'yellow', light: ['#ffd23f', 'rgba(255,210,63,.22)'], dark: ['#ffd23f', 'rgba(255,210,63,.22)'], labelKey: 'acc_yellow' },
+      { v: 'green', light: ['#0a8f4d', 'rgba(10,143,77,.14)'], dark: ['#0a8f4d', 'rgba(10,143,77,.14)'], labelKey: 'acc_green' },
+    ],
+  },
+};
+
+// ---- Tema (familia) ----
+// DEFAULT sin preferencia guardada: Modern + modo system (sigue al SO).
+export function getFamily(): ThemeFamily {
+  migrateLegacy();
+  const f = localStorage.getItem(THEME_KEY) as ThemeFamily | null;
+  return f && FAMILIES.includes(f) ? f : 'modern';
+}
+
+export function getMode(): ThemeMode {
+  migrateLegacy();
+  const m = localStorage.getItem(THEMODE_KEY);
+  return m === 'light' || m === 'dark' ? m : 'system';
 }
 
 export function systemPrefersDark(): boolean {
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 }
 
-export function effectiveTheme(mode: ThemeMode = getThemeMode()): 'light' | 'dark' {
-  if (mode === 'auto') return systemPrefersDark() ? 'dark' : 'light';
-  return mode;
+// ¿El modo efectivo es oscuro? (system = sigue al SO).
+export function isDarkMode(mode: ThemeMode = getMode()): boolean {
+  if (mode === 'system') return systemPrefersDark();
+  return mode === 'dark';
+}
+
+// Luminosidad efectiva (para pares claro/oscuro de acentos, iconos sol/luna).
+export function effectiveTheme(): 'light' | 'dark' {
+  const family = getFamily();
+  if (family === 'modern' || family === 'classic') return isDarkMode() ? 'dark' : 'light';
+  return family === 'brutalist' ? 'light' : 'dark'; // phosphor fijo oscuro
 }
 
 export function applyTheme(): void {
-  const eff = effectiveTheme();
-  document.documentElement.dataset.theme = eff === 'dark' ? 'dark' : '';
-  // theme-color dinámico según el tema efectivo
+  const family = getFamily();
+  const mode = getMode();
+  const el = document.documentElement;
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', eff === 'dark' ? '#0e1210' : '#f6f6f3');
-  applyAccent(); // el acento tiene valores distintos por tema
+  let dt: string;
+  if (family === 'classic') dt = isDarkMode(mode) ? 'dark' : '';
+  else if (family === 'modern') dt = isDarkMode(mode) ? 'modern-dark' : 'modern-light';
+  else dt = family; // phosphor | brutalist (fijos)
+  el.dataset.theme = dt;
+  if (meta) meta.setAttribute('content', SKIN_BG[dt] ?? (dt === 'dark' ? '#0e1210' : '#f6f6f3'));
+  applyAccent(); // acento en todos los temas
 }
 
-export function setThemeMode(mode: ThemeMode): void {
-  if (mode === 'auto') localStorage.removeItem(THEME_KEY);
-  else localStorage.setItem(THEME_KEY, mode);
+export function setThemeFamily(f: ThemeFamily): void {
+  localStorage.setItem(THEME_KEY, f);
   applyTheme();
-  subs.forEach((f) => f());
+  subs.forEach((fn) => fn());
 }
 
-// Botón del header: alterna claro/oscuro manualmente (override)
+export function setThemeMode(m: ThemeMode): void {
+  localStorage.setItem(THEMODE_KEY, m);
+  applyTheme();
+  subs.forEach((fn) => fn());
+}
+
+// Botón del header: alterna claro/oscuro manualmente (override sobre system)
 export function toggleTheme(): void {
-  setThemeMode(effectiveTheme() === 'dark' ? 'light' : 'dark');
+  setThemeMode(isDarkMode() ? 'light' : 'dark');
 }
 
 export function onThemeChange(fn: () => void): () => void {
@@ -91,13 +190,13 @@ export function onThemeChange(fn: () => void): () => void {
   return () => subs.delete(fn);
 }
 
-// En modo sistema, re-aplica el tema cuando cambia prefers-color-scheme
+// Re-aplica el tema cuando cambia prefers-color-scheme en modo system.
 export function startThemeWatcher(): void {
   const mq = window.matchMedia('(prefers-color-scheme: dark)');
   const onChange = () => {
-    if (getThemeMode() === 'auto') {
+    if (getMode() === 'system') {
       applyTheme();
-      subs.forEach((f) => f());
+      subs.forEach((fn) => fn());
     }
   };
   if (mq.addEventListener) mq.addEventListener('change', onChange);
@@ -110,8 +209,30 @@ export function getAccent(): AccentId {
   return v && ACCENTS[v] ? v : 'emerald';
 }
 
+// Acento activo de una familia: override persistido (easyzfs-accent-<familia>)
+// o, por defecto, el acento identidad de la familia.
+export function getFamilyAccent(family: ThemeFamily): string | null {
+  const v = localStorage.getItem('easyzfs-accent-' + family);
+  return v && FAMILY_ACCENTS[family].options.some((o) => o.v === v) ? v : null;
+}
+
+export function currentFamilyAccentId(family: ThemeFamily): string {
+  return getFamilyAccent(family) ?? FAMILY_ACCENTS[family].default;
+}
+
+// Devuelve el par [color, soft] del acento efectivo para la luminosidad actual.
+function accentColors(): [string, string] {
+  const family = getFamily();
+  const eff = effectiveTheme();
+  if (family === 'classic') return ACCENTS[getAccent()][eff];
+  const opts = FAMILY_ACCENTS[family];
+  const id = currentFamilyAccentId(family);
+  const opt = opts.options.find((o) => o.v === id) ?? opts.options[0];
+  return eff === 'dark' ? opt.dark : opt.light;
+}
+
 export function applyAccent(): void {
-  const [accent, soft] = ACCENTS[getAccent()][effectiveTheme()];
+  const [accent, soft] = accentColors();
   const st = document.documentElement.style;
   st.setProperty('--accent', accent);
   st.setProperty('--accent-soft', soft);
@@ -119,8 +240,10 @@ export function applyAccent(): void {
   // acento amber un estado sano y un aviso serían indistinguibles.
 }
 
-export function setAccent(id: AccentId): void {
-  localStorage.setItem(ACCENT_KEY, id);
+export function setAccent(id: string): void {
+  const family = getFamily();
+  if (family !== 'classic') localStorage.setItem('easyzfs-accent-' + family, id);
+  else localStorage.setItem(ACCENT_KEY, id);
   applyAccent();
 }
 
