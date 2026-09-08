@@ -30,10 +30,10 @@ export function Donut({ parts, size = 132, centerValue, centerLabel }: {
             return el;
           })
         )}
-        <text x="21" y="20.5" textAnchor="middle" style={{ fontSize: 9, fontWeight: 700, fill: 'var(--text)' }}>{centerValue}</text>
-        <text x="21" y="27.5" textAnchor="middle" style={{ fontSize: 3.6, fill: 'var(--text2)' }}>{centerLabel}</text>
+        <text x="21" y="20.5" textAnchor="middle" style={{ fontSize: 10, fontWeight: 700, fill: 'var(--text)' }}>{centerValue}</text>
+        <text x="21" y="27.5" textAnchor="middle" style={{ fontSize: 3.9, fill: 'var(--text2)' }}>{centerLabel}</text>
       </svg>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12.5 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13.5 }}>
         {parts.map((p) => (
           <span key={p.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--text2)' }}>
             <i style={{ width: 9, height: 9, borderRadius: '50%', background: p.color, display: 'inline-block' }} />

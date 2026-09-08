@@ -25,9 +25,6 @@
     if(o!==null){ls.setItem(nuevo,o);ls.removeItem(legacy);}
     return o;
   }
-  var t=getk('easyzfs-theme-mode','zfc-theme');
-  var dark=t==='dark'||(t!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
-  if(dark)document.documentElement.dataset.theme='dark';
   // ESPEJO de ACCENTS en ui/theme.ts: si cambia una, cambia la otra.
   var ACC={
     cyan:{l:['#0e7c93','#dff0f4'],d:['#4cc3d9','#13292f']},
@@ -35,10 +32,40 @@
     emerald:{l:['#2f7d5f','#e3f0e9'],d:['#5cb893','#1d2f27']},
     amber:{l:['#a8741f','#f6ecd9'],d:['#d9a84e','#33291a']}
   };
-  var a=ACC[getk('easyzfs-accent','zfc-accent')]||ACC.emerald;
-  var v=dark?a.d:a.l,st=document.documentElement.style;
-  st.setProperty('--accent',v[0]);st.setProperty('--accent-soft',v[1]);
-  // --ok NO sigue al acento: es semántico (salud OK); vive solo en el CSS.
+  // ESPEJO de SKIN_BG en ui/theme.ts: si cambia una, cambia la otra.
+  var SKINBG={'modern-dark':'#0d0e12','modern-light':'#f4f5f8','phosphor':'#050810','brutalist':'#f2ede1'};
+  var st=document.documentElement.style, ms=document.querySelector('meta[name="theme-color"]');
+  // Modelo: familia (easyzfs-theme) + modo (easyzfs-theme-mode). Migración
+  // desde el modelo combinado anterior (auto|light|dark|modern-*|phosphor|brutalist).
+  var fam=ls.getItem('easyzfs-theme'), mod=ls.getItem('easyzfs-theme-mode');
+  if(fam===null){
+    var legacy=ls.getItem('easyzfs-theme-mode')||ls.getItem('zfc-theme');
+    if(legacy==='light'||legacy==='dark'||legacy==='auto'){fam='classic';mod=legacy==='auto'?'system':legacy;}
+    else if(legacy==='modern-dark'){fam='modern';mod='dark';}
+    else if(legacy==='modern-light'){fam='modern';mod='light';}
+    else if(legacy==='phosphor'||legacy==='brutalist'){fam=legacy;mod='system';}
+    else {fam='modern';mod='system';}
+    ls.setItem('easyzfs-theme',fam);ls.setItem('easyzfs-theme-mode',mod);
+  }
+  var systemDark=window.matchMedia('(prefers-color-scheme: dark)').matches;
+  var dark=(mod==='dark'||(mod==='system'&&systemDark));
+  var dt;
+  if(fam==='classic'){dt=dark?'dark':'';}
+  else if(fam==='modern'){dt=dark?'modern-dark':'modern-light';}
+  else {dt=fam;} // phosphor | brutalist
+  document.documentElement.dataset.theme=dt;
+  if(ms)ms.setAttribute('content',SKINBG[dt]||(dt==='dark'?'#0e1210':'#f6f6f3'));
+  // Acento: en familias no-classic manda su CSS (salvo override); en clásico se aplica inline.
+  if(fam!=='classic'){
+    st.removeProperty('--accent');st.removeProperty('--accent-soft');
+    var lum=fam==='modern'?(dark?'dark':'light'):(fam==='brutalist'?'light':'dark');
+    var ov=ls.getItem('easyzfs-accent-'+fam);
+    if(ov&&ACC[ov]){var ar=ACC[ov][lum];st.setProperty('--accent',ar[0]);st.setProperty('--accent-soft',ar[1]);}
+  }else{
+    var a=ACC[getk('easyzfs-accent','zfc-accent')]||ACC.emerald;
+    var v=dark?a.d:a.l;
+    st.setProperty('--accent',v[0]);st.setProperty('--accent-soft',v[1]);
+  }
   if(getk('easyzfs-density','zfc-density')==='compact'){
     document.documentElement.dataset.density='compact';st.fontSize='13.5px';
   }
@@ -49,8 +76,6 @@
   var L=getk('easyzfs-lang','zfc-lang');
   document.documentElement.lang=(L==='es'||L==='en')?L:
     (((navigator.language||'es').toLowerCase().indexOf('en')===0)?'en':'es');
-  var m=document.querySelector('meta[name="theme-color"]');
-  if(m)m.setAttribute('content',dark?'#0e1210':'#f6f6f3');
 }catch(e){}})();
 </script>
 </head>

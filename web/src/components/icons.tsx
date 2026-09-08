@@ -30,6 +30,7 @@ export const IconCheck = (p: P) => base({ size: 11, strokeWidth: 3.2, ...p }, <p
 export const IconMonitor = (p: P) => base(p, <><rect x="2" y="4" width="20" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></>);
 export const IconUpload = (p: P) => base(p, <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m17 8-5-5-5 5" /><path d="M12 3v12" /></>);
 export const IconCode = (p: P) => base(p, <><path d="m16 18 6-6-6-6" /><path d="m8 6-6 6 6 6" /></>);
+export const IconBlock = (p: P) => base(p, <><rect x="3" y="5" width="18" height="14" /><path d="M3 10h18" /></>);
 export const IconShield = (p: P) => base(p, <path d="M12 22s8-3.6 8-10V5l-8-3-8 3v7c0 6.4 8 10 8 10z" />);
 export const IconDownload = (p: P) => base(p, <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" /><path d="M12 15V3" /></>);
 export const IconList = (p: P) => base(p, <><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3 6h.01M3 12h.01M3 18h.01" /></>);

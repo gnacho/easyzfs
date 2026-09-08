@@ -370,6 +370,16 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.22
+
+- **Nuevo sistema de temas con cuatro skins (#130)**: la interfaz incorpora cuatro looks distintos, conmutables desde *Ajustes → Apariencia*, manteniendo el clásico intacto para los usuarios actuales.
+  - **Clásico** — el look de siempre (claro/oscuro/sistema; es el default para usuarios existentes).
+  - **Moderno** — el default en instalaciones nuevas (oscuro o claro según tu SO): acento violeta, tarjetas sin borde con elevación suave, navegación activa en píldora y un halo radial sutil.
+  - **Fósforo** — estética CRT/terminal: JetBrains Mono en todo, radio 0, scanlines y rejilla de fondo, tarjetas con esquinas HUD, medidores segmentados y botones/badges cuadrados en mayúsculas, con identidad verde fósforo.
+  - **Brutalista** — papel crema con bordes negros de 2 px, sombras duras desplazadas, botón primario amarillo señal, títulos subrayados "marcador" y navegación activa negra con texto amarillo.
+- **Tema y modo ahora van separados**: eliges una familia (*Clásico / Moderno / Fósforo / Brutalista*) y, para Clásico y Moderno, un modo (*Sistema / Claro / Oscuro*). Cada familia ofrece su propia paleta de acentos (con su acento default preseleccionado) y el picker funciona en todos los temas, mientras los colores de estado siguen siendo semánticos. Densidad y reducción de animaciones se conservan bajo cada skin.
+- **Tipografía algo más grande** en el Dashboard y las secciones tipo Disk health, y el banner de rebuild ahora usa acento azul (info) en el tema Moderno.
+
 ### v2.9.21
 
 - **Reduce la recolección de ZFS cuando la UI está cerrada (#126)**: la web UI mantiene un stream SSE abierto contra `/api/events`, así que `ZpoolCollector` usa el número de suscriptores del hub como señal de presencia. Con la UI abierta ejecuta una recolección completa cada `EASYZFS_ZPOOL_INTERVAL` (10 s por defecto). Con la UI cerrada pasa a un heartbeat ligero de salud/alertas cada `EASYZFS_ZPOOL_ALERT_INTERVAL` (60 s por defecto) y solo hace una recolección completa cada `EASYZFS_ZPOOL_IDLE_INTERVAL` (300 s por defecto). Las alertas en segundo plano (DEGRADED, scrub, capacidad) siguen evaluándose al menos cada minuto, y las series de capacidad siguen persistiendo cada 10 minutos, mientras que los nodos en reposo emiten muchísimos menos comandos `zpool`/`zfs`.

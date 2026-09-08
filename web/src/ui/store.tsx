@@ -10,8 +10,8 @@ import { AUTH_EXPIRED_EVENT, connectSSE, disconnectSSE } from '../data/events';
 import { ApiError } from '../data/types';
 import { initLang, onLangChange, setLangMode, t as translate, getLangMode } from './i18n';
 import type { LangMode, I18nKey } from './i18n';
-import { applyTheme, applyDensity, applyReduceMotion, onThemeChange, startThemeWatcher, effectiveTheme, setThemeMode, getThemeMode } from './theme';
-import type { ThemeMode } from './theme';
+import { applyTheme, applyDensity, applyReduceMotion, onThemeChange, startThemeWatcher, effectiveTheme, getFamily, getMode, setThemeFamily, setThemeMode } from './theme';
+import type { ThemeFamily, ThemeMode } from './theme';
 
 export type ViewId = 'dash' | 'pools' | 'data' | 'snaps' | 'tasks' | 'disks' | 'trends' | 'settings';
 export const VIEWS: ViewId[] = ['dash', 'pools', 'data', 'snaps', 'tasks', 'disks', 'trends', 'settings'];
@@ -44,9 +44,11 @@ interface AppCtx {
   t: ((k: I18nKey, vars?: Record<string, string | number>) => string) & ((k: string) => string);
   langMode: LangMode;
   setLang: (m: LangMode) => void;
-  themeMode: ThemeMode;
+  family: ThemeFamily;
+  mode: ThemeMode;
   themeEff: 'light' | 'dark';
-  setTheme: (m: ThemeMode) => void;
+  setFamily: (f: ThemeFamily) => void;
+  setMode: (m: ThemeMode) => void;
   isAdmin: boolean;
   // Capacidades de OpenZFS del host (feature-gating; null hasta conocerlas)
   caps: Capabilities | null;
@@ -70,7 +72,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [route, setRoute] = useState<ViewId>(parseHash());
   const routeRef = useRef<ViewId>(parseHash());
   const [langMode, setLangModeState] = useState<LangMode>(getLangMode());
-  const [themeMode, setThemeModeState] = useState<ThemeMode>(getThemeMode());
+  const [family, setFamilyState] = useState<ThemeFamily>(getFamily());
+  const [mode, setModeState] = useState<ThemeMode>(getMode());
   const [themeEff, setThemeEff] = useState<'light' | 'dark'>(effectiveTheme());
   const [dataVersion, setDataVersion] = useState(0);
   const [caps, setCaps] = useState<Capabilities | null>(null);
@@ -92,7 +95,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     startThemeWatcher();
     const offLang = onLangChange(() => setLangModeState(getLangMode()));
     const offTheme = onThemeChange(() => {
-      setThemeModeState(getThemeMode());
+      setFamilyState(getFamily());
+      setModeState(getMode());
       setThemeEff(effectiveTheme());
     });
     (async () => {
@@ -231,7 +235,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const s = stateRef.current;
     if (s.user && !s.demo) getProvider().setMyLanguage(m).catch(() => {});
   }, []);
-  const setTheme = useCallback((m: ThemeMode) => setThemeMode(m), []);
+  const setFamily = useCallback((f: ThemeFamily) => setThemeFamily(f), []);
+  const setMode = useCallback((m: ThemeMode) => setThemeMode(m), []);
   const refresh = useCallback(() => setDataVersion((v) => v + 1), []);
   const reloadUser = useCallback(() => {
     getProvider().me().then(setUser).catch(() => {});
@@ -251,12 +256,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<AppCtx>(() => ({
     ready, demo, user, route, navigate, login, login2FA, logout, enterDemo, exitDemo,
-    t, langMode, setLang, themeMode, themeEff, setTheme,
+    t, langMode, setLang, family, mode, themeEff, setFamily, setMode,
     isAdmin: user?.role === 'admin',
     caps,
     refresh, dataVersion, reloadUser,
     toasts, notify, dismissToast,
-  }), [ready, demo, user, route, navigate, login, login2FA, logout, enterDemo, exitDemo, t, langMode, setLang, themeMode, themeEff, setTheme, caps, refresh, dataVersion, reloadUser, toasts, notify, dismissToast]);
+  }), [ready, demo, user, route, navigate, login, login2FA, logout, enterDemo, exitDemo, t, langMode, setLang, family, mode, themeEff, setFamily, setMode, caps, refresh, dataVersion, reloadUser, toasts, notify, dismissToast]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

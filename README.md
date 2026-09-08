@@ -362,6 +362,16 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.22
+
+- **New theme system with four visual skins (#130)**: the interface now ships four distinct looks, switchable from *Settings → Appearance* while keeping the classic one intact for existing users.
+  - **Classic** — the familiar light/dark/system look (the default for existing users).
+  - **Modern** — the default for new installs (dark or light following your OS): violet accent, borderless cards with soft elevation, pill-shaped active nav and a subtle radial halo.
+  - **Phosphor** — a CRT/terminal aesthetic: JetBrains Mono everywhere, zero radius, scanlines and a grid background, HUD-cornered cards, segmented meters and squared uppercase buttons/badges, with a phosphor-green identity.
+  - **Brutalist** — cream paper with 2px black borders, hard offset shadows, signal-yellow primary buttons, marker-underlined titles and black active nav with yellow text.
+- **Theme and mode are now separate**: pick a family (*Classic / Modern / Phosphor / Brutalist*) and, for Classic and Modern, a mode (*System / Light / Dark*). Each family offers its own accent palette (its default accent preselected) and the accent picker works on every theme while state colors stay semantic. Density and reduced-motion are preserved under every skin.
+- **Slightly larger type** in the Dashboard and the disk-health sections, and the rebuild banner now uses a blue (info) accent in the Modern theme.
+
 ### v2.9.21
 
 - **Throttle ZFS collector when no UI is connected (#126)**: the web UI keeps an SSE stream open to `/api/events`, so the `ZpoolCollector` now uses the hub's subscriber count as a presence signal. While the UI is open it runs a full collection every `EASYZFS_ZPOOL_INTERVAL` (default 10 s). When the UI is closed it falls back to a cheap health/alert heartbeat every `EASYZFS_ZPOOL_ALERT_INTERVAL` (default 60 s) and only runs a full collection every `EASYZFS_ZPOOL_IDLE_INTERVAL` (default 300 s). Background alerts (DEGRADED, scrub, capacity) keep firing at least every minute, and capacity series still persist every 10 minutes, while idle nodes issue dramatically fewer `zpool`/`zfs` commands.
