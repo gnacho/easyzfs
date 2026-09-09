@@ -194,12 +194,13 @@ export function InfoBubble({ title, glyph = '?', children }: { title?: string; g
 }
 
 // Pie de tarjeta KPI con valor opcional de porcentaje
-export function KpiCard({ label, value, small, foot, meter }: {
+export function KpiCard({ label, value, small, foot, meter, led }: {
   label: string; value: ReactNode; small?: string; foot?: ReactNode; meter?: number;
+  led?: 'g' | 'a' | 'r' | 'c' | 'o';
 }) {
   return (
     <div className="card kpi">
-      <div className="lbl">{label}</div>
+      <div className="lbl">{led && <span className={`led ${led}`} />}{label}</div>
       <div className="val">{value}{small ? <> <small>{small}</small></> : null}</div>
       {meter !== undefined && <Meter pct={meter} />}
       {foot && <div className="foot">{foot}</div>}

@@ -29,6 +29,17 @@ export default function Datasets() {
     try { await fn(); } catch (e) { setErr(errorMessage(e, t)); }
   };
 
+  // Glifo de árbol estilo mockup: "├─" para hijos, "└─" para el último hijo
+  // de cada padre (la lista ya viene ordenada jerárquicamente del backend).
+  const treeGlyph = (name: string, idx: number, all: typeof data): string => {
+    if (!all) return '';
+    const slash = name.lastIndexOf('/');
+    if (slash < 0) return '';
+    const parent = name.slice(0, slash);
+    const isLast = !all.slice(idx + 1).some((x) => x.name.startsWith(parent + '/') && x.name.split('/').length === name.split('/').length);
+    return isLast ? '└─' : '├─';
+  };
+
   return (
     <div className="view">
       {loading && !data && <Spinner label={t('loading')} />}
@@ -36,12 +47,13 @@ export default function Datasets() {
         <table className="data">
           <thead>
             <tr>
-              <th className="slack">{t('ds_name')}</th><th>{t('ds_type')}</th><th>{t('ds_comp')}</th>
-              <th className="num">{t('ds_used')}</th><th className="num">{t('ds_avail')}</th><th className="num">{t('ds_quota')}</th><th />
+              <th className="ledcol" /><th className="slack">{t('ds_name')}</th><th>{t('ds_type')}</th><th>{t('ds_comp')}</th>
+              <th className="num">{t('ds_used')}</th><th className="num">{t('ds_avail')}</th><th className="num">{t('ds_quota')}</th>
+              <th className="hide-md">{t('ds_mountpoint')}</th><th />
             </tr>
           </thead>
           <tbody>
-            {(data ?? []).map((d) => {
+            {(data ?? []).map((d, di) => {
               const rewriting = running.has(d.name);
               const canRewrite = isAdmin && !!caps?.rewrite && d.type === 'fs' &&
                 !!d.mountpoint && d.mountpoint !== '—' && d.mountpoint !== '-' && d.mountpoint !== 'none' && d.mountpoint !== 'legacy';
@@ -50,7 +62,13 @@ export default function Datasets() {
               return (
               <tr className="clickable" key={d.name}
                 onClick={() => openModal('propsds', { ds: d })}>
+                <td className="ledcol">
+                  <span className={`led ${encrypted && !unlocked ? 'a' : d.type === 'volume' ? 'c' : 'g'}`} />
+                </td>
                 <td className="mono" style={{ fontWeight: 600 }}>
+                  {treeGlyph(d.name, di, data) && (
+                    <span className="tree" aria-hidden="true">{treeGlyph(d.name, di, data)} </span>
+                  )}
                   {encrypted && (
                     <span style={{ display: 'inline-flex', verticalAlign: '-3px', marginRight: 6,
                       color: unlocked ? 'var(--ok)' : 'var(--err)' }}
@@ -71,7 +89,8 @@ export default function Datasets() {
                 <td>{d.compression}</td>
                 <td className="num">{fmtBytes(d.used_bytes)}</td>
                 <td className="num">{fmtBytes(d.avail_bytes)}</td>
-                <td className="num">{d.quota_bytes ? fmtBytes(d.quota_bytes) : '—'}</td>
+                <td className="num">{d.quota_bytes ? fmtBytes(d.quota_bytes) : <span className="dim">—</span>}</td>
+                <td className="mono dim hide-md" style={{ fontSize: 12 }}>{d.mountpoint || '—'}</td>
                 <td style={{ whiteSpace: 'nowrap' }}>
                   {encrypted && isAdmin && (<>
                     {!unlocked && (

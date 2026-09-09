@@ -128,7 +128,7 @@ export default function Disks() {
         <table className="data responsive">
           <thead>
             <tr>
-              <th>{t('dk_disk')}</th><th className="slack">{t('dk_model')}</th><th className="num hide-md">{t('dk_size')}</th>
+              <th className="ledcol" /><th>{t('dk_disk')}</th><th className="slack">{t('dk_model')}</th><th className="num hide-md">{t('dk_size')}</th>
               <th className="num">{t('dk_temp')}</th><th>{t('dk_smart')}</th><th className="hide-md">{t('dk_pool')}</th><th />
             </tr>
           </thead>
@@ -137,6 +137,9 @@ export default function Disks() {
               <tr key={d.dev} className="clickable"
                 title={t('dsm_title')}
                 onClick={() => openModal('diskdetail', { disk: d })}>
+                <td className="ledcol">
+                  <span className={`led ${d.smart === 'ok' ? 'g' : d.smart === 'warn' ? 'a' : d.smart === 'crit' ? 'r' : 'o'}`} />
+                </td>
                 <td className="mono" style={{ fontWeight: 650 }}>{d.dev}</td>
                 <td className="modelcell">
                   <div style={{ fontSize: 13 }}>{d.model}</div>
@@ -145,7 +148,7 @@ export default function Disks() {
                   </div>
                 </td>
                 <td className="num hide-md" data-l={t('dk_size')}>{fmtBytes(d.size_bytes)}</td>
-                <td className="num" data-l={t('dk_temp')}>
+                <td className="num mono" data-l={t('dk_temp')} style={{ fontVariantNumeric: 'tabular-nums' }}>
                   {d.temp_c === null ? '—' : `${d.temp_c}°C`}
                   <DiskTempSpark dev={d.dev} />
                 </td>

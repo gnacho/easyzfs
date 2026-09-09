@@ -112,6 +112,7 @@ export default function Tasks() {
         <div className="card">
           {list.map((j) => (
             <div className="rowitem" key={j.id}>
+              <span className={`led ${j.enabled ? 'g' : 'o'}`} />
               <div className="grow">
                 <div className="t1" style={{ fontSize: 13.5 }}>
                   <Badge tone={TIPO_CLS[j.tipo]} dot={false} style={{ padding: '2px 8px' }}>{tipoLbl(j.tipo)}</Badge>
@@ -209,6 +210,7 @@ export default function Tasks() {
           {sys.loading && !sys.data && <Spinner label={t('loading')} />}
           {(sys.data?.timers ?? []).map((s, i) => (
             <div className="rowitem" key={i}>
+              <span className={`led ${s.source === 'systemd' ? 'c' : 'a'}`} />
               <Badge tone={s.source === 'systemd' ? 'info' : 'warn'} dot={false} style={{ padding: '2px 8px' }}>
                 {s.source}
               </Badge>
@@ -273,6 +275,7 @@ export default function Tasks() {
         <div className="card">
           {(hist.data ?? []).map((h, i) => (
             <div className="rowitem" key={i}>
+              <span className={`led ${h.ok ? 'g' : 'r'}`} />
               <Badge tone={h.ok ? 'ok' : 'err'} dot={false} style={{ padding: '2px 8px' }}>
                 {h.ok ? t('hist_ok') : t('hist_warn')}
               </Badge>

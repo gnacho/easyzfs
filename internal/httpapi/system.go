@@ -4,8 +4,10 @@ package httpapi
 import (
 	"context"
 	"net/http"
+	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"easyzfs/internal/db"
@@ -35,21 +37,109 @@ func (s *Server) getVersion(w http.ResponseWriter, r *http.Request) {
 			caps = c
 		}
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
-		"name":         "EasyZFS",
-		"version":      s.version,
-		"build":        s.build,
-		"go":           runtime.Version(),
-		"os_arch":      runtime.GOOS + "/" + runtime.GOARCH,
-		"uptime_sec":   int64(time.Since(s.started).Seconds()),
-		"rss_bytes":    memRSS(),
-		"db_bytes":     db.SizeBytes(s.cfg.DBPath),
-		"db_path":      s.cfg.DBPath,
-		"zfs_version":  caps.Version,
-		"capabilities": caps,
-		"demo":         s.cfg.Demo,
+	out := map[string]any{
+		"name":          "EasyZFS",
+		"version":       s.version,
+		"build":         s.build,
+		"go":            runtime.Version(),
+		"os_arch":       runtime.GOOS + "/" + runtime.GOARCH,
+		"uptime_sec":    int64(time.Since(s.started).Seconds()),
+		"rss_bytes":     memRSS(),
+		"db_bytes":      db.SizeBytes(s.cfg.DBPath),
+		"db_path":       s.cfg.DBPath,
+		"zfs_version":   caps.Version,
+		"capabilities":  caps,
+		"demo":          s.cfg.Demo,
 		"pendingUpdate": pendingUpdateJSON(s.updater),
-	})
+	}
+	// Métricas del host (best effort: se omiten si no se pueden leer).
+	if l1, l5, l15, ok := loadAvg(); ok {
+		out["load1"], out["load5"], out["load15"] = l1, l5, l15
+	}
+	if total, avail, ok := memInfo(); ok {
+		out["mem_total_bytes"], out["mem_avail_bytes"] = total, avail
+	}
+	if hit, size, ok := arcStats(); ok {
+		out["arc_hit_pct"], out["arc_size_bytes"] = hit, size
+	}
+	writeJSON(w, http.StatusOK, out)
+}
+
+// loadAvg lee /proc/loadavg (load 1/5/15).
+func loadAvg() (l1, l5, l15 float64, ok bool) {
+	b, err := os.ReadFile("/proc/loadavg")
+	if err != nil {
+		return 0, 0, 0, false
+	}
+	f := strings.Fields(string(b))
+	if len(f) < 3 {
+		return 0, 0, 0, false
+	}
+	l1, err1 := strconv.ParseFloat(f[0], 64)
+	l5, err5 := strconv.ParseFloat(f[1], 64)
+	l15, err15 := strconv.ParseFloat(f[2], 64)
+	if err1 != nil || err5 != nil || err15 != nil {
+		return 0, 0, 0, false
+	}
+	return l1, l5, l15, true
+}
+
+// memInfo lee MemTotal/MemAvailable de /proc/meminfo (en bytes).
+func memInfo() (total, avail uint64, ok bool) {
+	b, err := os.ReadFile("/proc/meminfo")
+	if err != nil {
+		return 0, 0, false
+	}
+	for _, line := range strings.Split(string(b), "\n") {
+		f := strings.Fields(line)
+		if len(f) < 2 {
+			continue
+		}
+		kb, err := strconv.ParseUint(f[1], 10, 64)
+		if err != nil {
+			continue
+		}
+		switch strings.TrimSuffix(f[0], ":") {
+		case "MemTotal":
+			total = kb * 1024
+		case "MemAvailable":
+			avail = kb * 1024
+		}
+	}
+	return total, avail, total > 0
+}
+
+// arcStats calcula el hit ratio del ARC de ZFS a partir de
+// /proc/spl/kstat/zfs/arcstats (hits/(hits+misses)). Devuelve también el
+// tamaño actual del ARC en bytes.
+func arcStats() (hitPct float64, sizeBytes uint64, ok bool) {
+	b, err := os.ReadFile("/proc/spl/kstat/zfs/arcstats")
+	if err != nil {
+		return 0, 0, false
+	}
+	var hits, misses, size uint64
+	for _, line := range strings.Split(string(b), "\n") {
+		f := strings.Fields(line)
+		if len(f) < 3 {
+			continue
+		}
+		v, err := strconv.ParseUint(f[2], 10, 64)
+		if err != nil {
+			continue
+		}
+		switch f[0] {
+		case "hits":
+			hits = v
+		case "misses":
+			misses = v
+		case "size":
+			size = v
+		}
+	}
+	if hits+misses == 0 {
+		return 0, size, false
+	}
+	return float64(hits) / float64(hits+misses) * 100, size, true
 }
 
 // getSettings — GET /api/settings.
@@ -133,17 +223,17 @@ func validateSettings(st settingsBody) string {
 
 // settingsBody — body de PUT /api/settings (idéntico a settings.Settings).
 type settingsBody struct {
-	Lang              string `json:"lang"`
-	CapWarnPct        int    `json:"cap_warn_pct"`
-	CapCritPct        int    `json:"cap_crit_pct"`
-	DiskTempC         int    `json:"disk_temp_c"`
-	Webhook           string `json:"webhook"`
-	NotifyScrubErrors bool   `json:"notify_scrub_errors"`
-	NotifySmartChange bool   `json:"notify_smart_change"`
-	DemoEnabled       bool   `json:"demo_enabled"`
-	BackupEnabled       bool `json:"backup_enabled"`
-	BackupFreqHours     int  `json:"backup_freq_hours"`
-	BackupRetentionDays int  `json:"backup_retention_days"`
+	Lang                string `json:"lang"`
+	CapWarnPct          int    `json:"cap_warn_pct"`
+	CapCritPct          int    `json:"cap_crit_pct"`
+	DiskTempC           int    `json:"disk_temp_c"`
+	Webhook             string `json:"webhook"`
+	NotifyScrubErrors   bool   `json:"notify_scrub_errors"`
+	NotifySmartChange   bool   `json:"notify_smart_change"`
+	DemoEnabled         bool   `json:"demo_enabled"`
+	BackupEnabled       bool   `json:"backup_enabled"`
+	BackupFreqHours     int    `json:"backup_freq_hours"`
+	BackupRetentionDays int    `json:"backup_retention_days"`
 }
 
 // listAlerts — GET /api/alerts → últimas 100.

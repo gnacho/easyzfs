@@ -5,7 +5,7 @@ import { errorMessage, useApp } from '../ui/store';
 import { t } from '../ui/i18n';
 import { fmtBytes, fmtBytesPair, fmtPct, fmtRatio, timeAgo } from '../ui/format';
 import { statusLabel } from '../ui/labels';
-import { Badge, InfoBubble, Meter, Switch } from './ui';
+import { Badge, InfoBubble, Switch } from './ui';
 import { Sparkline } from './Sparkline';
 import { useModal } from './Modal';
 import { useEffect, useState } from 'react';
@@ -117,38 +117,43 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
   const canExpand = isAdmin && !!caps?.raidz_expansion &&
     (pool.raidz_vdevs ?? []).length > 0 && free.length > 0 && !expanding;
 
+  const ledCls = ok ? 'g' : pool.status === 'DEGRADED' ? 'a' : 'r';
   return (
     <div className="card">
-      <div className="poolhead">
+      <div className="pool-head">
+        <span className={`led ${ledCls}`} />
         <div className="grow">
-          <div className="t1" style={{ fontSize: 16, fontWeight: 700, display: 'flex', gap: 9, alignItems: 'center' }}>
+          <div className="pool-name">
             {pool.name} <Badge tone={ok ? 'ok' : 'warn'}>{statusLabel(pool.status, t)}</Badge>
             {pool.checkpoint && <Badge tone="info">{t('ck_badge')}</Badge>}
           </div>
-          <div className="t2">{pool.topo}</div>
-          <TopoHelp topo={pool.topo} />
-          <Meter pct={pct} />
-          {hist.length > 0 && (
-            <div className="sparks" aria-label={t('pool_history_series')}>
-              {hist.sort((a, b) => a.days - b.days).map((h) => (
-                <span key={h.days} className="spark" title={t('pool_history_days', { days: h.days })}>
-                  <Sparkline points={h.points} width={72} height={26}
-                    ariaLabel={t('pool_history_days', { days: h.days })} />
-                  <em>{h.days}d</em>
-                </span>
-              ))}
-            </div>
-          )}
+          <div className="pool-raid">{pool.topo} <TopoHelp topo={pool.topo} /></div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontWeight: 700, fontSize: 17 }}>
+        <div className="pool-cap">
+          <div className="big">
             {cap.used}
-            <span className="muted" style={{ fontWeight: 500 }}>
-              {' '}{t('pool_of')} {cap.total}
-            </span>
+            <span className="dim">{' '}{t('pool_of')} {cap.total}</span>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text2)' }}>{fmtPct(pct)} {t('pool_used')}</div>
+          <div className="pct">{fmtPct(pct)} {t('pool_used')}</div>
         </div>
+      </div>
+
+      <div className="pool-bar">
+        <div className={`segbar ${pct >= 90 ? 'crit' : pct >= 80 ? 'warn' : ''}`}
+          role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
+          <i style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
+        </div>
+        {hist.length > 0 && (
+          <div className="sparks" aria-label={t('pool_history_series')}>
+            {hist.sort((a, b) => a.days - b.days).map((h) => (
+              <span key={h.days} className="spark" title={t('pool_history_days', { days: h.days })}>
+                <Sparkline points={h.points} width={72} height={26}
+                  ariaLabel={t('pool_history_days', { days: h.days })} />
+                <em>{h.days}d</em>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="poolmeta">
@@ -205,22 +210,24 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
           // que desaparece solo al terminar la reconstrucción.
           if (v.replacing && v.status !== 'ONLINE') {
             return (
-              <div className="vdev" key={v.dev} style={{ opacity: 0.55 }}>
+              <div className="vdev out" key={v.dev}>
+                <span className="led o" />
                 <span className="badge info" style={{ padding: '2px 7px' }}>{t('vdev_outgoing')}</span>
                 <span className="dname" title={v.dev}>{shortDev(v)}</span>
-                <span style={{ fontSize: 12, color: 'var(--text2)' }}>{t('vdev_outgoing_hint')}</span>
+                <span className="drole">{t('vdev_outgoing_hint')}</span>
               </div>
             );
           }
           return (
-          <div className="vdev" key={v.dev} style={v.replacing ? { flexWrap: 'wrap' } : undefined}>
+          <div className={`vdev${v.status !== 'ONLINE' ? ' faulted' : ''}`} key={v.dev} style={v.replacing ? { flexWrap: 'wrap' } : undefined}>
+            <span className={`led ${v.status === 'ONLINE' ? 'g' : v.status === 'OFFLINE' ? 'o' : 'r'}`} />
             <span className={`badge ${v.status === 'ONLINE' ? 'ok' : 'err'}`} style={{ padding: '2px 7px' }}>{statusLabel(v.status, t)}</span>
             <span className="dname" title={v.dev}>{shortDev(v)}</span>
             {v.replacing && (
               <span className="badge info" style={{ padding: '1px 7px' }} title={t('vdev_new_hint')}>{t('vdev_new')}</span>
             )}
-            <span>{v.role !== '—' ? v.role : ''}</span>
-            <span style={{ marginLeft: 'auto' }}>{v.temp_c}°C</span>
+            <span className="drole">{v.role !== '—' ? v.role : ''}</span>
+            <span className="temp" style={{ marginLeft: 'auto' }}>{v.temp_c}°C</span>
             {v.replacing ? (
               <span className="vdevjoin" title={t('vdev_joining_hint')}>
                 {t('vdev_joining')} · {Math.round(pool.scrub.pct)}%
@@ -254,7 +261,7 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
 
       {err && <p className="form-err" style={{ padding: '0 16px' }} role="alert">{err}</p>}
 
-      <div style={{ display: 'flex', gap: 7, padding: '0 16px 15px', flexWrap: 'wrap' }}>
+      <div className="pool-actions">
         {!resilvering && !expanding && (
           <button className="btn sm" title={running ? t('pool_scrub_pause_hint') : t('pool_scrub_hint')}
             onClick={() => scrub(running ? 'pause' : 'start')}>

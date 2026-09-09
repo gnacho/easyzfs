@@ -65,6 +65,7 @@ export default function Snapshots() {
               onClick={() => toggle(g.dataset)}
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(g.dataset); } }}>
               <span className="chev" style={{ display: 'inline-flex' }}><IconChev /></span>
+              <span className={`led ${g.snaps.length > 0 ? 'g' : 'o'}`} />
               <span className="mono" style={{ fontWeight: 650, fontSize: 13.5 }}>{g.dataset}</span>
               <span className="badge info" style={{ marginLeft: 'auto' }}>{g.snaps.length}</span>
             </div>
@@ -73,7 +74,7 @@ export default function Snapshots() {
                 <div className="snap" key={s.full}>
                   <Badge tone={s.kind === 'manual' ? 'warn' : 'info'} dot={false} style={{ padding: '2px 8px' }}>{s.kind}</Badge>
                   <span className="mono">{s.name}</span>
-                  <span style={{ color: 'var(--text2)', fontSize: 12 }}>
+                  <span className="mono" style={{ color: 'var(--text2)', fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
                     {fmtBytes(s.used_bytes)} · {timeAgo(s.ts, t)}
                   </span>
                   <span className="actions" style={{ marginLeft: 'auto' }}>

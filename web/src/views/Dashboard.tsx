@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { subscribeEvents } from '../data/events';
 import { useData } from '../ui/useData';
 import { useApp, alertTargetView } from '../ui/store';
-import { fmtBytes, fmtBytesPair, fmtInt, fmtPct, timeAgo } from '../ui/format';
+import { fmtBytes, fmtBytesPair, fmtDateTime, fmtInt, fmtPct, timeAgo } from '../ui/format';
 import { KpiCard, Spinner } from '../components/ui';
 import { PoolCard } from '../components/PoolCard';
 import { Donut } from '../components/Donut';
@@ -70,16 +70,17 @@ export default function Dashboard() {
       {!o && <Spinner label={t('loading')} />}
       {o && (<>
         <div className="grid kpis">
-          <KpiCard label={t('kpi_health')}
+          <KpiCard label={t('kpi_health')} led={o.pools_online === o.pools_total ? 'g' : 'a'}
             value={`${o.pools_total} pools`}
             foot={o.pools_online === o.pools_total ? t('kpi_health_ok') : t('kpi_health_warn')} />
-          <KpiCard label={t('kpi_cap')}
+          <KpiCard label={t('kpi_cap')} led={pct >= 90 ? 'r' : pct >= 80 ? 'a' : 'c'}
             value={cap!.used}
             small={`${t('pool_of')} ${cap!.total}`}
             foot={`${fmtPct(pct)} ${t('kpi_cap_used')}`} meter={pct} />
-          <KpiCard label={t('kpi_snaps')} value={fmtInt(o.snapshots_total)}
+          <KpiCard label={t('kpi_snaps')} led="c" value={fmtInt(o.snapshots_total)}
             foot={`${o.jobs_active} ${t('kpi_snaps_foot')}`} />
-          <KpiCard label={t('kpi_scrub')} value={o.last_scrub.errors === 0 ? 'OK' : String(o.last_scrub.errors)}
+          <KpiCard label={t('kpi_scrub')} led={o.last_scrub.errors === 0 ? 'g' : 'r'}
+            value={o.last_scrub.errors === 0 ? 'OK' : String(o.last_scrub.errors)}
             foot={`${o.last_scrub.pool} · ${o.last_scrub.errors} ${t('kpi_scrub_errors')} · ${timeAgo(o.last_scrub.ts, t)}`} />
         </div>
 
@@ -149,9 +150,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Alertas + Actividad: apiladas en pantalla normal; en ancha van a
-            2 columnas (dash-cols) para no dejar media pantalla vacía */}
-        <div className="dash-cols">
         <div className="sect">
           <h2>{t('dash_alerts')}</h2>
           <div className="card">
@@ -160,18 +158,41 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* grid2 del mockup: temperaturas de disco (LED + minibarra) y
+            actividad reciente con formato de registro de eventos */}
+        <div className="dash-cols">
         <div className="sect">
-          <h2>{t('dash_activity')}</h2>
-          <div className="card">
-            {o.activity.map((a, i) => (
-              <div className="rowitem" key={i}>
-                <div className="grow">
-                  <div className="t1" style={{ fontSize: 13.5 }}>{a.text}</div>
-                  <div className="t2">{a.detail}</div>
+          <h2>{t('dash_temps')}</h2>
+          <div className="card" style={{ padding: '10px 16px 12px' }}>
+            {(!disks.data || disks.data.length === 0) && <div className="empty">{t('empty')}</div>}
+            {(disks.data ?? []).map((d) => {
+              const tC = d.temp_c;
+              const w = tC == null ? 0 : Math.min(100, Math.round((tC / 70) * 100));
+              return (
+                <div className="dev" key={d.dev}>
+                  <span className={`led ${d.smart === 'ok' ? 'g' : d.smart === 'warn' ? 'a' : d.smart === 'crit' ? 'r' : 'o'}`} />
+                  <span className="dname" title={d.model}>{d.dev.replace('/dev/', '')}</span>
+                  <span className="drole">{d.pool && d.pool !== '—' ? d.pool : ''}</span>
+                  <span className="temp" style={{ marginLeft: 'auto' }}>{tC == null ? '—' : `${tC}°C`}</span>
+                  <span className="minibar" style={{ width: 90 }}><i style={{ width: `${w}%` }} /></span>
                 </div>
-                <span style={{ fontSize: 11.5, color: 'var(--text2)' }}>{timeAgo(a.ts, t)}</span>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="sect">
+          <h2>{t('dash_events')}</h2>
+          <div className="card evt-card">
+            <div className="evt-log">
+              {o.activity.map((a, i) => (
+                <div className="evt" key={i}>
+                  <span className="ts">{fmtDateTime(a.ts)}</span>
+                  <span className="msg">{a.text}{a.detail ? <span className="dim"> · {a.detail}</span> : null}</span>
+                </div>
+              ))}
+              {o.activity.length === 0 && <div className="empty">{t('empty')}</div>}
+            </div>
           </div>
         </div>
         </div>
