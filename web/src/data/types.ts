@@ -71,6 +71,15 @@ export interface VersionInfo {
   demo: boolean;
   capabilities?: Capabilities; // ausente en respuestas viejas del server
   pendingUpdate?: { from: string; to: string } | null;
+  // Métricas del host (best effort; ausentes si el server no puede leerlas,
+  // p. ej. fuera de Linux o sin ZFS cargado).
+  load1?: number;
+  load5?: number;
+  load15?: number;
+  mem_total_bytes?: number;
+  mem_avail_bytes?: number;
+  arc_hit_pct?: number;
+  arc_size_bytes?: number;
 }
 
 // Estado de actualización (GET /api/update/status). El apply lo ejecuta el

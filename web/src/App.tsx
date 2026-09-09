@@ -13,6 +13,8 @@ import ErrorBoundary from './components/ErrorBoundary';
 import PullToRefresh from './components/PullToRefresh';
 import { getProvider } from './data';
 import { subscribeEvents } from './data/events';
+import { fmtBytes, fmtBytesPair, fmtDuration } from './ui/format';
+import type { VersionInfo } from './data/types';
 import { timeAgo } from './ui/format';
 import { lazyRetry } from './ui/lazyRetry';
 import { useUpdateAvailable } from './ui/updatecheck';
@@ -115,6 +117,73 @@ function AlertsPanel({ onClose }: { onClose: () => void }) {
         })}
       </div>
     </div>
+  );
+}
+
+// Panel de métricas del host en el sidebar (uptime, load, RAM daemon/sistema,
+// ARC hit). Los campos son best-effort: una fila solo se pinta si el server
+// la reporta (/api/version). Se refresca cada 30 s.
+function SideStats() {
+  const [v, setV] = useState<VersionInfo | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () => getProvider().getVersion().then((x) => alive && setV(x)).catch(() => {});
+    load();
+    const id = setInterval(load, 30000);
+    return () => { alive = false; clearInterval(id); };
+  }, []);
+  if (!v) return null;
+  const memUsed = v.mem_total_bytes && v.mem_avail_bytes != null
+    ? v.mem_total_bytes - v.mem_avail_bytes : null;
+  const memPct = memUsed != null && v.mem_total_bytes
+    ? Math.round((memUsed / v.mem_total_bytes) * 100) : null;
+  return (
+    <div className="side-stats">
+      <div className="ss-row">
+        <span className="ss-k">UPTIME</span>
+        <span className="ss-v g">{fmtDuration(v.uptime_sec)}</span>
+      </div>
+      {v.load1 != null && (
+        <div className="ss-row">
+          <span className="ss-k">LOAD</span>
+          <span className="ss-v">{v.load1.toFixed(2)} {v.load5?.toFixed(2)} {v.load15?.toFixed(2)}</span>
+        </div>
+      )}
+      <div className="ss-row">
+        <span className="ss-k">RAM · daemon</span>
+        <span className="ss-v">{fmtBytes(v.rss_bytes)}</span>
+      </div>
+      {memUsed != null && v.mem_total_bytes != null && (
+        <div className="ss-row ss-col">
+          <div className="ss-line">
+            <span className="ss-k">RAM · system</span>
+            <span className="ss-v">{(() => { const p = fmtBytesPair(memUsed, v.mem_total_bytes); return `${p.used} / ${p.total}`; })()}</span>
+          </div>
+          {memPct != null && <div className="minibar"><i style={{ width: `${memPct}%` }} /></div>}
+        </div>
+      )}
+      {v.arc_hit_pct != null && (
+        <div className="ss-row">
+          <span className="ss-k">ARC HIT</span>
+          <span className="ss-v g">{v.arc_hit_pct.toFixed(1)}%</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Reloj de consola en la topbar (mono, tabular; oculto < 1100px por CSS).
+function Clock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const p = (n: number) => String(n).padStart(2, '0');
+  return (
+    <span className="clock" aria-hidden="true">
+      {p(now.getHours())}:{p(now.getMinutes())}<b>:{p(now.getSeconds())}</b>
+    </span>
   );
 }
 
@@ -223,6 +292,7 @@ function Shell() {
               );
             })}
           </nav>
+          {!collapsed && <SideStats />}
           <div className="sidefoot">
             <div className="sideactions">
               <a href="#/settings" className={active === 'settings' ? 'active' : ''}
@@ -296,6 +366,8 @@ function Shell() {
               </div>
             </div>
             <div className="head-actions">
+              <span className="live-badge"><span className="live-dot" />LIVE</span>
+              <Clock />
               <button className="iconbtn" title={t('a11y_alerts')} aria-label={t('a11y_alerts')}
                 style={{ position: 'relative' }} onClick={() => { setShowAlerts((v) => !v); setHasPending(false); }}>
                 <IconBell />

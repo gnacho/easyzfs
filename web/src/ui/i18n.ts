@@ -93,6 +93,7 @@ const es = {
   kpi_scrub: 'Último scrub', kpi_scrub_errors: 'errores',
   dash_pools: 'Pools', dash_see_all: 'Ver todos',
   dash_alerts: 'Alertas recientes', dash_activity: 'Actividad',
+  dash_temps: 'Temperatura de discos', dash_events: 'Registro de eventos',
   dash_no_alerts: 'Sin alertas. Todo en orden.',
 
   // Tendencias (#85)
@@ -246,7 +247,7 @@ const es = {
   nds_pass_mismatch: 'Las passphrases no coinciden',
   ds_encrypted: 'cifrado', ds_locked: 'bloqueado (sin clave)', ds_unlocked: 'desbloqueado',
   ds_rename: 'Renombrar', ds_rename_ph: 'nuevo/nombre',
-  ds_mount: 'Montar', ds_unmount: 'Desmontar', ds_promote: 'Promocionar',
+  ds_mount: 'Montar', ds_unmount: 'Desmontar', ds_promote: 'Promocionar', ds_mountpoint: 'Punto de montaje',
   ds_unmount_err: 'No se pudo desmontar: el dataset puede estar en uso',
   ds_promote_hint: 'Invierte la clonación: este dataset pasa a ser el origen',
   ds_unlock: 'Desbloquear', ds_lock: 'Bloquear', ds_changekey: 'Cambiar clave',
@@ -705,6 +706,7 @@ const en: Record<I18nKey, string> = {
   kpi_scrub: 'Last scrub', kpi_scrub_errors: 'errors',
   dash_pools: 'Pools', dash_see_all: 'View all',
   dash_alerts: 'Recent alerts', dash_activity: 'Activity',
+  dash_temps: 'Disk temperatures', dash_events: 'Event log',
   dash_no_alerts: 'No alerts. Everything is fine.',
 
   // Trends (#85)
@@ -852,7 +854,7 @@ const en: Record<I18nKey, string> = {
   nds_pass_mismatch: 'Passphrases do not match',
   ds_encrypted: 'encrypted', ds_locked: 'locked (no key)', ds_unlocked: 'unlocked',
   ds_rename: 'Rename', ds_rename_ph: 'new/name',
-  ds_mount: 'Mount', ds_unmount: 'Unmount', ds_promote: 'Promote',
+  ds_mount: 'Mount', ds_unmount: 'Unmount', ds_promote: 'Promote', ds_mountpoint: 'Mountpoint',
   ds_unmount_err: 'Could not unmount: the dataset may be in use',
   ds_promote_hint: 'Reverses cloning: this dataset becomes the origin',
   ds_unlock: 'Unlock', ds_lock: 'Lock', ds_changekey: 'Change key',

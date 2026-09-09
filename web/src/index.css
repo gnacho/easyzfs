@@ -58,7 +58,9 @@ label{font-size:12px;font-weight:600;color:var(--text2);display:block;margin:12p
    minmax: las pistas vacías colapsan, así que con menos pools de los que
    caben no queda una columna fantasma */
 @media(min-width:1500px){
-  .grid.pools{grid-template-columns:repeat(auto-fit,minmax(min(100%,560px),1fr)) !important;align-items:start}
+  /* Las tarjetas de pool van siempre a ancho completo (diseño del mockup):
+     cada pool es una banda con cabecera, barra segmentada y vdevs */
+  .grid.pools{grid-template-columns:1fr !important;align-items:start}
 }
 aside.sidebar{
   display:none; width:218px; flex-shrink:0; padding:22px 14px;
@@ -1158,3 +1160,280 @@ html.reduce-motion *{transition:none!important;animation:none!important}
 .tpv-scope:only-child{flex:1}
 /* nota en lugar del picker de acento cuando hay skin activo */
 .accent-note{font-size:12px;color:var(--text3);font-style:italic}
+
+/* ================================================================
+   SKINS — capa 2: componentes.
+   El lenguaje visual del mockup aplicado a los componentes reales
+   (tarjetas, KPIs, tablas, botones, nav, header, toasts, modales).
+   Todo gated por [data-theme="<skin>"]: el clásico no cambia.
+   ================================================================ */
+
+/* ---------- reloj de consola en la topbar (elemento nuevo) ---------- */
+.clock{
+  font-family:var(--font-mono);font-size:12.5px;color:var(--text2);
+  font-variant-numeric:tabular-nums;letter-spacing:.04em;white-space:nowrap;
+}
+.clock b{color:var(--text);font-weight:500}
+@media(max-width:1100px){.clock{display:none}}
+
+/* ---------- todos los skins ---------- */
+/* selección con el acento del skin */
+[data-theme="modern-dark"] ::selection,
+[data-theme="modern-light"] ::selection,
+[data-theme="phosphor"] ::selection,
+[data-theme="brutalist"] ::selection{background:var(--accent);color:var(--on-accent)}
+/* scrollbars finas acordes al skin */
+[data-theme="modern-dark"]::-webkit-scrollbar,
+[data-theme="modern-light"]::-webkit-scrollbar,
+[data-theme="phosphor"]::-webkit-scrollbar,
+[data-theme="brutalist"]::-webkit-scrollbar{width:10px;height:10px}
+[data-theme="modern-dark"]::-webkit-scrollbar-track,
+[data-theme="modern-light"]::-webkit-scrollbar-track,
+[data-theme="phosphor"]::-webkit-scrollbar-track,
+[data-theme="brutalist"]::-webkit-scrollbar-track{background:var(--bg)}
+[data-theme="modern-dark"]::-webkit-scrollbar-thumb,
+[data-theme="modern-light"]::-webkit-scrollbar-thumb,
+[data-theme="phosphor"]::-webkit-scrollbar-thumb,
+[data-theme="brutalist"]::-webkit-scrollbar-thumb{background:var(--border);border-radius:99px}
+[data-theme="phosphor"]::-webkit-scrollbar-thumb,
+[data-theme="brutalist"]::-webkit-scrollbar-thumb{border-radius:0}
+/* filas de tabla con hover de acento */
+[data-theme="modern-dark"] table.data tbody tr,
+[data-theme="modern-light"] table.data tbody tr,
+[data-theme="phosphor"] table.data tbody tr,
+[data-theme="brutalist"] table.data tbody tr{transition:background .12s}
+[data-theme="modern-dark"] table.data tbody tr:hover,
+[data-theme="modern-light"] table.data tbody tr:hover,
+[data-theme="phosphor"] table.data tbody tr:hover,
+[data-theme="brutalist"] table.data tbody tr:hover{background:var(--accent-soft)}
+
+/* ---------- MODERN (ambos): títulos con línea, KPI grande, hover con halo ---------- */
+[data-theme="modern-dark"] .cardtitle,
+[data-theme="modern-light"] .cardtitle,
+[data-theme="phosphor"] .cardtitle{display:flex;align-items:center;gap:12px}
+[data-theme="modern-dark"] .cardtitle::after,
+[data-theme="modern-light"] .cardtitle::after,
+[data-theme="phosphor"] .cardtitle::after{content:"";flex:1;height:1px;background:var(--border)}
+/* la banda de las admin-cards ya tiene su propio tratamiento: sin línea */
+[data-theme="modern-dark"] .admin-card .cardtitle::after,
+[data-theme="modern-light"] .admin-card .cardtitle::after,
+[data-theme="phosphor"] .admin-card .cardtitle::after{content:none}
+[data-theme="modern-dark"] header.top h1,
+[data-theme="modern-light"] header.top h1{font-weight:800;letter-spacing:-.02em}
+[data-theme="modern-dark"] .kpi .val,
+[data-theme="modern-light"] .kpi .val{font-size:30px;font-weight:800}
+[data-theme="modern-dark"] .meter,
+[data-theme="modern-light"] .meter{height:8px}
+[data-theme="modern-dark"] .btn:hover,
+[data-theme="modern-light"] .btn:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+[data-theme="modern-dark"] .seg button.on,
+[data-theme="modern-light"] .seg button.on{background:var(--accent-soft);color:var(--accent);box-shadow:none}
+[data-theme="modern-dark"] .brand svg,
+[data-theme="modern-light"] .brand svg{color:var(--accent)}
+
+/* ---------- PHOSPHOR capa 2: corchetes, viñeta, prompts, títulos ---------- */
+/* botones-comando: [ ETIQUETA ] */
+[data-theme="phosphor"] .btn::before{content:"[";color:var(--text3);font-weight:400}
+[data-theme="phosphor"] .btn::after{content:"]";color:var(--text3);font-weight:400}
+[data-theme="phosphor"] .btn:hover::before,
+[data-theme="phosphor"] .btn:hover::after{color:var(--accent)}
+[data-theme="phosphor"] .btn.primary::before,
+[data-theme="phosphor"] .btn.primary::after{color:inherit;opacity:.5}
+[data-theme="phosphor"] .btn.solid-danger::before,
+[data-theme="phosphor"] .btn.solid-danger::after{color:inherit;opacity:.5}
+/* viñeta CRT (bajo las scanlines, sobre el contenido; no intercepta clics) */
+[data-theme="phosphor"] body::before{
+  content:"";position:fixed;inset:0;z-index:8999;pointer-events:none;
+  background:radial-gradient(ellipse 120% 100% at 50% 50%, transparent 62%, rgba(0,0,0,.38) 100%);
+}
+/* prompt de terminal en la navegación */
+[data-theme="phosphor"] aside.sidebar nav a::before,
+[data-theme="phosphor"] .sideactions a::before{content:"›";color:var(--text3);font-weight:400}
+[data-theme="phosphor"] aside.sidebar nav a.active::before,
+[data-theme="phosphor"] .sideactions a.active::before{color:inherit}
+[data-theme="phosphor"] aside.sidebar.collapsed nav a::before,
+[data-theme="phosphor"] aside.sidebar.collapsed .sideactions a::before{content:none}
+/* logo fósforo */
+[data-theme="phosphor"] .brand svg{color:var(--accent);filter:drop-shadow(0 0 6px rgba(0,244,142,.45))}
+/* títulos de terminal */
+[data-theme="phosphor"] header.top h1{
+  text-transform:uppercase;letter-spacing:.04em;
+  text-shadow:0 0 18px rgba(0,244,142,.25);
+}
+[data-theme="phosphor"] .cardtitle{
+  font-size:11px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--text2);font-weight:600;
+}
+/* la banda de admin conserva su jerarquía */
+[data-theme="phosphor"] .admin-card .cardtitle{
+  font-size:15px;letter-spacing:-.01em;text-transform:none;color:var(--accent);font-weight:700;
+}
+/* radios duros en todos los controles */
+[data-theme="phosphor"] .iconbtn,
+[data-theme="phosphor"] .theme-pill,
+[data-theme="phosphor"] .theme-pill button,
+[data-theme="phosphor"] .topuser,
+[data-theme="phosphor"] .topuser .avatar,
+[data-theme="phosphor"] .alert .ico,
+[data-theme="phosphor"] .updatebar,
+[data-theme="phosphor"] .relbar,
+[data-theme="phosphor"] .demobar,
+[data-theme="phosphor"] .toast,
+[data-theme="phosphor"] .modal,
+[data-theme="phosphor"] .sel-pop,
+[data-theme="phosphor"] .bottomnav button{border-radius:0}
+/* interruptores cuadrados */
+[data-theme="phosphor"] .switch .track{border-radius:0}
+[data-theme="phosphor"] .switch .track::after{border-radius:0}
+/* cabeceras de tabla técnicas */
+[data-theme="phosphor"] table.data th{letter-spacing:.18em;font-size:10px;color:var(--text3)}
+/* iconos de alerta con halo */
+[data-theme="phosphor"] .alert .ico{box-shadow:0 0 14px color-mix(in srgb, currentColor 35%, transparent)}
+/* reloj en fósforo */
+[data-theme="phosphor"] .clock{color:var(--accent);text-shadow:0 0 8px rgba(0,244,142,.35)}
+[data-theme="phosphor"] .clock b{color:var(--accent)}
+
+/* ---------- BRUTALIST capa 2: titular marcador, logo pegatina, bordes ---------- */
+[data-theme="brutalist"] header.top h1{
+  text-transform:uppercase;letter-spacing:-.01em;
+  background:linear-gradient(transparent 60%, #ffd23f 60%);padding:0 4px;
+}
+[data-theme="brutalist"] .brand svg{
+  background:#ffd23f;border:2px solid #141414;box-shadow:3px 3px 0 #141414;padding:3px;
+}
+[data-theme="brutalist"] .iconbtn{border-radius:0;border-width:2px}
+[data-theme="brutalist"] .theme-pill{border-radius:0;border-width:2px}
+[data-theme="brutalist"] .theme-pill button{border-radius:0}
+[data-theme="brutalist"] .theme-pill button.active{box-shadow:none;background:#141414;color:#ffd23f}
+[data-theme="brutalist"] .topuser{border-radius:0;border-width:2px}
+[data-theme="brutalist"] .alert .ico{border-radius:0}
+[data-theme="brutalist"] .updatebar,
+[data-theme="brutalist"] .relbar,
+[data-theme="brutalist"] .demobar{border-width:2px;border-radius:0}
+[data-theme="brutalist"] .toast{border-width:2px;border-left-width:5px;border-radius:0;box-shadow:4px 4px 0 #141414}
+[data-theme="brutalist"] .modal{border:2px solid #141414;border-radius:0;box-shadow:8px 8px 0 #141414}
+[data-theme="brutalist"] .sel-pop{border-width:2px;border-radius:0}
+[data-theme="brutalist"] .bottomnav{border-top-width:2px}
+[data-theme="brutalist"] .bottomnav button{border-radius:0;text-transform:uppercase;letter-spacing:.04em}
+[data-theme="brutalist"] .switch .track{border-radius:0;border-width:2px;border-color:#141414}
+[data-theme="brutalist"] .switch .track::after{border-radius:0}
+[data-theme="brutalist"] table.data th{border-bottom:2px solid #141414}
+
+/* ================= Capa 3: métricas en vivo (mockup) ================= */
+/* Sidebar: uptime / load / RAM / ARC. Mono, discreto, tabular. */
+.side-stats{
+  margin:10px 10px 4px;padding:10px 12px 8px;
+  border:1px solid var(--border);border-radius:var(--radius-sm);
+  background:var(--surface);
+  font-family:var(--font-mono);font-size:11px;
+  display:flex;flex-direction:column;gap:7px;
+  font-variant-numeric:tabular-nums;
+}
+.ss-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.ss-row.ss-col{flex-direction:column;align-items:stretch;gap:4px}
+.ss-line{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.ss-k{color:var(--text3);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;white-space:nowrap}
+.ss-v{color:var(--text2);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-v.g{color:var(--ok)}
+.minibar{height:3px;border-radius:2px;background:var(--surface2);overflow:hidden}
+.minibar i{display:block;height:100%;background:var(--accent);border-radius:2px}
+
+/* Header: badge LIVE con punto pulsante */
+.live-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  font-family:var(--font-mono);font-size:10px;letter-spacing:.12em;
+  color:var(--text3);border:1px solid var(--border);border-radius:999px;
+  padding:3px 9px;user-select:none;
+}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--ok);animation:livepulse 2s ease-in-out infinite}
+@keyframes livepulse{0%,100%{opacity:1;box-shadow:0 0 0 0 color-mix(in srgb,var(--ok) 45%,transparent)}50%{opacity:.55;box-shadow:0 0 0 4px transparent}}
+@media (max-width:1100px){.live-badge{display:none}}
+
+/* LED de estado (pools, discos, datasets, jobs): punto 8px con halo suave */
+.led{width:8px;height:8px;border-radius:50%;display:inline-block;flex:none;background:var(--text3)}
+.led.g{background:var(--ok);box-shadow:0 0 6px color-mix(in srgb,var(--ok) 60%,transparent)}
+.led.a{background:var(--warn);box-shadow:0 0 6px color-mix(in srgb,var(--warn) 60%,transparent)}
+.led.r{background:var(--err);box-shadow:0 0 6px color-mix(in srgb,var(--err) 60%,transparent)}
+.led.c{background:var(--accent);box-shadow:0 0 6px color-mix(in srgb,var(--accent) 60%,transparent)}
+.led.o{background:var(--text3);opacity:.5;box-shadow:none}
+
+/* ---------- ajustes por piel ---------- */
+[data-theme="phosphor"] .side-stats{
+  background:transparent;border-color:color-mix(in srgb,var(--ok) 30%,transparent);
+  box-shadow:inset 0 0 18px color-mix(in srgb,var(--ok) 6%,transparent);
+}
+[data-theme="phosphor"] .ss-v{color:var(--ok);text-shadow:0 0 6px color-mix(in srgb,var(--ok) 45%,transparent)}
+[data-theme="phosphor"] .ss-k{color:color-mix(in srgb,var(--ok) 55%,transparent)}
+[data-theme="phosphor"] .minibar{background:color-mix(in srgb,var(--ok) 14%,transparent)}
+[data-theme="phosphor"] .minibar i{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+[data-theme="phosphor"] .live-badge{border-color:color-mix(in srgb,var(--ok) 40%,transparent);color:var(--ok);border-radius:0;text-shadow:0 0 6px color-mix(in srgb,var(--ok) 45%,transparent)}
+[data-theme="phosphor"] .live-dot{border-radius:0}
+[data-theme="phosphor"] .led{border-radius:0}
+[data-theme="brutalist"] .side-stats{border:2px solid #141414;border-radius:0;background:var(--surface)}
+[data-theme="brutalist"] .minibar{border-radius:0;border:1px solid #141414}
+[data-theme="brutalist"] .minibar i{border-radius:0}
+[data-theme="brutalist"] .live-badge{border:2px solid #141414;border-radius:0;color:var(--text)}
+[data-theme="brutalist"] .led{border-radius:0;box-shadow:none;border:1px solid #141414}
+
+/* ================= Capa 3b: tarjetas de pool (mockup) ================= */
+.pool-head{display:flex;align-items:center;gap:12px;padding:16px 16px 12px;flex-wrap:wrap}
+.pool-head>.led{width:10px;height:10px}
+.pool-head .grow{flex:1;min-width:180px}
+.pool-name{font-size:16px;font-weight:700;display:flex;gap:9px;align-items:center;letter-spacing:-.01em}
+.pool-raid{font-family:var(--font-mono);font-size:11.5px;color:var(--text2);margin-top:3px;display:flex;gap:6px;align-items:center}
+.pool-cap{text-align:right;margin-left:auto}
+.pool-cap .big{font-family:var(--font-mono);font-weight:700;font-size:18px;font-variant-numeric:tabular-nums}
+.pool-cap .big .dim{color:var(--text3);font-weight:500;font-size:13px}
+.pool-cap .pct{font-size:12px;color:var(--text2);margin-top:2px}
+.pool-bar{padding:0 16px 12px}
+.pool-bar .sparks{margin-top:10px}
+.segbar{height:10px;border-radius:99px;background:var(--surface2);overflow:hidden}
+.segbar>i{display:block;height:100%;border-radius:99px;background:var(--accent);transition:width .4s ease}
+.segbar.warn>i{background:var(--warn)}
+.segbar.crit>i{background:var(--err)}
+.poolmeta{font-family:var(--font-mono);font-size:11.5px;gap:16px}
+.vdev .drole{font-size:12px;color:var(--text2)}
+.vdev .temp{font-family:var(--font-mono);font-size:12.5px;color:var(--text2);font-variant-numeric:tabular-nums}
+.vdev.faulted .dname{color:var(--err)}
+.vdev.out{opacity:.55}
+.pool-actions{display:flex;gap:7px;padding:12px 16px 15px;flex-wrap:wrap;border-top:1px solid var(--border)}
+[data-density="compact"] .pool-head{padding:12px 12px 8px}
+[data-density="compact"] .pool-bar{padding:0 12px 8px}
+[data-density="compact"] .pool-actions{padding:8px 12px 12px}
+[data-theme="phosphor"] .pool-name{text-transform:uppercase;letter-spacing:.04em;text-shadow:0 0 8px color-mix(in srgb,var(--ok) 40%,transparent)}
+[data-theme="phosphor"] .segbar{background:color-mix(in srgb,var(--ok) 12%,transparent);border-radius:0}
+[data-theme="phosphor"] .segbar>i{border-radius:0;background:var(--ok);box-shadow:0 0 8px color-mix(in srgb,var(--ok) 60%,transparent)}
+[data-theme="phosphor"] .segbar.warn>i{background:var(--warn);box-shadow:0 0 8px color-mix(in srgb,var(--warn) 60%,transparent)}
+[data-theme="phosphor"] .segbar.crit>i{background:var(--err);box-shadow:0 0 8px color-mix(in srgb,var(--err) 60%,transparent)}
+[data-theme="phosphor"] .pool-cap .big{color:var(--ok);text-shadow:0 0 8px color-mix(in srgb,var(--ok) 40%,transparent)}
+[data-theme="brutalist"] .segbar{border:2px solid #141414;border-radius:0;height:12px}
+[data-theme="brutalist"] .segbar>i{border-radius:0}
+[data-theme="brutalist"] .pool-actions{border-top:2px solid #141414}
+
+/* ================= Capa 3c: dashboard (mockup) ================= */
+.kpi .lbl{display:flex;align-items:center;gap:7px}
+.kpi .lbl .led{width:7px;height:7px}
+.dev{display:flex;align-items:center;gap:10px;padding:6px 0;font-size:13px}
+.dev+.dev{border-top:1px solid var(--border)}
+.dev .dname{font-family:var(--font-mono);font-size:12.5px;color:var(--text)}
+.dev .drole{font-size:12px;color:var(--text3)}
+.dev .temp{font-family:var(--font-mono);font-size:12.5px;color:var(--text2);font-variant-numeric:tabular-nums}
+.dev .minibar{width:90px;flex:none}
+.evt-card{padding:8px 16px 10px}
+.evt-log{font-family:var(--font-mono);font-size:12px;line-height:1.5;display:flex;flex-direction:column}
+.evt{display:flex;gap:12px;padding:4px 0;align-items:baseline}
+.evt+.evt{border-top:1px dashed var(--border)}
+.evt .ts{color:var(--text3);white-space:nowrap;font-size:11px;flex:none}
+.evt .msg{color:var(--text2);min-width:0}
+.evt .msg .dim{color:var(--text3)}
+[data-theme="phosphor"] .evt .ts{color:color-mix(in srgb,var(--ok) 55%,transparent)}
+[data-theme="phosphor"] .evt .msg{color:var(--ok);text-shadow:0 0 5px color-mix(in srgb,var(--ok) 30%,transparent)}
+[data-theme="phosphor"] .evt+.evt{border-top-color:color-mix(in srgb,var(--ok) 20%,transparent)}
+[data-theme="brutalist"] .evt+.evt{border-top:1px solid #141414}
+
+/* ================= Capa 3d: tablas (mockup) ================= */
+.dim{color:var(--text3)}
+.ledcol{width:26px;text-align:center;padding-right:0!important}
+table.data td.ledcol,table.data th.ledcol{width:26px}
+.tree{color:var(--text3);font-weight:400;user-select:none}
+[data-theme="phosphor"] .tree{color:color-mix(in srgb,var(--ok) 50%,transparent)}

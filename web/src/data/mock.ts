@@ -54,6 +54,9 @@ export class MockProvider implements DataProvider {
     uptime_sec: 17 * 86400 + 4 * 3600, rss_bytes: 21 * 1024 ** 2,
     db_bytes: Math.round(8.4 * 1024 ** 2), db_path: '/var/lib/easyzfs/app.db',
     zfs_version: '2.4.1', demo: true,
+    load1: 0.42, load5: 0.38, load15: 0.31,
+    mem_total_bytes: 8 * 1024 ** 3, mem_avail_bytes: Math.round(4.9 * 1024 ** 3),
+    arc_hit_pct: 97.4, arc_size_bytes: Math.round(1.8 * 1024 ** 3),
     capabilities: {
       rewrite: true, raidz_expansion: true, scrub_all: true,
       scrub_range: true, zarc_names: true, json_output: true, version: '2.4.1',
