@@ -142,12 +142,15 @@ export interface BackupStatus {
 export interface ChannelInfo {
   configured: boolean;
   server?: string;   // ntfy: servidor sin el topic
-  url?: string;      // gotify
+  url?: string;      // gotify / webhook
   chat_id?: string;  // telegram
-  host?: string;     // syslog
+  host?: string;     // syslog / email
   port?: number;
   proto?: string;
   facility?: number;
+  user?: string;       // email
+  from?: string;       // email
+  encryption?: string; // email
   token_set?: boolean;
   topic_set?: boolean;
   editable: boolean;
@@ -156,7 +159,7 @@ export type ChannelName = 'ntfy' | 'gotify' | 'telegram' | 'syslog' | 'email' | 
 export type ChannelsStatus = Record<ChannelName, ChannelInfo>;
 
 // Cambios al guardar un canal: los campos write-only vacíos/ausentes conservan
-// el valor actual; clear_token lo borra.
+// el valor actual; clear_token/clear_pass lo borran.
 export interface ChannelPatch {
   url?: string;
   token?: string;
@@ -166,6 +169,11 @@ export interface ChannelPatch {
   port?: number;
   proto?: string;
   facility?: number;
+  user?: string;
+  pass?: string;
+  clear_pass?: boolean;
+  from?: string;
+  encryption?: string;
 }
 
 export type AlertLevel = 'info' | 'warn' | 'crit';

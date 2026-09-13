@@ -75,8 +75,8 @@ export class MockProvider implements DataProvider {
     telegram: { configured: true, chat_id: '-1001234567890', token_set: true, editable: true },
     gotify: { configured: false, editable: true },
     syslog: { configured: false, editable: true },
-    email: { configured: false, editable: false },
-    webhook: { configured: true, editable: false },
+    email: { configured: false, editable: true },
+    webhook: { configured: true, url: 'https://hooks.example.com/easyzfs', editable: true },
     push: { configured: false, editable: false },
   };
   private backupLast: BackupFile | null = {
@@ -311,6 +311,10 @@ export class MockProvider implements DataProvider {
     if (patch.port !== undefined) c.port = patch.port;
     if (patch.proto !== undefined) c.proto = patch.proto;
     if (patch.facility !== undefined) c.facility = patch.facility;
+    if (patch.user !== undefined) c.user = patch.user;
+    if (patch.from !== undefined) { c.from = patch.from; c.configured = true; }
+    if (patch.encryption !== undefined) c.encryption = patch.encryption;
+    if (patch.pass) { c.token_set = true; c.configured = true; }
   };
   deleteChannel = async (name: ChannelName) => {
     await delay();

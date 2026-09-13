@@ -705,7 +705,7 @@ const CHANNEL_LABEL: Record<ChannelName, I18nKey> = {
 // Orden de presentación y canales que admiten prueba de envío (los del
 // paquete channels; email/webhook/push solo muestran su estado).
 const CHANNEL_ORDER: ChannelName[] = ['telegram', 'ntfy', 'gotify', 'syslog', 'email', 'webhook', 'push'];
-const CHANNEL_TESTABLE: ChannelName[] = ['telegram', 'ntfy', 'gotify', 'syslog'];
+const CHANNEL_TESTABLE: ChannelName[] = ['telegram', 'ntfy', 'gotify', 'syslog', 'email'];
 
 // Detalle no secreto de la fila de un canal.
 function channelDetail(name: ChannelName, info: ChannelInfo, t: (k: I18nKey) => string): string {
@@ -718,6 +718,10 @@ function channelDetail(name: ChannelName, info: ChannelInfo, t: (k: I18nKey) => 
       return info.chat_id ? `chat ${info.chat_id}` : '';
     case 'syslog':
       return info.host ? `${info.host}:${info.port ?? 514} (${info.proto ?? 'udp'})` : '';
+    case 'email':
+      return info.host ? `${info.host}:${info.port ?? 587}` : '';
+    case 'webhook':
+      return info.url ?? '';
     default:
       return '';
   }
@@ -727,13 +731,17 @@ function channelDetail(name: ChannelName, info: ChannelInfo, t: (k: I18nKey) => 
 // campos write-only (URL de ntfy, tokens) vacíos conservan el valor actual.
 function ChannelForm({ name, info, onDone }: { name: ChannelName; info: ChannelInfo; onDone: () => void }) {
   const { t, notify } = useApp();
-  const [url, setUrl] = useState(name === 'gotify' ? (info.url ?? '') : '');
+  const [url, setUrl] = useState(name === 'gotify' || name === 'webhook' ? (info.url ?? '') : '');
   const [token, setToken] = useState('');
   const [chatId, setChatId] = useState(info.chat_id ?? '');
   const [host, setHost] = useState(info.host ?? '');
-  const [port, setPort] = useState(String(info.port ?? 514));
+  const [port, setPort] = useState(String(info.port ?? (name === 'email' ? 587 : 514)));
   const [proto, setProto] = useState(info.proto ?? 'udp');
   const [facility, setFacility] = useState(String(info.facility ?? 1));
+  const [user, setUser] = useState(info.user ?? '');
+  const [pass, setPass] = useState('');
+  const [from, setFrom] = useState(info.from ?? '');
+  const [encryption, setEncryption] = useState(info.encryption ?? 'starttls');
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
@@ -750,6 +758,15 @@ function ChannelForm({ name, info, onDone }: { name: ChannelName; info: ChannelI
       } else if (name === 'telegram') {
         if (token.trim()) patch.token = token.trim();
         patch.chat_id = chatId.trim();
+      } else if (name === 'email') {
+        patch.host = host.trim();
+        patch.port = +port;
+        patch.user = user.trim();
+        patch.from = from.trim();
+        patch.encryption = encryption;
+        if (pass.trim()) patch.pass = pass.trim();
+      } else if (name === 'webhook') {
+        patch.url = url.trim();
       } else {
         patch.host = host.trim();
         patch.port = +port;
@@ -830,6 +847,41 @@ function ChannelForm({ name, info, onDone }: { name: ChannelName; info: ChannelI
             <input id="ch-fac" type="number" min={0} max={23} value={facility} onChange={(e) => setFacility(e.target.value)} />
           </div>
         </div>
+      )}
+      {name === 'email' && (
+        <>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ minWidth: 180 }}>
+              <label htmlFor="ch-ehost">{t('s_ch_email_host')}</label>
+              <input id="ch-ehost" type="text" value={host} placeholder="smtp.example.com" onChange={(e) => setHost(e.target.value)} />
+            </div>
+            <div style={{ width: 100 }}>
+              <label htmlFor="ch-eport">{t('s_ch_email_port')}</label>
+              <input id="ch-eport" type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} />
+            </div>
+            <div style={{ width: 150 }}>
+              <label htmlFor="ch-eenc">{t('s_ch_email_enc')}</label>
+              <Select value={encryption} ariaLabel={t('s_ch_email_enc')}
+                options={[{ v: 'starttls', label: 'STARTTLS' }, { v: 'tls', label: 'TLS' }, { v: 'none', label: 'None' }]}
+                onChange={setEncryption} />
+            </div>
+          </div>
+          <label htmlFor="ch-euser">{t('s_ch_email_user')}</label>
+          <input id="ch-euser" type="text" value={user} autoComplete="off" onChange={(e) => setUser(e.target.value)} />
+          <label htmlFor="ch-epass">{t('s_ch_email_pass')}</label>
+          <input id="ch-epass" type="password" value={pass} autoComplete="new-password"
+            placeholder={info.token_set ? '••••••••' : ''} onChange={(e) => setPass(e.target.value)} />
+          <p className="muted" style={{ marginTop: 2 }}>{t('s_ch_token_hint')}</p>
+          <label htmlFor="ch-efrom">{t('s_ch_email_from')}</label>
+          <input id="ch-efrom" type="text" value={from} placeholder="EasyZFS <easyzfs@example.com>" onChange={(e) => setFrom(e.target.value)} />
+        </>
+      )}
+      {name === 'webhook' && (
+        <>
+          <label htmlFor="ch-whurl">{t('s_ch_webhook_url')}</label>
+          <input id="ch-whurl" type="text" value={url} autoComplete="off"
+            placeholder="https://hooks.example.com/easyzfs" onChange={(e) => setUrl(e.target.value)} />
+        </>
       )}
       {err && <p className="form-err" role="alert" style={{ marginTop: 8 }}>{err}</p>}
       <div className="m-actions" style={{ justifyContent: 'flex-start', marginTop: 10 }}>
