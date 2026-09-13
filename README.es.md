@@ -370,6 +370,13 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.23
+
+- **Canal de alertas por Telegram (#134)**: las alertas ya pueden llegar a un chat de Telegram mediante la Bot API (`sendMessage`), configurado con un bot token y un chat id. Usa el mismo circuito de alertas que los demás canales (por evento, plantillas ES/EN, prefijo por severidad).
+- **Los canales de alerta se configuran desde la interfaz (#134)**: Telegram, ntfy, Gotify, syslog, email SMTP y el webhook saliente se configuran desde *Ajustes → Canales de alerta*, con estado por canal, formulario en línea y botón de prueba, y los cambios se aplican sin reiniciar el servicio. La configuración se guarda en la base de datos; las variables de entorno anteriores (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `NTFY_URL`, `GOTIFY_URL`, `SYSLOG_HOST`, `SMTP_*`, `WEBHOOK_SECRET`) solo siembran la primera ejecución. Los secretos (bot token, topic de ntfy, contraseña SMTP) son de solo escritura y nunca los devuelve la API.
+- **Entrega de ntfy/Gotify/Telegram endurecida**: los errores de red ya no filtran el topic ni el bot token en los registros, solo se reintentan los fallos transitorios (429/5xx/red; los 4xx son permanentes) y los mensajes largos se truncan por límite de runas.
+- **Nuevos endpoints**: `GET /api/channels`, `PUT`/`DELETE /api/channels/{name}` y `POST /api/channels/{name}/test` (admin). El webhook no tiene botón de prueba porque su entrega es asíncrona (cola con reintentos y tabla de descartes).
+
 ### v2.9.22
 
 - **Nuevo sistema de temas con cuatro skins (#130)**: la interfaz incorpora cuatro looks distintos, conmutables desde *Ajustes → Apariencia*, manteniendo el clásico intacto para los usuarios actuales.

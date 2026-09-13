@@ -362,6 +362,13 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.23
+
+- **Telegram alert channel (#134)**: alerts can now reach a Telegram chat through the Bot API (`sendMessage`), configured with a bot token and a chat id. It uses the same alert pipeline as the other channels (per-event, ES/EN templates, severity prefix).
+- **Alert channels are now configurable from the UI (#134)**: Telegram, ntfy, Gotify, syslog, SMTP email and the outgoing webhook can be configured from *Settings → Alert channels*, with per-channel status, an inline form and a test button, and changes apply without restarting the service. Configuration is stored in the database; the previous environment variables (`TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`, `NTFY_URL`, `GOTIFY_URL`, `SYSLOG_HOST`, `SMTP_*`, `WEBHOOK_SECRET`) only seed the first run. Secrets (bot token, ntfy topic, SMTP password) are write-only and are never returned by the API.
+- **Hardened ntfy/Gotify/Telegram delivery**: network errors no longer leak the topic or the bot token in logs, only transient failures (429/5xx/transport) are retried (4xx are permanent), and long messages are truncated on rune boundaries.
+- **New endpoints**: `GET /api/channels`, `PUT`/`DELETE /api/channels/{name}` and `POST /api/channels/{name}/test` (admin). The webhook has no test button because its delivery is asynchronous (queue with retries and a dead-letter table).
+
 ### v2.9.22
 
 - **New theme system with four visual skins (#130)**: the interface now ships four distinct looks, switchable from *Settings → Appearance* while keeping the classic one intact for existing users.
