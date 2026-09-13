@@ -5,7 +5,7 @@ import { emitEvent } from './events';
 import { ApiError } from './types';
 import { computeRecommendations } from './recs';
 import type {
-  Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
+  Alert, BackupFile, BackupStatus, ChannelName, ChannelPatch, ChannelsStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SeriesPoint, SeriesResp, SessionUser, Settings, Snapshot, SmartSelftest,
   SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UserInfo, VersionInfo,
   APIKeyCreated, APIKeyInfo,
@@ -70,6 +70,15 @@ export class MockProvider implements DataProvider {
     backup_enabled: true, backup_freq_hours: 24, backup_retention_days: 3,
   };
 
+  private channels: ChannelsStatus = {
+    ntfy: { configured: true, server: 'https://ntfy.sh', topic_set: true, token_set: false, editable: true },
+    telegram: { configured: true, chat_id: '-1001234567890', token_set: true, editable: true },
+    gotify: { configured: false, editable: true },
+    syslog: { configured: false, editable: true },
+    email: { configured: false, editable: true },
+    webhook: { configured: true, url: 'https://hooks.example.com/easyzfs', editable: true },
+    push: { configured: false, editable: false },
+  };
   private backupLast: BackupFile | null = {
     file: 'app-20260801-030000.db', ts: iso(daysAgo(1, 3)), bytes: 318 * 1024,
   };
@@ -282,6 +291,36 @@ export class MockProvider implements DataProvider {
     return { ...this.backupLast };
   };
   importBackup = async (_f: File) => { await delay(800); };
+  // Canales de alerta (#134): estado de ejemplo (config por entorno en real).
+  getChannels = async (): Promise<ChannelsStatus> => {
+    await delay();
+    return structuredClone(this.channels);
+  };
+  putChannel = async (name: ChannelName, patch: ChannelPatch) => {
+    await delay();
+    const c = this.channels[name];
+    if (!c) return;
+    if (patch.url !== undefined && patch.url !== '') {
+      if (name === 'ntfy') { c.server = patch.url.replace(/\/[^/]*$/, ''); c.topic_set = true; }
+      else { c.url = patch.url; }
+      c.configured = true;
+    }
+    if (patch.token) { c.token_set = true; c.configured = true; }
+    if (patch.chat_id !== undefined) { c.chat_id = patch.chat_id; c.configured = true; }
+    if (patch.host !== undefined) { c.host = patch.host; c.configured = true; }
+    if (patch.port !== undefined) c.port = patch.port;
+    if (patch.proto !== undefined) c.proto = patch.proto;
+    if (patch.facility !== undefined) c.facility = patch.facility;
+    if (patch.user !== undefined) c.user = patch.user;
+    if (patch.from !== undefined) { c.from = patch.from; c.configured = true; }
+    if (patch.encryption !== undefined) c.encryption = patch.encryption;
+    if (patch.pass) { c.token_set = true; c.configured = true; }
+  };
+  deleteChannel = async (name: ChannelName) => {
+    await delay();
+    this.channels[name] = { configured: false, editable: this.channels[name].editable };
+  };
+  testChannel = async (_name: ChannelName) => { await delay(700); };
   getAlerts = async () => { await delay(); return this.alerts.map((a) => ({ ...a })); };
   ackAlert = async (id: number) => {
     await delay();

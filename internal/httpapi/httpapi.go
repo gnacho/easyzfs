@@ -20,10 +20,12 @@ import (
 	"easyzfs/internal/apikeys"
 	"easyzfs/internal/auth"
 	"easyzfs/internal/backup"
+	"easyzfs/internal/channels"
 	"easyzfs/internal/collectors"
 	"easyzfs/internal/config"
 	"easyzfs/internal/hub"
 	"easyzfs/internal/longops"
+	"easyzfs/internal/notifier"
 	"easyzfs/internal/push"
 	"easyzfs/internal/replication"
 	"easyzfs/internal/scheduler"
@@ -34,61 +36,67 @@ import (
 
 // Server — dependencias inyectadas desde main (sin framework de DI).
 type Server struct {
-	cfg        *config.Config
-	db         *sql.DB
-	auth       *auth.Manager
-	users      *users.Store
-	apiKeys    *apikeys.Store
-	alerter    *alerts.Alerter
-	settings   *settings.Store
-	pools      collectors.PoolProvider
-	disks      collectors.DiskProvider
-	sysTimers  collectors.SysTimerProvider
-	perf       collectors.PerfProvider
-	caps       collectors.CapProvider
-	act        *actions.Service
-	sched      *scheduler.Scheduler
-	jstore     *scheduler.Store
-	h          *hub.Hub
-	push       *push.Sender
-	backup     *backup.Store
-	longOps    *longops.Manager
-	repl       *replication.Runner
-	updater    *updater.Updater
-	started    time.Time
-	version    string
-	build      string
-	zfsVersion string
+	cfg          *config.Config
+	db           *sql.DB
+	auth         *auth.Manager
+	users        *users.Store
+	apiKeys      *apikeys.Store
+	alerter      *alerts.Alerter
+	settings     *settings.Store
+	pools        collectors.PoolProvider
+	disks        collectors.DiskProvider
+	sysTimers    collectors.SysTimerProvider
+	perf         collectors.PerfProvider
+	caps         collectors.CapProvider
+	act          *actions.Service
+	sched        *scheduler.Scheduler
+	jstore       *scheduler.Store
+	h            *hub.Hub
+	push         *push.Sender
+	channels     *channels.Client
+	channelStore *channels.Store
+	mailer       *notifier.Mailer
+	backup       *backup.Store
+	longOps      *longops.Manager
+	repl         *replication.Runner
+	updater      *updater.Updater
+	started      time.Time
+	version      string
+	build        string
+	zfsVersion   string
 
 	loginLimiter *loginLimiter // rate limit de /api/login (IP+usuario)
 }
 
 // Deps — parámetros del constructor.
 type Deps struct {
-	Cfg        *config.Config
-	DB         *sql.DB
-	Auth       *auth.Manager
-	Users      *users.Store
-	APIKeys    *apikeys.Store
-	Alerter    *alerts.Alerter
-	Settings   *settings.Store
-	Pools      collectors.PoolProvider
-	Disks      collectors.DiskProvider
-	SysTimers  collectors.SysTimerProvider
-	Perf       collectors.PerfProvider
-	Caps       collectors.CapProvider
-	Actions    *actions.Service
-	Sched      *scheduler.Scheduler
-	Jobs       *scheduler.Store
-	Hub        *hub.Hub
-	Push       *push.Sender
-	Backup     *backup.Store
-	LongOps    *longops.Manager
-	Repl       *replication.Runner
-	Updater    *updater.Updater
-	Version    string
-	Build      string
-	ZFSVersion string
+	Cfg          *config.Config
+	DB           *sql.DB
+	Auth         *auth.Manager
+	Users        *users.Store
+	APIKeys      *apikeys.Store
+	Alerter      *alerts.Alerter
+	Settings     *settings.Store
+	Pools        collectors.PoolProvider
+	Disks        collectors.DiskProvider
+	SysTimers    collectors.SysTimerProvider
+	Perf         collectors.PerfProvider
+	Caps         collectors.CapProvider
+	Actions      *actions.Service
+	Sched        *scheduler.Scheduler
+	Jobs         *scheduler.Store
+	Hub          *hub.Hub
+	Push         *push.Sender
+	Channels     *channels.Client
+	ChannelStore *channels.Store
+	Mailer       *notifier.Mailer
+	Backup       *backup.Store
+	LongOps      *longops.Manager
+	Repl         *replication.Runner
+	Updater      *updater.Updater
+	Version      string
+	Build        string
+	ZFSVersion   string
 }
 
 // NewServer crea el servidor del API.
@@ -99,6 +107,8 @@ func NewServer(d Deps) *Server {
 		pools: d.Pools, disks: d.Disks, sysTimers: d.SysTimers,
 		perf: d.Perf, caps: d.Caps,
 		act: d.Actions, sched: d.Sched, jstore: d.Jobs, h: d.Hub, push: d.Push,
+		channels: d.Channels, channelStore: d.ChannelStore,
+		mailer: d.Mailer,
 		backup: d.Backup, longOps: d.LongOps, repl: d.Repl,
 		updater: d.Updater,
 		started: time.Now(), version: d.Version, build: d.Build, zfsVersion: d.ZFSVersion,
@@ -150,6 +160,11 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("GET /api/alerts", s.listAlerts)
 	a.HandleFunc("POST /api/alerts/{id}/ack", s.ackAlert)
 	a.HandleFunc("GET /api/overview", s.getOverview)
+	// canales de alerta (#134): estado (sin secretos), configuración y prueba
+	a.HandleFunc("GET /api/channels", s.auth.RequireAdmin(s.getChannels))
+	a.HandleFunc("PUT /api/channels/{name}", s.auth.RequireAdmin(s.putChannel))
+	a.HandleFunc("DELETE /api/channels/{name}", s.auth.RequireAdmin(s.deleteChannel))
+	a.HandleFunc("POST /api/channels/{name}/test", s.auth.RequireAdmin(s.testChannel))
 	a.HandleFunc("GET /api/system-timers", s.listSystemTimers)
 	a.HandleFunc("POST /api/system-timers/schedule", s.auth.RequireAdmin(s.sysTimerSchedule))
 	a.HandleFunc("POST /api/system-timers/migrate", s.auth.RequireAdmin(s.sysTimerMigrate))

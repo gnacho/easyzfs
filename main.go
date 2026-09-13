@@ -110,17 +110,6 @@ func main() {
 	})
 	alerter.SetWebhook(webhookNotifier)
 
-	// Canal email (S5): inerte si SMTP no está configurado (log aviso en config).
-	var emailNotifier *notifier.Mailer
-	if smtpCfg := notifier.FromConfig(cfg); smtpCfg.Validate() == nil {
-		emailNotifier, err = notifier.NewMailer(smtpCfg)
-		if err != nil {
-			log.Printf("aviso: email desactivado: %v", err)
-		} else {
-			alerter.SetEmail(emailNotifier)
-		}
-	}
-
 	// Sender Web Push: inerte si faltan claves VAPID; en demo nunca envía.
 	pushSender := push.New(cfg, database, h)
 	alerter.SetPush(pushSender)
@@ -128,16 +117,52 @@ func main() {
 	// la ventana de silencio. En demo o sin VAPID queda inerte.
 	go pushSender.RunQueue(ctx)
 
-	// Canales ntfy/gotify/syslog (#86): inerte si no hay ninguna configurada.
-	channelsClient := channels.New(
-		cfg.NtfyURL, cfg.NtfyToken,
-		cfg.GotifyURL, cfg.GotifyToken,
-		cfg.SyslogHost, cfg.SyslogPort, cfg.SyslogProto, cfg.SyslogFacility,
-	)
-	if channelsClient.Enabled() {
-		alerter.SetChannels(channelsClient)
-		log.Printf("canales de alerta configurados (ntfy=%v gotify=%v syslog=%v)",
-			cfg.NtfyURL != "", cfg.GotifyURL != "", cfg.SyslogHost != "")
+	// Canales ntfy/gotify/telegram/syslog/email (#86, #134): la config vive en
+	// BD (editable desde Ajustes sin reiniciar); el entorno solo la siembra la
+	// primera vez (compatibilidad con la config previa por env).
+	channelStore := channels.NewStore(database)
+	channelCfg, ok, err := channelStore.Load(ctx)
+	if err != nil {
+		log.Printf("aviso: no se pudo leer la config de canales: %v", err)
+	}
+	if !ok {
+		channelCfg = channels.Config{
+			NtfyURL:          cfg.NtfyURL,
+			NtfyToken:        cfg.NtfyToken,
+			GotifyURL:        cfg.GotifyURL,
+			GotifyToken:      cfg.GotifyToken,
+			TelegramBotToken: cfg.TelegramBotToken,
+			TelegramChatID:   cfg.TelegramChatID,
+			SyslogHost:       cfg.SyslogHost,
+			SyslogPort:       cfg.SyslogPort,
+			SyslogProto:      cfg.SyslogProto,
+			SyslogFacility:   cfg.SyslogFacility,
+			SMTPHost:         cfg.SMTPHost,
+			SMTPPort:         cfg.SMTPPort,
+			SMTPUser:         cfg.SMTPUser,
+			SMTPPass:         cfg.SMTPPass,
+			SMTPFrom:         cfg.SMTPFrom,
+			SMTPEncryption:   cfg.SMTPEncryption,
+		}
+		if err := channelStore.Save(ctx, channelCfg); err != nil {
+			log.Printf("aviso: no se pudo sembrar la config de canales: %v", err)
+		}
+	}
+	channelsClient := channels.New(channelCfg)
+	// El alerter SIEMPRE recibe el cliente: al configurar un canal desde la UI
+	// entra en vigor sin reiniciar (el cliente decide por config en cada evento).
+	alerter.SetChannels(channelsClient)
+	log.Printf("canales de alerta: ntfy=%v gotify=%v telegram=%v syslog=%v email=%v",
+		channelsClient.Configured("ntfy"), channelsClient.Configured("gotify"),
+		channelsClient.Configured("telegram"), channelsClient.Configured("syslog"),
+		channelsClient.Configured("email"))
+
+	// Canal email (SMTP): mismo origen de config que los canales; se recrea en
+	// caliente al guardar desde Ajustes.
+	var emailNotifier *notifier.Mailer
+	if m := httpapi.MailerFromConfig(channelCfg); m != nil {
+		emailNotifier = m
+		alerter.SetEmail(m)
 	}
 
 	// Colectores (reales o mock) + providers para los handlers.
@@ -183,6 +208,7 @@ func main() {
 		Perf: providers.Perf, Caps: providers.Caps,
 		Actions: act, Sched: sched, Jobs: jobStore, Hub: h, Push: pushSender,
 		Backup: backupStore, LongOps: longOps, Repl: replRunner, Updater: updaterSvc,
+		Channels: channelsClient, ChannelStore: channelStore, Mailer: emailNotifier,
 		Version: version, Build: build, ZFSVersion: zfsVersion,
 	})
 

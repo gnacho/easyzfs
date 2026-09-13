@@ -11,7 +11,7 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconLanguages } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconLanguages, IconSend } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
@@ -22,7 +22,7 @@ import { FAMILY_ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduce
 import type { Density, ThemeFamily, ThemeMode } from '../ui/theme';
 import type { I18nKey } from '../ui/i18n';
 import type {
-  BackupStatus, Lang, PushAlertTipo, PushPreference,
+  BackupStatus, ChannelInfo, ChannelName, ChannelPatch, ChannelsStatus, Lang, PushAlertTipo, PushPreference,
   Settings as SettingsData, UpdateStatus,
 } from '../data/types';
 
@@ -691,6 +691,287 @@ function ProfileCard() {
   );
 }
 
+// Etiqueta traducida de cada canal de alerta (exhaustivo sobre ChannelName).
+const CHANNEL_LABEL: Record<ChannelName, I18nKey> = {
+  ntfy: 's_ch_ntfy',
+  gotify: 's_ch_gotify',
+  telegram: 's_ch_telegram',
+  syslog: 's_ch_syslog',
+  email: 's_ch_email',
+  webhook: 's_ch_webhook',
+  push: 's_ch_push',
+};
+
+// Orden de presentación y canales que admiten prueba de envío (los del
+// paquete channels; email/webhook/push solo muestran su estado).
+const CHANNEL_ORDER: ChannelName[] = ['telegram', 'ntfy', 'gotify', 'syslog', 'email', 'webhook', 'push'];
+const CHANNEL_TESTABLE: ChannelName[] = ['telegram', 'ntfy', 'gotify', 'syslog', 'email'];
+
+// Detalle no secreto de la fila de un canal.
+function channelDetail(name: ChannelName, info: ChannelInfo, t: (k: I18nKey) => string): string {
+  switch (name) {
+    case 'ntfy':
+      return info.topic_set ? `${info.server ?? ''} · ${t('s_ch_topic_set')}` : (info.server ?? '');
+    case 'gotify':
+      return info.url ?? '';
+    case 'telegram':
+      return info.chat_id ? `chat ${info.chat_id}` : '';
+    case 'syslog':
+      return info.host ? `${info.host}:${info.port ?? 514} (${info.proto ?? 'udp'})` : '';
+    case 'email':
+      return info.host ? `${info.host}:${info.port ?? 587}` : '';
+    case 'webhook':
+      return info.url ?? '';
+    default:
+      return '';
+  }
+}
+
+// Formulario de configuración de un canal (se despliega bajo su fila). Los
+// campos write-only (URL de ntfy, tokens) vacíos conservan el valor actual.
+function ChannelForm({ name, info, onDone }: { name: ChannelName; info: ChannelInfo; onDone: () => void }) {
+  const { t, notify } = useApp();
+  const [url, setUrl] = useState(name === 'gotify' || name === 'webhook' ? (info.url ?? '') : '');
+  const [token, setToken] = useState('');
+  const [chatId, setChatId] = useState(info.chat_id ?? '');
+  const [host, setHost] = useState(info.host ?? '');
+  const [port, setPort] = useState(String(info.port ?? (name === 'email' ? 587 : 514)));
+  const [proto, setProto] = useState(info.proto ?? 'udp');
+  const [facility, setFacility] = useState(String(info.facility ?? 1));
+  const [user, setUser] = useState(info.user ?? '');
+  const [pass, setPass] = useState('');
+  const [from, setFrom] = useState(info.from ?? '');
+  const [encryption, setEncryption] = useState(info.encryption ?? 'starttls');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const save = async () => {
+    setBusy(true); setErr('');
+    try {
+      const patch: ChannelPatch = {};
+      if (name === 'ntfy') {
+        if (url.trim()) patch.url = url.trim();
+        if (token.trim()) patch.token = token.trim();
+      } else if (name === 'gotify') {
+        patch.url = url.trim();
+        if (token.trim()) patch.token = token.trim();
+      } else if (name === 'telegram') {
+        if (token.trim()) patch.token = token.trim();
+        patch.chat_id = chatId.trim();
+      } else if (name === 'email') {
+        patch.host = host.trim();
+        patch.port = +port;
+        patch.user = user.trim();
+        patch.from = from.trim();
+        patch.encryption = encryption;
+        if (pass.trim()) patch.pass = pass.trim();
+      } else if (name === 'webhook') {
+        patch.url = url.trim();
+      } else {
+        patch.host = host.trim();
+        patch.port = +port;
+        patch.proto = proto;
+        patch.facility = +facility;
+      }
+      await getProvider().putChannel(name, patch);
+      notify(t('s_ch_saved'), 'ok');
+      onDone();
+    } catch (e) { setErr(errorMessage(e, t)); }
+    setBusy(false);
+  };
+
+  const disable = async () => {
+    setBusy(true); setErr('');
+    try {
+      await getProvider().deleteChannel(name);
+      notify(t('s_ch_disabled'), 'ok');
+      onDone();
+    } catch (e) { setErr(errorMessage(e, t)); }
+    setBusy(false);
+  };
+
+  return (
+    <div className="ch-form">
+      {name === 'ntfy' && (
+        <>
+          <label htmlFor="ch-url">{t('s_ch_ntfy_url')}</label>
+          <input id="ch-url" type="text" value={url} autoComplete="off"
+            placeholder="https://ntfy.sh/mi-topic" onChange={(e) => setUrl(e.target.value)} />
+          <p className="muted" style={{ marginTop: 2 }}>{t('s_ch_ntfy_url_hint')}</p>
+          <label htmlFor="ch-tok">{t('s_ch_token_opt')}</label>
+          <input id="ch-tok" type="password" value={token} autoComplete="new-password"
+            placeholder={info.token_set ? '••••••••' : ''} onChange={(e) => setToken(e.target.value)} />
+          <p className="muted" style={{ marginTop: 2 }}>{t('s_ch_token_hint')}</p>
+        </>
+      )}
+      {name === 'gotify' && (
+        <>
+          <label htmlFor="ch-url">{t('s_ch_gotify_url')}</label>
+          <input id="ch-url" type="text" value={url} autoComplete="off"
+            placeholder="https://gotify.example.com" onChange={(e) => setUrl(e.target.value)} />
+          <label htmlFor="ch-tok">{t('s_ch_token')}</label>
+          <input id="ch-tok" type="password" value={token} autoComplete="new-password"
+            placeholder={info.token_set ? '••••••••' : ''} onChange={(e) => setToken(e.target.value)} />
+          <p className="muted" style={{ marginTop: 2 }}>{t('s_ch_token_hint')}</p>
+        </>
+      )}
+      {name === 'telegram' && (
+        <>
+          <label htmlFor="ch-tok">{t('s_ch_tg_token')}</label>
+          <input id="ch-tok" type="password" value={token} autoComplete="new-password"
+            placeholder={info.token_set ? '••••••••' : '123456:ABC…'} onChange={(e) => setToken(e.target.value)} />
+          <p className="muted" style={{ marginTop: 2 }}>{t('s_ch_token_hint')}</p>
+          <label htmlFor="ch-chat">{t('s_ch_tg_chat')}</label>
+          <input id="ch-chat" type="text" value={chatId} autoComplete="off"
+            placeholder="-1001234567890" onChange={(e) => setChatId(e.target.value)} />
+        </>
+      )}
+      {name === 'syslog' && (
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          <div style={{ minWidth: 150 }}>
+            <label htmlFor="ch-host">{t('s_ch_syslog_host')}</label>
+            <input id="ch-host" type="text" value={host} placeholder="127.0.0.1" onChange={(e) => setHost(e.target.value)} />
+          </div>
+          <div style={{ width: 100 }}>
+            <label htmlFor="ch-port">{t('s_ch_syslog_port')}</label>
+            <input id="ch-port" type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} />
+          </div>
+          <div style={{ width: 110 }}>
+            <label htmlFor="ch-proto">{t('s_ch_syslog_proto')}</label>
+            <Select value={proto} ariaLabel={t('s_ch_syslog_proto')}
+              options={[{ v: 'udp', label: 'UDP' }, { v: 'tcp', label: 'TCP' }]}
+              onChange={setProto} />
+          </div>
+          <div style={{ width: 100 }}>
+            <label htmlFor="ch-fac">{t('s_ch_syslog_facility')}</label>
+            <input id="ch-fac" type="number" min={0} max={23} value={facility} onChange={(e) => setFacility(e.target.value)} />
+          </div>
+        </div>
+      )}
+      {name === 'email' && (
+        <>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ minWidth: 180 }}>
+              <label htmlFor="ch-ehost">{t('s_ch_email_host')}</label>
+              <input id="ch-ehost" type="text" value={host} placeholder="smtp.example.com" onChange={(e) => setHost(e.target.value)} />
+            </div>
+            <div style={{ width: 100 }}>
+              <label htmlFor="ch-eport">{t('s_ch_email_port')}</label>
+              <input id="ch-eport" type="number" min={1} max={65535} value={port} onChange={(e) => setPort(e.target.value)} />
+            </div>
+            <div style={{ width: 150 }}>
+              <label htmlFor="ch-eenc">{t('s_ch_email_enc')}</label>
+              <Select value={encryption} ariaLabel={t('s_ch_email_enc')}
+                options={[{ v: 'starttls', label: 'STARTTLS' }, { v: 'tls', label: 'TLS' }, { v: 'none', label: 'None' }]}
+                onChange={setEncryption} />
+            </div>
+          </div>
+          <label htmlFor="ch-euser">{t('s_ch_email_user')}</label>
+          <input id="ch-euser" type="text" value={user} autoComplete="off" onChange={(e) => setUser(e.target.value)} />
+          <label htmlFor="ch-epass">{t('s_ch_email_pass')}</label>
+          <input id="ch-epass" type="password" value={pass} autoComplete="new-password"
+            placeholder={info.token_set ? '••••••••' : ''} onChange={(e) => setPass(e.target.value)} />
+          <p className="muted" style={{ marginTop: 2 }}>{t('s_ch_token_hint')}</p>
+          <label htmlFor="ch-efrom">{t('s_ch_email_from')}</label>
+          <input id="ch-efrom" type="text" value={from} placeholder="EasyZFS <easyzfs@example.com>" onChange={(e) => setFrom(e.target.value)} />
+        </>
+      )}
+      {name === 'webhook' && (
+        <>
+          <label htmlFor="ch-whurl">{t('s_ch_webhook_url')}</label>
+          <input id="ch-whurl" type="text" value={url} autoComplete="off"
+            placeholder="https://hooks.example.com/easyzfs" onChange={(e) => setUrl(e.target.value)} />
+        </>
+      )}
+      {err && <p className="form-err" role="alert" style={{ marginTop: 8 }}>{err}</p>}
+      <div className="m-actions" style={{ justifyContent: 'flex-start', marginTop: 10 }}>
+        <button className="btn sm primary" disabled={busy} onClick={() => { void save(); }}>{t('save')}</button>
+        {info.configured && (
+          <button className="btn sm danger" disabled={busy} onClick={() => { void disable(); }}>{t('s_ch_disable')}</button>
+        )}
+        <button className="btn sm" disabled={busy} onClick={onDone}>{t('cancel')}</button>
+      </div>
+    </div>
+  );
+}
+
+// Tarjeta "Canales de alerta" (zona admin): estado de cada canal (sin
+// secretos), configuración en caliente y botón Probar.
+function ChannelsPanel() {
+  const { t, notify } = useApp();
+  const [ch, setCh] = useState<ChannelsStatus | null>(null);
+  const [editing, setEditing] = useState<ChannelName | null>(null);
+  const [busy, setBusy] = useState<ChannelName | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const load = () => getProvider().getChannels().then(setCh).catch(() => {});
+  useEffect(() => {
+    let alive = true;
+    getProvider().getChannels().then((c) => alive && setCh(c)).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const test = async (name: ChannelName) => {
+    setBusy(name);
+    setResult(null);
+    try {
+      await getProvider().testChannel(name);
+      setResult({ ok: true, text: t('s_ch_ok') });
+      notify(t('s_ch_ok'), 'ok');
+    } catch (e) {
+      const m = errorMessage(e, t);
+      setResult({ ok: false, text: m });
+      notify(m, 'err');
+    }
+    setBusy(null);
+  };
+
+  const done = () => { setEditing(null); setResult(null); void load(); };
+
+  if (!ch) return <Spinner label={t('loading')} />;
+  return (
+    <div className="card pad admin-card">
+      <h3 className="cardtitle">{t('s_ch_title')}</h3>
+      <p className="muted">{t('s_ch_d')}</p>
+      <div>
+        {CHANNEL_ORDER.map((name) => {
+          const info = ch[name];
+          return (
+            <div key={name}>
+              <div className="rowitem">
+                <div className="grow">
+                  <div className="t1" style={{ fontSize: 14 }}>{t(CHANNEL_LABEL[name])}</div>
+                  <div className="t2">{info.editable ? channelDetail(name, info, t) : t('s_ch_env_only')}</div>
+                </div>
+                <Badge tone={info.configured ? 'ok' : 'warn'} dot={false}>
+                  {info.configured ? t('s_ch_on') : t('s_ch_off')}
+                </Badge>
+                {CHANNEL_TESTABLE.includes(name) && (
+                  <button className="btn sm" disabled={!info.configured || busy === name}
+                    onClick={() => { void test(name); }}>
+                    {busy === name ? t('s_ch_testing') : t('s_ch_test')}
+                  </button>
+                )}
+                {info.editable && (
+                  <button className="btn sm" aria-expanded={editing === name}
+                    onClick={() => setEditing(editing === name ? null : name)}>
+                    {t('s_ch_edit')}
+                  </button>
+                )}
+              </div>
+              {editing === name && <ChannelForm name={name} info={info} onDone={done} />}
+            </div>
+          );
+        })}
+      </div>
+      {result && (
+        <p className={result.ok ? 'thresh-msg' : 'form-err'} role={result.ok ? 'status' : 'alert'}
+          style={{ marginTop: 8 }}>{result.text}</p>
+      )}
+    </div>
+  );
+}
+
 export default function Settings() {
   const { t, family, mode, themeEff, setFamily, setMode, isAdmin, user, refresh, reloadUser, logout, setLang, notify } = useApp();
   const { openModal } = useModal();
@@ -704,7 +985,7 @@ export default function Settings() {
   const [reduceMotion, setReduceMotionState] = useState(getReduceMotion());
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone());
-  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | 'apikeys' | null>(null);
+  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | 'apikeys' | 'channels' | null>(null);
   // Snapshot de los umbrales guardados (para resaltar los campos modificados
   // y limpiar la marca al guardar) + mensaje de feedback local de la tarjeta.
   const [threshSaved, setThreshSaved] = useState<{ cap_warn_pct: number; cap_crit_pct: number; disk_temp_c: number } | null>(null);
@@ -933,6 +1214,15 @@ export default function Settings() {
               <IconChev className="chev" />
             </button>
 
+            {/* 3c. Canales de alerta (desplegable, #134) */}
+            <button type="button" aria-expanded={adminPanel === 'channels'}
+              onClick={() => setAdminPanel(adminPanel === 'channels' ? null : 'channels')}
+              className={`ab-btn${adminPanel === 'channels' ? ' on' : ''}`}>
+              <IconSend size={15} />
+              <span className="hidden-sm">{t('s_ch_title')}</span>
+              <IconChev className="chev" />
+            </button>
+
             {/* 4. Modo demo a la derecha */}
             <div className="ab-right">
               <span>{t('s_demo_enable')}</span>
@@ -991,6 +1281,11 @@ export default function Settings() {
           {adminPanel === 'apikeys' && (
             <div className="ab-panel">
               <APIKeysPanel />
+            </div>
+          )}
+          {adminPanel === 'channels' && (
+            <div className="ab-panel">
+              <ChannelsPanel />
             </div>
           )}
         </div>
