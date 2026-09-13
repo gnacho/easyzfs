@@ -20,6 +20,7 @@ import (
 	"easyzfs/internal/apikeys"
 	"easyzfs/internal/auth"
 	"easyzfs/internal/backup"
+	"easyzfs/internal/channels"
 	"easyzfs/internal/collectors"
 	"easyzfs/internal/config"
 	"easyzfs/internal/hub"
@@ -51,6 +52,7 @@ type Server struct {
 	jstore     *scheduler.Store
 	h          *hub.Hub
 	push       *push.Sender
+	channels   *channels.Client
 	backup     *backup.Store
 	longOps    *longops.Manager
 	repl       *replication.Runner
@@ -82,6 +84,7 @@ type Deps struct {
 	Jobs       *scheduler.Store
 	Hub        *hub.Hub
 	Push       *push.Sender
+	Channels   *channels.Client
 	Backup     *backup.Store
 	LongOps    *longops.Manager
 	Repl       *replication.Runner
@@ -99,7 +102,8 @@ func NewServer(d Deps) *Server {
 		pools: d.Pools, disks: d.Disks, sysTimers: d.SysTimers,
 		perf: d.Perf, caps: d.Caps,
 		act: d.Actions, sched: d.Sched, jstore: d.Jobs, h: d.Hub, push: d.Push,
-		backup: d.Backup, longOps: d.LongOps, repl: d.Repl,
+		channels: d.Channels,
+		backup:   d.Backup, longOps: d.LongOps, repl: d.Repl,
 		updater: d.Updater,
 		started: time.Now(), version: d.Version, build: d.Build, zfsVersion: d.ZFSVersion,
 		loginLimiter: newLoginLimiter(),
@@ -150,6 +154,9 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("GET /api/alerts", s.listAlerts)
 	a.HandleFunc("POST /api/alerts/{id}/ack", s.ackAlert)
 	a.HandleFunc("GET /api/overview", s.getOverview)
+	// canales de alerta (#134): estado (sin secretos) y prueba de envío
+	a.HandleFunc("GET /api/channels", s.auth.RequireAdmin(s.getChannels))
+	a.HandleFunc("POST /api/channels/{name}/test", s.auth.RequireAdmin(s.testChannel))
 	a.HandleFunc("GET /api/system-timers", s.listSystemTimers)
 	a.HandleFunc("POST /api/system-timers/schedule", s.auth.RequireAdmin(s.sysTimerSchedule))
 	a.HandleFunc("POST /api/system-timers/migrate", s.auth.RequireAdmin(s.sysTimerMigrate))

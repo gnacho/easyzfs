@@ -41,7 +41,7 @@ type Config struct {
 	SMTPTimeout    time.Duration // SMTP_TIMEOUT (def 10s)
 	SMTPTestTo     string        // SMTP_TEST_TO: fuerza destino de prueba en todos los envíos
 
-	// Canales de alerta adicionales (#86). Vacio = canal desactivado.
+	// Canales de alerta adicionales (#86, #134). Vacio = canal desactivado.
 	NtfyURL        string // NTFY_URL (p.ej. https://ntfy.sh/mi-topic)
 	NtfyToken      string // NTFY_TOKEN (opcional; vacío = sin auth)
 	GotifyURL      string // GOTIFY_URL (p.ej. https://gotify.example.com)
@@ -50,6 +50,10 @@ type Config struct {
 	SyslogPort     int    // SYSLOG_PORT (def 514)
 	SyslogProto    string // SYSLOG_PROTO: udp | tcp (def udp)
 	SyslogFacility int    // SYSLOG_FACILITY (def 1 = user)
+
+	// Telegram (#134): Bot API sendMessage. Requiere AMBOS valores.
+	TelegramBotToken string // TELEGRAM_BOT_TOKEN (token del bot de @BotFather)
+	TelegramChatID   string // TELEGRAM_CHAT_ID (chat/group id de destino)
 
 	// Intervalos del colector principal de ZFS (#124/#126).
 	// ZpoolInterval = ritmo con la UI abierta (full collect).
@@ -103,14 +107,17 @@ func Load() *Config {
 		SMTPTimeout:    time.Duration(envInt("SMTP_TIMEOUT", 10)) * time.Second,
 		SMTPTestTo:     os.Getenv("SMTP_TEST_TO"),
 
-		NtfyURL:        os.Getenv("NTFY_URL"),
-		NtfyToken:      os.Getenv("NTFY_TOKEN"),
-		GotifyURL:      os.Getenv("GOTIFY_URL"),
-		GotifyToken:    os.Getenv("GOTIFY_TOKEN"),
-		SyslogHost:     os.Getenv("SYSLOG_HOST"),
-		SyslogPort:     envInt("SYSLOG_PORT", 514),
-		SyslogProto:    env("SYSLOG_PROTO", "udp"),
-		SyslogFacility: envInt("SYSLOG_FACILITY", 1),
+		NtfyURL:         os.Getenv("NTFY_URL"),
+		NtfyToken:       os.Getenv("NTFY_TOKEN"),
+		GotifyURL:       os.Getenv("GOTIFY_URL"),
+		GotifyToken:     os.Getenv("GOTIFY_TOKEN"),
+		SyslogHost:      os.Getenv("SYSLOG_HOST"),
+		SyslogPort:      envInt("SYSLOG_PORT", 514),
+		SyslogProto:     env("SYSLOG_PROTO", "udp"),
+		SyslogFacility:  envInt("SYSLOG_FACILITY", 1),
+
+		TelegramBotToken: os.Getenv("TELEGRAM_BOT_TOKEN"),
+		TelegramChatID:   os.Getenv("TELEGRAM_CHAT_ID"),
 
 		ZpoolInterval:      time.Duration(envInt("EASYZFS_ZPOOL_INTERVAL", 10)) * time.Second,
 		ZpoolAlertInterval: time.Duration(envInt("EASYZFS_ZPOOL_ALERT_INTERVAL", 60)) * time.Second,
@@ -160,6 +167,14 @@ func Load() *Config {
 		log.Println("aviso: SMTP_HOST no configurado; notificaciones por email desactivadas")
 	} else if cfg.SMTPFrom == "" {
 		log.Println("aviso: SMTP_FROM no configurado; notificaciones por email desactivadas")
+	}
+	// Telegram (#134): requiere bot token Y chat id.
+	if (cfg.TelegramBotToken == "") != (cfg.TelegramChatID == "") {
+		missing := "TELEGRAM_CHAT_ID"
+		if cfg.TelegramChatID != "" {
+			missing = "TELEGRAM_BOT_TOKEN"
+		}
+		log.Printf("aviso: %s sin valor; canal de Telegram incompleto y desactivado (faltan ambos: TELEGRAM_BOT_TOKEN y TELEGRAM_CHAT_ID)", missing)
 	}
 	return cfg
 }

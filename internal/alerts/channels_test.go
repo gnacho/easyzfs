@@ -43,7 +43,7 @@ func TestRaiseKind_EnviaCanales(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	c := channels.New(srv.URL, "", "", "", "", 0, "udp", 1)
+	c := channels.New(channels.Config{NtfyURL: srv.URL})
 	a := New(d, hub.NewHub(), st)
 	a.SetChannels(c)
 	a.RaiseKind(context.Background(), "warn", "pool.tank", "pools:tank",

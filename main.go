@@ -128,16 +128,24 @@ func main() {
 	// la ventana de silencio. En demo o sin VAPID queda inerte.
 	go pushSender.RunQueue(ctx)
 
-	// Canales ntfy/gotify/syslog (#86): inerte si no hay ninguna configurada.
-	channelsClient := channels.New(
-		cfg.NtfyURL, cfg.NtfyToken,
-		cfg.GotifyURL, cfg.GotifyToken,
-		cfg.SyslogHost, cfg.SyslogPort, cfg.SyslogProto, cfg.SyslogFacility,
-	)
+	// Canales ntfy/gotify/telegram/syslog (#86, #134): inertes si no hay
+	// ninguno configurado.
+	channelsClient := channels.New(channels.Config{
+		NtfyURL:          cfg.NtfyURL,
+		NtfyToken:        cfg.NtfyToken,
+		GotifyURL:        cfg.GotifyURL,
+		GotifyToken:      cfg.GotifyToken,
+		TelegramBotToken: cfg.TelegramBotToken,
+		TelegramChatID:   cfg.TelegramChatID,
+		SyslogHost:       cfg.SyslogHost,
+		SyslogPort:       cfg.SyslogPort,
+		SyslogProto:      cfg.SyslogProto,
+		SyslogFacility:   cfg.SyslogFacility,
+	})
 	if channelsClient.Enabled() {
 		alerter.SetChannels(channelsClient)
-		log.Printf("canales de alerta configurados (ntfy=%v gotify=%v syslog=%v)",
-			cfg.NtfyURL != "", cfg.GotifyURL != "", cfg.SyslogHost != "")
+		log.Printf("canales de alerta configurados (ntfy=%v gotify=%v telegram=%v syslog=%v)",
+			cfg.NtfyURL != "", cfg.GotifyURL != "", cfg.TelegramBotToken != "" && cfg.TelegramChatID != "", cfg.SyslogHost != "")
 	}
 
 	// Colectores (reales o mock) + providers para los handlers.
@@ -183,7 +191,8 @@ func main() {
 		Perf: providers.Perf, Caps: providers.Caps,
 		Actions: act, Sched: sched, Jobs: jobStore, Hub: h, Push: pushSender,
 		Backup: backupStore, LongOps: longOps, Repl: replRunner, Updater: updaterSvc,
-		Version: version, Build: build, ZFSVersion: zfsVersion,
+		Channels: channelsClient,
+		Version:  version, Build: build, ZFSVersion: zfsVersion,
 	})
 
 	mux := http.NewServeMux()
