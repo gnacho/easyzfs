@@ -128,25 +128,38 @@ func main() {
 	// la ventana de silencio. En demo o sin VAPID queda inerte.
 	go pushSender.RunQueue(ctx)
 
-	// Canales ntfy/gotify/telegram/syslog (#86, #134): inertes si no hay
-	// ninguno configurado.
-	channelsClient := channels.New(channels.Config{
-		NtfyURL:          cfg.NtfyURL,
-		NtfyToken:        cfg.NtfyToken,
-		GotifyURL:        cfg.GotifyURL,
-		GotifyToken:      cfg.GotifyToken,
-		TelegramBotToken: cfg.TelegramBotToken,
-		TelegramChatID:   cfg.TelegramChatID,
-		SyslogHost:       cfg.SyslogHost,
-		SyslogPort:       cfg.SyslogPort,
-		SyslogProto:      cfg.SyslogProto,
-		SyslogFacility:   cfg.SyslogFacility,
-	})
-	if channelsClient.Enabled() {
-		alerter.SetChannels(channelsClient)
-		log.Printf("canales de alerta configurados (ntfy=%v gotify=%v telegram=%v syslog=%v)",
-			cfg.NtfyURL != "", cfg.GotifyURL != "", cfg.TelegramBotToken != "" && cfg.TelegramChatID != "", cfg.SyslogHost != "")
+	// Canales ntfy/gotify/telegram/syslog (#86, #134): la config vive en BD
+	// (editable desde Ajustes sin reiniciar); el entorno solo la siembra la
+	// primera vez (compatibilidad con la config previa por env).
+	channelStore := channels.NewStore(database)
+	channelCfg, ok, err := channelStore.Load(ctx)
+	if err != nil {
+		log.Printf("aviso: no se pudo leer la config de canales: %v", err)
 	}
+	if !ok {
+		channelCfg = channels.Config{
+			NtfyURL:          cfg.NtfyURL,
+			NtfyToken:        cfg.NtfyToken,
+			GotifyURL:        cfg.GotifyURL,
+			GotifyToken:      cfg.GotifyToken,
+			TelegramBotToken: cfg.TelegramBotToken,
+			TelegramChatID:   cfg.TelegramChatID,
+			SyslogHost:       cfg.SyslogHost,
+			SyslogPort:       cfg.SyslogPort,
+			SyslogProto:      cfg.SyslogProto,
+			SyslogFacility:   cfg.SyslogFacility,
+		}
+		if err := channelStore.Save(ctx, channelCfg); err != nil {
+			log.Printf("aviso: no se pudo sembrar la config de canales: %v", err)
+		}
+	}
+	channelsClient := channels.New(channelCfg)
+	// El alerter SIEMPRE recibe el cliente: al configurar un canal desde la UI
+	// entra en vigor sin reiniciar (el cliente decide por config en cada evento).
+	alerter.SetChannels(channelsClient)
+	log.Printf("canales de alerta: ntfy=%v gotify=%v telegram=%v syslog=%v",
+		channelsClient.Configured("ntfy"), channelsClient.Configured("gotify"),
+		channelsClient.Configured("telegram"), channelsClient.Configured("syslog"))
 
 	// Colectores (reales o mock) + providers para los handlers.
 	providers, cols := collectors.Build(cfg, database, h, alerter)
@@ -191,8 +204,8 @@ func main() {
 		Perf: providers.Perf, Caps: providers.Caps,
 		Actions: act, Sched: sched, Jobs: jobStore, Hub: h, Push: pushSender,
 		Backup: backupStore, LongOps: longOps, Repl: replRunner, Updater: updaterSvc,
-		Channels: channelsClient,
-		Version:  version, Build: build, ZFSVersion: zfsVersion,
+		Channels: channelsClient, ChannelStore: channelStore,
+		Version: version, Build: build, ZFSVersion: zfsVersion,
 	})
 
 	mux := http.NewServeMux()

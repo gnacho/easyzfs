@@ -304,8 +304,8 @@ func TestConfigured(t *testing.T) {
 	if c.Configured("email") {
 		t.Fatal("email no es un canal del paquete")
 	}
-	if c.TelegramChatID() != "1" {
-		t.Fatalf("chat id %q", c.TelegramChatID())
+	if c.Config().TelegramChatID != "1" {
+		t.Fatalf("chat id %q", c.Config().TelegramChatID)
 	}
 }
 

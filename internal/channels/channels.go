@@ -1,6 +1,7 @@
 // Package channels — canales de alerta adicionales (#86, #134): ntfy, Gotify,
-// Telegram y Syslog. Cada canal es inerte si no está configurado (env). Envíos
-// best-effort con timeout acotado; los fallos se loguean y no rompen nada.
+// Telegram y Syslog. Cada canal es inerte si no está configurado. La
+// configuración vive en BD (editable desde Ajustes sin reiniciar) y se lee en
+// cada envío; el env solo siembra la primera vez.
 //
 // Reglas de seguridad (lecciones de NetPulse #773 / NetGrip #298):
 //   - Los secretos viajan en la URL de ntfy (el topic) y de Telegram (el bot
@@ -26,76 +27,76 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 // ErrNotConfigured — el canal pedido no tiene configuración mínima.
 var ErrNotConfigured = errors.New("canal no configurado")
 
-// Config — datos de configuración de los canales (viene de env).
+// Config — configuración de los canales (BD; el env siembra la primera vez).
+// Los tokens nunca se exponen en la API.
 type Config struct {
-	NtfyURL   string
-	NtfyToken string
+	NtfyURL   string `json:"ntfy_url,omitempty"`
+	NtfyToken string `json:"ntfy_token,omitempty"`
 
-	GotifyURL   string
-	GotifyToken string
+	GotifyURL   string `json:"gotify_url,omitempty"`
+	GotifyToken string `json:"gotify_token,omitempty"`
 
-	TelegramBotToken string
-	TelegramChatID   string
+	TelegramBotToken string `json:"telegram_bot_token,omitempty"`
+	TelegramChatID   string `json:"telegram_chat_id,omitempty"`
 
-	SyslogHost     string
-	SyslogPort     int
-	SyslogProto    string
-	SyslogFacility int
+	SyslogHost     string `json:"syslog_host,omitempty"`
+	SyslogPort     int    `json:"syslog_port,omitempty"`
+	SyslogProto    string `json:"syslog_proto,omitempty"`
+	SyslogFacility int    `json:"syslog_facility,omitempty"`
 }
 
-// Client — conjunto de canales configurados. Los vacíos no envían.
+// Client — conjunto de canales. La configuración es dinámica (Apply) para que
+// los cambios desde Ajustes entren en vigor sin reiniciar el servicio.
 type Client struct {
-	ntfyURL   string
-	ntfyToken string
+	mu  sync.RWMutex
+	cfg Config
 
-	gotifyURL   string
-	gotifyToken string
-
-	telegramToken  string
-	telegramChatID string
-	telegramBase   string // base de la Bot API (inyectable en tests)
-
-	syslogHost     string
-	syslogPort     int
-	syslogProto    string
-	syslogFacility int
-
-	http *http.Client
+	http         *http.Client
+	telegramBase string // base de la Bot API (inyectable en tests)
 }
 
-// New construye el cliente a partir de la configuración. Solo registra los
-// canales con los datos mínimos; el resto queda inactivo.
+// New construye el cliente con la configuración inicial.
 func New(cfg Config) *Client {
 	return &Client{
-		ntfyURL:        cfg.NtfyURL,
-		ntfyToken:      cfg.NtfyToken,
-		gotifyURL:      cfg.GotifyURL,
-		gotifyToken:    cfg.GotifyToken,
-		telegramToken:  cfg.TelegramBotToken,
-		telegramChatID: cfg.TelegramChatID,
-		telegramBase:   telegramAPIBase,
-		syslogHost:     cfg.SyslogHost,
-		syslogPort:     cfg.SyslogPort,
-		syslogProto:    cfg.SyslogProto,
-		syslogFacility: cfg.SyslogFacility,
-		http:           &http.Client{Timeout: 10 * time.Second},
+		cfg:          cfg,
+		http:         &http.Client{Timeout: 10 * time.Second},
+		telegramBase: telegramAPIBase,
 	}
 }
 
+// Apply reemplaza la configuración en caliente (tras guardar en Ajustes).
+func (c *Client) Apply(cfg Config) {
+	c.mu.Lock()
+	c.cfg = cfg
+	c.mu.Unlock()
+}
+
+// Config devuelve una copia de la configuración actual.
+func (c *Client) Config() Config {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.cfg
+}
+
 // telegramReady — Telegram necesita token Y chat id.
-func (c *Client) telegramReady() bool {
-	return c != nil && c.telegramToken != "" && c.telegramChatID != ""
+func telegramReady(cfg Config) bool {
+	return cfg.TelegramBotToken != "" && cfg.TelegramChatID != ""
 }
 
 // Enabled — ¿hay al menos un canal configurado?
 func (c *Client) Enabled() bool {
-	return c != nil && (c.ntfyURL != "" || c.gotifyURL != "" || c.syslogHost != "" || c.telegramReady())
+	if c == nil {
+		return false
+	}
+	cfg := c.Config()
+	return cfg.NtfyURL != "" || cfg.GotifyURL != "" || cfg.SyslogHost != "" || telegramReady(cfg)
 }
 
 // Configured — ¿el canal indicado tiene configuración mínima? Nombres válidos:
@@ -104,27 +105,19 @@ func (c *Client) Configured(name string) bool {
 	if c == nil {
 		return false
 	}
+	cfg := c.Config()
 	switch name {
 	case "ntfy":
-		return c.ntfyURL != ""
+		return cfg.NtfyURL != ""
 	case "gotify":
-		return c.gotifyURL != ""
+		return cfg.GotifyURL != ""
 	case "telegram":
-		return c.telegramReady()
+		return telegramReady(cfg)
 	case "syslog":
-		return c.syslogHost != ""
+		return cfg.SyslogHost != ""
 	default:
 		return false
 	}
-}
-
-// TelegramChatID — chat de destino configurado (no es un secreto: el token
-// nunca se expone). Vacío si Telegram no está configurado.
-func (c *Client) TelegramChatID() string {
-	if c == nil {
-		return ""
-	}
-	return c.telegramChatID
 }
 
 // Send entrega la alerta a todos los canales configurados (best-effort).
@@ -134,36 +127,37 @@ func (c *Client) Send(ctx context.Context, title, body string) {
 	if c == nil {
 		return
 	}
-	if err := c.sendNtfy(ctx, title, body); err != nil {
+	cfg := c.Config()
+	if err := c.sendNtfy(ctx, cfg, title, body); err != nil {
 		log.Printf("channels: ntfy: %v", err)
 	}
-	if err := c.sendGotify(ctx, title, body); err != nil {
+	if err := c.sendGotify(ctx, cfg, title, body); err != nil {
 		log.Printf("channels: gotify: %v", err)
 	}
-	if err := c.sendTelegram(ctx, title, body); err != nil {
+	if err := c.sendTelegram(ctx, cfg, title, body); err != nil {
 		log.Printf("channels: telegram: %v", err)
 	}
-	if err := c.sendSyslog(ctx, title, body); err != nil {
+	if err := c.sendSyslog(ctx, cfg, title, body); err != nil {
 		log.Printf("channels: syslog: %v", err)
 	}
 }
 
 // Test envía un mensaje de prueba por el canal indicado y devuelve el error
-// real (sin loguear) para que el endpoint HTTP pueda informar. ErrNotConfigured
-// si el canal no está listo.
+// real (sin loguear) para que el endpoint HTTP pueda informar.
 func (c *Client) Test(ctx context.Context, name, title, body string) error {
 	if c == nil {
 		return ErrNotConfigured
 	}
+	cfg := c.Config()
 	switch name {
 	case "ntfy":
-		return c.sendNtfy(ctx, title, body)
+		return c.sendNtfy(ctx, cfg, title, body)
 	case "gotify":
-		return c.sendGotify(ctx, title, body)
+		return c.sendGotify(ctx, cfg, title, body)
 	case "telegram":
-		return c.sendTelegram(ctx, title, body)
+		return c.sendTelegram(ctx, cfg, title, body)
 	case "syslog":
-		return c.sendSyslog(ctx, title, body)
+		return c.sendSyslog(ctx, cfg, title, body)
 	default:
 		return fmt.Errorf("canal desconocido: %q", name)
 	}
@@ -171,10 +165,9 @@ func (c *Client) Test(ctx context.Context, name, title, body string) error {
 
 // --- ntfy ---
 
-// sendNtfy — POST JSON a NTFY_URL con Authorization Bearer si hay token.
-// La URL configurada es el topic completo (p.ej. https://ntfy.sh/mialerta).
-func (c *Client) sendNtfy(ctx context.Context, title, body string) error {
-	if c == nil || c.ntfyURL == "" {
+// sendNtfy — POST JSON a la URL del topic con Authorization Bearer si hay token.
+func (c *Client) sendNtfy(ctx context.Context, cfg Config, title, body string) error {
+	if cfg.NtfyURL == "" {
 		return nil
 	}
 	payload, err := json.Marshal(map[string]string{
@@ -184,23 +177,23 @@ func (c *Client) sendNtfy(ctx context.Context, title, body string) error {
 	if err != nil {
 		return fmt.Errorf("marshal: %w", err)
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.ntfyURL, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cfg.NtfyURL, bytes.NewReader(payload))
 	if err != nil {
-		return redactErr(err, topicOf(c.ntfyURL))
+		return redactErr(err, topicOf(cfg.NtfyURL))
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if c.ntfyToken != "" {
-		req.Header.Set("Authorization", "Bearer "+c.ntfyToken)
+	if cfg.NtfyToken != "" {
+		req.Header.Set("Authorization", "Bearer "+cfg.NtfyToken)
 	}
 	// El topic (secreto) va en la URL: redactarlo en cualquier error.
-	return c.doRetry(req, topicOf(c.ntfyURL))
+	return c.doRetry(req, topicOf(cfg.NtfyURL))
 }
 
 // --- gotify ---
 
-// sendGotify — POST JSON a GOTIFY_URL/message con X-Gotify-Key.
-func (c *Client) sendGotify(ctx context.Context, title, body string) error {
-	if c == nil || c.gotifyURL == "" {
+// sendGotify — POST JSON a <url>/message con X-Gotify-Key.
+func (c *Client) sendGotify(ctx context.Context, cfg Config, title, body string) error {
+	if cfg.GotifyURL == "" {
 		return nil
 	}
 	payload, err := json.Marshal(map[string]string{
@@ -212,12 +205,12 @@ func (c *Client) sendGotify(ctx context.Context, title, body string) error {
 		return fmt.Errorf("marshal: %w", err)
 	}
 	// El token viaja en cabecera, no en la URL: sin secreto que redactar.
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(c.gotifyURL, "/")+"/message", bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSuffix(cfg.GotifyURL, "/")+"/message", bytes.NewReader(payload))
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Gotify-Key", c.gotifyToken)
+	req.Header.Set("X-Gotify-Key", cfg.GotifyToken)
 	return c.doRetry(req, "")
 }
 
@@ -232,41 +225,41 @@ const maxMessageRunes = 4096
 
 // sendTelegram — POST a /bot<token>/sendMessage con chat_id y texto.
 // El token va en la URL: se redacta en cualquier error.
-func (c *Client) sendTelegram(ctx context.Context, title, body string) error {
-	if !c.telegramReady() {
+func (c *Client) sendTelegram(ctx context.Context, cfg Config, title, body string) error {
+	if !telegramReady(cfg) {
 		return nil
 	}
 	text := truncateRunes(strings.TrimSpace(title+"\n"+body), maxMessageRunes)
 	payload, err := json.Marshal(map[string]any{
-		"chat_id":                  c.telegramChatID,
+		"chat_id":                  cfg.TelegramChatID,
 		"text":                     text,
 		"disable_web_page_preview": true,
 	})
 	if err != nil {
 		return fmt.Errorf("marshal: %w", err)
 	}
-	endpoint := c.telegramBase + "/bot" + c.telegramToken + "/sendMessage"
+	endpoint := c.telegramBase + "/bot" + cfg.TelegramBotToken + "/sendMessage"
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
-		return redactErr(err, c.telegramToken)
+		return redactErr(err, cfg.TelegramBotToken)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	return c.doRetry(req, c.telegramToken)
+	return c.doRetry(req, cfg.TelegramBotToken)
 }
 
 // --- syslog ---
 
 // sendSyslog — datagrama RFC 3164 (PRI + timestamp + host + texto) por UDP/TCP.
-func (c *Client) sendSyslog(ctx context.Context, title, body string) error {
-	if c == nil || c.syslogHost == "" {
+func (c *Client) sendSyslog(ctx context.Context, cfg Config, title, body string) error {
+	if cfg.SyslogHost == "" {
 		return nil
 	}
 	// facility*8 + severity(1=notice); fallback 14 (1*8+1=9 → user.notice).
-	pri := c.syslogFacility*8 + 1
+	pri := cfg.SyslogFacility*8 + 1
 	msg := fmt.Sprintf("<%d>%s EasyZFS[%d]: %s: %s",
 		pri, time.Now().Format("Jan _2 15:04:05"), 0, title, truncateRunes(body, maxMessageRunes))
-	addr := net.JoinHostPort(c.syslogHost, strconv.Itoa(c.syslogPort))
-	if c.syslogProto == "tcp" {
+	addr := net.JoinHostPort(cfg.SyslogHost, strconv.Itoa(cfg.SyslogPort))
+	if cfg.SyslogProto == "tcp" {
 		var d net.Dialer
 		conn, err := d.DialContext(ctx, "tcp", addr)
 		if err != nil {
@@ -408,6 +401,16 @@ func topicOf(rawURL string) string {
 		return ""
 	}
 	return t
+}
+
+// NtfyServer — servidor de una URL de ntfy sin el topic (para la API: el topic
+// es la contraseña y no se expone).
+func NtfyServer(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	return u.Scheme + "://" + u.Host
 }
 
 // truncateRunes — recorta a max runas (no bytes) y añade elipsis.

@@ -172,6 +172,13 @@ var migrations = []string{
 	  created_at TEXT NOT NULL DEFAULT (datetime('now')),
 	  last_used  TEXT
 	);`,
+	// v22: canales de alerta editables desde Ajustes (#134). Una fila única
+	// con la config completa (incluidos secretos, que nunca salen por la API).
+	`CREATE TABLE IF NOT EXISTS channel_configs (
+	  name       TEXT PRIMARY KEY,
+	  json       TEXT NOT NULL,
+	  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+	);`,
 }
 
 // Open abre la BD con WAL, busy_timeout y una sola conexión escritora.
