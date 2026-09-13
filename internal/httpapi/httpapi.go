@@ -25,6 +25,7 @@ import (
 	"easyzfs/internal/config"
 	"easyzfs/internal/hub"
 	"easyzfs/internal/longops"
+	"easyzfs/internal/notifier"
 	"easyzfs/internal/push"
 	"easyzfs/internal/replication"
 	"easyzfs/internal/scheduler"
@@ -54,6 +55,7 @@ type Server struct {
 	push         *push.Sender
 	channels     *channels.Client
 	channelStore *channels.Store
+	mailer       *notifier.Mailer
 	backup       *backup.Store
 	longOps      *longops.Manager
 	repl         *replication.Runner
@@ -87,6 +89,7 @@ type Deps struct {
 	Push         *push.Sender
 	Channels     *channels.Client
 	ChannelStore *channels.Store
+	Mailer       *notifier.Mailer
 	Backup       *backup.Store
 	LongOps      *longops.Manager
 	Repl         *replication.Runner
@@ -105,6 +108,7 @@ func NewServer(d Deps) *Server {
 		perf: d.Perf, caps: d.Caps,
 		act: d.Actions, sched: d.Sched, jstore: d.Jobs, h: d.Hub, push: d.Push,
 		channels: d.Channels, channelStore: d.ChannelStore,
+		mailer: d.Mailer,
 		backup: d.Backup, longOps: d.LongOps, repl: d.Repl,
 		updater: d.Updater,
 		started: time.Now(), version: d.Version, build: d.Build, zfsVersion: d.ZFSVersion,

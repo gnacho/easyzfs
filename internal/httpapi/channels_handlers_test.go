@@ -9,17 +9,30 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"easyzfs/internal/auth"
 	"easyzfs/internal/channels"
 	"easyzfs/internal/config"
 	"easyzfs/internal/db"
+	"easyzfs/internal/settings"
 	"easyzfs/internal/users"
 )
+
+// resetRateGuard — vacía el cupo global de mutaciones por IP: los tests
+// comparten 127.0.0.1 y el cupo es por IP y minuto, así que sin esto un test
+// con muchas mutaciones deja a los siguientes con 429.
+func resetRateGuard() {
+	rateGuardGlobal.mu.Lock()
+	rateGuardGlobal.hits = map[string][]time.Time{}
+	rateGuardGlobal.mu.Unlock()
+}
 
 // serverChannelsPrueba — servidor con BD migrada, admin, canales y su store.
 func serverChannelsPrueba(t *testing.T, ch *channels.Client) (http.Handler, *http.Cookie) {
 	t.Helper()
+	resetRateGuard()
+	t.Cleanup(resetRateGuard)
 	d, err := db.Open(t.TempDir() + "/test.db")
 	if err != nil {
 		t.Fatalf("open: %v", err)
@@ -34,9 +47,14 @@ func serverChannelsPrueba(t *testing.T, ch *channels.Client) (http.Handler, *htt
 	}
 	cfg := &config.Config{}
 	am := auth.NewManager(d, []byte("secreto-de-prueba-32-bytes-xxxxxxxx"), false)
+	st, err := settings.NewStore(d)
+	if err != nil {
+		t.Fatalf("settings: %v", err)
+	}
 	srv := NewServer(Deps{
 		Cfg: cfg, DB: d, Auth: am, Users: us,
 		Channels: ch, ChannelStore: channels.NewStore(d),
+		Settings: st,
 	})
 	cookie, err := am.CreateSession(context.Background(), "admin")
 	if err != nil {
@@ -95,8 +113,11 @@ func TestGetChannelsNoSecrets(t *testing.T) {
 	if resp.Channels["syslog"].Configured {
 		t.Error("syslog no está configurado")
 	}
-	if !resp.Channels["telegram"].Editable || resp.Channels["email"].Editable {
-		t.Error("editable mal marcado (telegram sí, email no)")
+	if !resp.Channels["telegram"].Editable || !resp.Channels["email"].Editable || !resp.Channels["webhook"].Editable {
+		t.Error("telegram/email/webhook deben ser editables")
+	}
+	if resp.Channels["push"].Editable {
+		t.Error("push no debe ser editable (VAPID lo genera el instalador)")
 	}
 }
 
@@ -198,6 +219,59 @@ func TestPutChannelValidation(t *testing.T) {
 	}
 	if ch.Enabled() {
 		t.Fatal("una config inválida no debe persistir")
+	}
+}
+
+// PUT email y webhook: guardado en caliente, validación y no-fuga de secretos.
+func TestPutEmailAndWebhook(t *testing.T) {
+	ch := channels.New(channels.Config{})
+	h, cookie := serverChannelsPrueba(t, ch)
+
+	// Email incompleto (host sin remitente) → 400.
+	w := doReq(t, h, cookie, "PUT", "/api/channels/email", `{"host":"smtp.example.com"}`)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("email incompleto: status %d", w.Code)
+	}
+
+	// Email completo → 200 y canal configurado sin reiniciar.
+	w = doReq(t, h, cookie, "PUT", "/api/channels/email",
+		`{"host":"smtp.example.com","port":587,"user":"u","pass":"secreto-smtp","from":"easyzfs@example.com","encryption":"starttls"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("PUT email: %d %s", w.Code, w.Body.String())
+	}
+	if !ch.Configured("email") {
+		t.Fatal("email debería estar configurado")
+	}
+
+	// GET no expone la contraseña SMTP.
+	gw := doReq(t, h, cookie, "GET", "/api/channels", "")
+	if strings.Contains(gw.Body.String(), "secreto-smtp") {
+		t.Fatalf("GET filtra la contraseña SMTP: %s", gw.Body.String())
+	}
+
+	// Webhook válido → 200 y URL visible en el GET.
+	w = doReq(t, h, cookie, "PUT", "/api/channels/webhook", `{"url":"https://hooks.example.com/x"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("PUT webhook: %d %s", w.Code, w.Body.String())
+	}
+	gw = doReq(t, h, cookie, "GET", "/api/channels", "")
+	if !strings.Contains(gw.Body.String(), "hooks.example.com") {
+		t.Fatalf("webhook no guardado: %s", gw.Body.String())
+	}
+
+	// Webhook inválido → 400.
+	w = doReq(t, h, cookie, "PUT", "/api/channels/webhook", `{"url":"ftp://x"}`)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("webhook inválido: status %d", w.Code)
+	}
+
+	// DELETE desactiva email.
+	w = doReq(t, h, cookie, "DELETE", "/api/channels/email", "")
+	if w.Code != http.StatusOK {
+		t.Fatalf("DELETE email: status %d", w.Code)
+	}
+	if ch.Configured("email") {
+		t.Fatal("email debería quedar desactivado")
 	}
 }
 

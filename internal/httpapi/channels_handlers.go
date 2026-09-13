@@ -1,6 +1,6 @@
 // channels_handlers.go — canales de alerta (#134): estado, configuración y
-// prueba de envío. Los secretos (bot token de Telegram, tokens de ntfy/Gotify)
-// NUNCA salen en la respuesta: solo un booleano "token_set"/"topic_set".
+// prueba de envío. Los secretos (bot token de Telegram, tokens de ntfy/Gotify,
+// contraseña SMTP) NUNCA salen en la respuesta: solo un booleano token_set.
 // La configuración se guarda en BD y entra en vigor sin reiniciar.
 package httpapi
 
@@ -15,25 +15,29 @@ import (
 
 	"easyzfs/internal/auth"
 	"easyzfs/internal/channels"
+	"easyzfs/internal/notifier"
 )
 
 // channelInfo — estado saneado de un canal para la UI.
 type channelInfo struct {
 	Configured bool   `json:"configured"`
 	Server     string `json:"server,omitempty"`  // ntfy: servidor sin topic
-	URL        string `json:"url,omitempty"`     // gotify
+	URL        string `json:"url,omitempty"`     // gotify / webhook
 	ChatID     string `json:"chat_id,omitempty"` // telegram
-	Host       string `json:"host,omitempty"`    // syslog
+	Host       string `json:"host,omitempty"`    // syslog / email
 	Port       int    `json:"port,omitempty"`
 	Proto      string `json:"proto,omitempty"`
 	Facility   int    `json:"facility,omitempty"`
-	TokenSet   bool   `json:"token_set,omitempty"`
-	TopicSet   bool   `json:"topic_set,omitempty"`
+	User       string `json:"user,omitempty"`       // email
+	From       string `json:"from,omitempty"`       // email
+	Encryption string `json:"encryption,omitempty"` // email
+	TokenSet   bool   `json:"token_set,omitempty"`  // hay secreto guardado
+	TopicSet   bool   `json:"topic_set,omitempty"`  // ntfy
 	Editable   bool   `json:"editable"`
 }
 
 // channelPatch — campos editables (punteros: ausente = no tocar).
-// token vacío o ausente = conservar; clear_token = borrar.
+// Los secretos (token/pass) y la URL de ntfy son write-only: vacío conserva.
 type channelPatch struct {
 	URL        *string `json:"url"`
 	Token      *string `json:"token"`
@@ -43,23 +47,33 @@ type channelPatch struct {
 	Port       *int    `json:"port"`
 	Proto      *string `json:"proto"`
 	Facility   *int    `json:"facility"`
+	User       *string `json:"user"`
+	Pass       *string `json:"pass"`
+	ClearPass  bool    `json:"clear_pass"`
+	From       *string `json:"from"`
+	Encryption *string `json:"encryption"`
 }
 
 // telegramTokenRe — formato del token de @BotFather: <id>:<secreto>.
 var telegramTokenRe = regexp.MustCompile(`^\d+:[A-Za-z0-9_-]{10,}$`)
 
-// testableChannel — canales que admiten prueba de envío y edición.
+// testableChannel — canales que admiten prueba de envío. El webhook no: su
+// entrega es asíncrona (cola + DLQ) y no tiene un resultado síncrono que mostrar.
 func testableChannel(name string) bool {
 	switch name {
-	case "ntfy", "gotify", "telegram", "syslog":
+	case "ntfy", "gotify", "telegram", "syslog", "email":
 		return true
 	}
 	return false
 }
 
-// getChannels — GET /api/channels (admin): estado de cada canal. Incluye los
-// canales de infraestructura (editables) y email/webhook/push (solo estado:
-// se configuran por entorno o en otras secciones). Nunca expone secretos.
+// editableChannel — canales configurables desde la UI.
+func editableChannel(name string) bool {
+	return testableChannel(name) || name == "webhook"
+}
+
+// getChannels — GET /api/channels (admin): estado de cada canal. Nunca expone
+// secretos (tokens, contraseña SMTP, topic de ntfy).
 func (s *Server) getChannels(w http.ResponseWriter, r *http.Request) {
 	cfg := s.channels.Config()
 	out := map[string]channelInfo{
@@ -90,17 +104,25 @@ func (s *Server) getChannels(w http.ResponseWriter, r *http.Request) {
 			Facility:   cfg.SyslogFacility,
 			Editable:   true,
 		},
+		"email": {
+			Configured: cfg.SMTPHost != "" && cfg.SMTPFrom != "",
+			Host:       cfg.SMTPHost,
+			Port:       cfg.SMTPPort,
+			User:       cfg.SMTPUser,
+			From:       cfg.SMTPFrom,
+			Encryption: cfg.SMTPEncryption,
+			TokenSet:   cfg.SMTPPass != "",
+			Editable:   true,
+		},
 	}
-	// Email: operativo con SMTP_HOST + SMTP_FROM (env; sin edición aquí).
-	out["email"] = channelInfo{Configured: s.cfg.SMTPHost != "" && s.cfg.SMTPFrom != ""}
-	// Webhook saliente: su URL vive en settings (BD), no en env.
-	whConfigured := false
+	// Webhook saliente: su URL vive en settings (BD).
+	whURL := ""
 	if s.settings != nil {
 		if st, err := s.settings.Load(r.Context()); err == nil {
-			whConfigured = st.Webhook != ""
+			whURL = st.Webhook
 		}
 	}
-	out["webhook"] = channelInfo{Configured: whConfigured}
+	out["webhook"] = channelInfo{Configured: whURL != "", URL: whURL, Editable: true}
 	out["push"] = channelInfo{Configured: s.cfg.PushEnabled()}
 	writeJSON(w, http.StatusOK, map[string]any{"channels": out})
 }
@@ -109,7 +131,7 @@ func (s *Server) getChannels(w http.ResponseWriter, r *http.Request) {
 // la aplica en caliente (sin reiniciar). Valida antes de persistir.
 func (s *Server) putChannel(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if !testableChannel(name) {
+	if !editableChannel(name) {
 		writeErr(w, http.StatusNotFound, "unknown_channel", "canal desconocido: "+name)
 		return
 	}
@@ -117,6 +139,13 @@ func (s *Server) putChannel(w http.ResponseWriter, r *http.Request) {
 	if !decodeJSON(w, r, &p) {
 		return
 	}
+
+	// El webhook vive en settings, no en la config de canales.
+	if name == "webhook" {
+		s.putWebhook(w, r, p)
+		return
+	}
+
 	cfg := s.channels.Config()
 	switch name {
 	case "ntfy":
@@ -156,6 +185,29 @@ func (s *Server) putChannel(w http.ResponseWriter, r *http.Request) {
 				cfg.SyslogProto = "udp"
 			}
 		}
+	case "email":
+		if p.Host != nil {
+			cfg.SMTPHost = strings.TrimSpace(*p.Host)
+		}
+		if p.Port != nil {
+			cfg.SMTPPort = *p.Port
+		}
+		if p.User != nil {
+			cfg.SMTPUser = strings.TrimSpace(*p.User)
+		}
+		if p.From != nil {
+			cfg.SMTPFrom = strings.TrimSpace(*p.From)
+		}
+		if p.Encryption != nil {
+			cfg.SMTPEncryption = strings.TrimSpace(*p.Encryption)
+		}
+		applyValue(&cfg.SMTPPass, p.Pass, p.ClearPass)
+		if cfg.SMTPHost != "" && cfg.SMTPPort == 0 {
+			cfg.SMTPPort = 587
+		}
+		if cfg.SMTPHost != "" && cfg.SMTPEncryption == "" {
+			cfg.SMTPEncryption = "starttls"
+		}
 	}
 	if msg, errCode := validateChannel(name, cfg); errCode != "" {
 		writeErr(w, http.StatusBadRequest, errCode, msg)
@@ -167,14 +219,77 @@ func (s *Server) putChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.channels.Apply(cfg)
+	if name == "email" {
+		s.applyMailer(cfg)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "channel": name})
+}
+
+// putWebhook — guarda la URL del webhook saliente en settings (aplica sin
+// reiniciar: el notifier la lee en cada envío).
+func (s *Server) putWebhook(w http.ResponseWriter, r *http.Request, p channelPatch) {
+	raw := ""
+	if p.URL != nil {
+		raw = strings.TrimSpace(*p.URL)
+	}
+	if raw != "" {
+		u, err := url.Parse(raw)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			writeErr(w, http.StatusBadRequest, "invalid_url", "la URL del webhook debe ser http(s)://…")
+			return
+		}
+	}
+	st, err := s.settings.Load(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "load_failed", "no se pudieron leer los ajustes")
+		return
+	}
+	st.Webhook = raw
+	if err := s.settings.Save(r.Context(), st); err != nil {
+		log.Printf("channels: guardar webhook: %v", err)
+		writeErr(w, http.StatusInternalServerError, "save_failed", "no se pudo guardar la configuración")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "channel": "webhook"})
+}
+
+// applyMailer — recrea el cliente SMTP con la config nueva y lo engancha al
+// alerter (nil si el canal queda incompleto). Cierra el anterior.
+func (s *Server) applyMailer(cfg channels.Config) {
+	if old := s.mailer; old != nil {
+		_ = old.Close()
+	}
+	s.mailer = MailerFromConfig(cfg)
+	if s.alerter != nil {
+		s.alerter.SetEmail(s.mailer)
+	}
+}
+
+// mailerFromConfig — construye el cliente SMTP desde la config de canales.
+func MailerFromConfig(cfg channels.Config) *notifier.Mailer {
+	if cfg.SMTPHost == "" || cfg.SMTPFrom == "" {
+		return nil
+	}
+	m, err := notifier.NewMailer(notifier.SMTP{
+		Host: cfg.SMTPHost, Port: cfg.SMTPPort, User: cfg.SMTPUser, Pass: cfg.SMTPPass,
+		From: cfg.SMTPFrom, Encryption: cfg.SMTPEncryption, Timeout: 10 * time.Second,
+	})
+	if err != nil {
+		log.Printf("channels: cliente SMTP inválido: %v", err)
+		return nil
+	}
+	return m
 }
 
 // deleteChannel — DELETE /api/channels/{name} (admin): desactiva el canal.
 func (s *Server) deleteChannel(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
-	if !testableChannel(name) {
+	if !editableChannel(name) {
 		writeErr(w, http.StatusNotFound, "unknown_channel", "canal desconocido: "+name)
+		return
+	}
+	if name == "webhook" {
+		s.putWebhook(w, r, channelPatch{URL: strPtr("")})
 		return
 	}
 	cfg := s.channels.Config()
@@ -187,6 +302,8 @@ func (s *Server) deleteChannel(w http.ResponseWriter, r *http.Request) {
 		cfg.TelegramBotToken, cfg.TelegramChatID = "", ""
 	case "syslog":
 		cfg.SyslogHost, cfg.SyslogPort, cfg.SyslogProto, cfg.SyslogFacility = "", 0, "", 0
+	case "email":
+		cfg.SMTPHost, cfg.SMTPPort, cfg.SMTPUser, cfg.SMTPPass, cfg.SMTPFrom, cfg.SMTPEncryption = "", 0, "", "", "", ""
 	}
 	if err := s.channelStore.Save(r.Context(), cfg); err != nil {
 		log.Printf("channels: desactivar %s: %v", name, err)
@@ -194,8 +311,14 @@ func (s *Server) deleteChannel(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.channels.Apply(cfg)
+	if name == "email" {
+		s.applyMailer(cfg)
+	}
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "channel": name})
 }
+
+// strPtr — puntero a string (para reutilizar putWebhook al desactivar).
+func strPtr(s string) *string { return &s }
 
 // applyValue — campo write-only: valor vacío/ausente conserva el actual;
 // clear lo borra. (El valor es un puntero para distinguir "ausente" de "vacío".)
@@ -256,13 +379,29 @@ func validateChannel(name string, cfg channels.Config) (string, string) {
 		if cfg.SyslogFacility < 0 || cfg.SyslogFacility > 23 {
 			return "la facility de syslog debe estar entre 0 y 23", "invalid_facility"
 		}
+	case "email":
+		host, from := cfg.SMTPHost != "", cfg.SMTPFrom != ""
+		if !host && !from {
+			return "", "" // desactivado
+		}
+		if host != from {
+			return "el email requiere servidor SMTP Y remitente (o ninguno de los dos)", "incomplete"
+		}
+		if cfg.SMTPPort < 1 || cfg.SMTPPort > 65535 {
+			return "el puerto SMTP debe estar entre 1 y 65535", "invalid_port"
+		}
+		switch cfg.SMTPEncryption {
+		case "none", "starttls", "tls":
+		default:
+			return "el cifrado SMTP debe ser none, starttls o tls", "invalid_encryption"
+		}
 	}
 	return "", ""
 }
 
 // testChannel — POST /api/channels/{name}/test (admin): envía una notificación
 // de prueba por el canal indicado. 400 si el canal no está configurado (no se
-// finge un éxito), 502 si el destino falla (mensaje ya redactado por el paquete).
+// finge un éxito), 502 si el destino falla (mensaje ya redactado).
 func (s *Server) testChannel(w http.ResponseWriter, r *http.Request) {
 	name := r.PathValue("name")
 	if !testableChannel(name) {
@@ -281,6 +420,30 @@ func (s *Server) testChannel(w http.ResponseWriter, r *http.Request) {
 	title, body := testMessage(lang)
 	ctx, cancel := context.WithTimeout(r.Context(), 12*time.Second)
 	defer cancel()
+
+	// Email: la prueba va al correo del admin que la lanza.
+	if name == "email" {
+		u, err := s.users.Get(r.Context(), auth.UserFromContext(r.Context()))
+		if err != nil || u.Email == "" {
+			writeErr(w, http.StatusBadRequest, "no_recipient",
+				"tu usuario no tiene email configurado en Mi perfil: la prueba necesita un destinatario")
+			return
+		}
+		if s.mailer == nil {
+			writeErr(w, http.StatusBadRequest, "channel_not_configured", "el canal email no está configurado")
+			return
+		}
+		if err := s.mailer.Send(ctx, []string{u.Email}, lang,
+			notifier.Alert{Level: "info", Source: "test", Target: "settings", Timestamp: time.Now()},
+			title, body); err != nil {
+			log.Printf("channels: prueba de email falló: %v", err)
+			writeErr(w, http.StatusBadGateway, "channel_test_failed", err.Error())
+			return
+		}
+		writeJSON(w, http.StatusOK, map[string]any{"ok": true, "channel": name})
+		return
+	}
+
 	if err := s.channels.Test(ctx, name, title, body); err != nil {
 		log.Printf("channels: prueba de %s falló: %v", name, err)
 		writeErr(w, http.StatusBadGateway, "channel_test_failed", err.Error())

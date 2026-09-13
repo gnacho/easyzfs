@@ -50,6 +50,14 @@ type Config struct {
 	SyslogPort     int    `json:"syslog_port,omitempty"`
 	SyslogProto    string `json:"syslog_proto,omitempty"`
 	SyslogFacility int    `json:"syslog_facility,omitempty"`
+
+	// Canal email (SMTP), editable desde Ajustes. La contraseña es write-only.
+	SMTPHost       string `json:"smtp_host,omitempty"`
+	SMTPPort       int    `json:"smtp_port,omitempty"`
+	SMTPUser       string `json:"smtp_user,omitempty"`
+	SMTPPass       string `json:"smtp_pass,omitempty"`
+	SMTPFrom       string `json:"smtp_from,omitempty"`
+	SMTPEncryption string `json:"smtp_encryption,omitempty"`
 }
 
 // Client — conjunto de canales. La configuración es dinámica (Apply) para que
@@ -115,6 +123,10 @@ func (c *Client) Configured(name string) bool {
 		return telegramReady(cfg)
 	case "syslog":
 		return cfg.SyslogHost != ""
+	case "email":
+		// El email no lo envía este paquete (lo hace el alerter con su
+		// Mailer), pero la UI consulta su estado aquí.
+		return cfg.SMTPHost != "" && cfg.SMTPFrom != ""
 	default:
 		return false
 	}
