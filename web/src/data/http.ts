@@ -3,7 +3,7 @@ import type { DataProvider } from './provider';
 import { ApiError } from './types';
 import { notifyAuthExpired } from './events';
 import type {
-  ActivityItem, Alert, APIKeyCreated, APIKeyInfo, BackupFile, BackupStatus, ChannelName, ChannelsStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
+  ActivityItem, Alert, APIKeyCreated, APIKeyInfo, BackupFile, BackupStatus, ChannelName, ChannelPatch, ChannelsStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings, SeriesResp,
   SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
@@ -90,6 +90,8 @@ export class HttpProvider implements DataProvider {
     const r = await get<{ channels: ChannelsStatus }>('/channels');
     return r.channels;
   };
+  putChannel = async (name: ChannelName, patch: ChannelPatch) => { await put<void>(`/channels/${enc(name)}`, patch); };
+  deleteChannel = async (name: ChannelName) => { await del<void>(`/channels/${enc(name)}`); };
   testChannel = async (name: ChannelName) => { await post<void>(`/channels/${enc(name)}/test`); };
   importBackup = async (file: File): Promise<void> => {
     // Body crudo (no JSON): el server verifica magic + quick_check y, si es

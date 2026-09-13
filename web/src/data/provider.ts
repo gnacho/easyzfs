@@ -1,6 +1,6 @@
 // Interfaz DataProvider: abstrae el origen de datos (HTTP real o mock demo).
 import type {
-  ActivityItem, Alert, APIKeyCreated, APIKeyInfo, BackupFile, BackupStatus, ChannelName, ChannelsStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
+  ActivityItem, Alert, APIKeyCreated, APIKeyInfo, BackupFile, BackupStatus, ChannelName, ChannelPatch, ChannelsStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON, SeriesResp,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings,
   SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
@@ -29,8 +29,10 @@ export interface DataProvider {
   runBackup(): Promise<BackupFile>;
   importBackup(file: File): Promise<void>;
 
-  // Canales de alerta (#134): estado (admin) y prueba de envío
+  // Canales de alerta (#134): estado (admin), configuración y prueba de envío
   getChannels(): Promise<ChannelsStatus>;
+  putChannel(name: ChannelName, patch: ChannelPatch): Promise<void>;
+  deleteChannel(name: ChannelName): Promise<void>;
   testChannel(name: ChannelName): Promise<void>;
 
   // Auth y sesión

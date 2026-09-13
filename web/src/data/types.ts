@@ -137,14 +137,36 @@ export interface BackupStatus {
   dir: string;
 }
 
-// Canales de alerta (#134): estado sin secretos (GET /api/channels)
+// Canales de alerta (#134): estado saneado (GET /api/channels). Los secretos
+// (tokens, topic de ntfy) NUNCA llegan: solo token_set/topic_set.
 export interface ChannelInfo {
   configured: boolean;
-  // Detalle no sensible del destino (p.ej. el chat id de Telegram).
-  detail?: string;
+  server?: string;   // ntfy: servidor sin el topic
+  url?: string;      // gotify
+  chat_id?: string;  // telegram
+  host?: string;     // syslog
+  port?: number;
+  proto?: string;
+  facility?: number;
+  token_set?: boolean;
+  topic_set?: boolean;
+  editable: boolean;
 }
 export type ChannelName = 'ntfy' | 'gotify' | 'telegram' | 'syslog' | 'email' | 'webhook' | 'push';
 export type ChannelsStatus = Record<ChannelName, ChannelInfo>;
+
+// Cambios al guardar un canal: los campos write-only vacíos/ausentes conservan
+// el valor actual; clear_token lo borra.
+export interface ChannelPatch {
+  url?: string;
+  token?: string;
+  clear_token?: boolean;
+  chat_id?: string;
+  host?: string;
+  port?: number;
+  proto?: string;
+  facility?: number;
+}
 
 export type AlertLevel = 'info' | 'warn' | 'crit';
 export interface Alert {
