@@ -11,7 +11,7 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconLanguages } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconLanguages, IconSend } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
@@ -22,7 +22,7 @@ import { FAMILY_ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduce
 import type { Density, ThemeFamily, ThemeMode } from '../ui/theme';
 import type { I18nKey } from '../ui/i18n';
 import type {
-  BackupStatus, Lang, PushAlertTipo, PushPreference,
+  BackupStatus, ChannelName, ChannelsStatus, Lang, PushAlertTipo, PushPreference,
   Settings as SettingsData, UpdateStatus,
 } from '../data/types';
 
@@ -691,6 +691,84 @@ function ProfileCard() {
   );
 }
 
+// Etiqueta traducida de cada canal de alerta (exhaustivo sobre ChannelName).
+const CHANNEL_LABEL: Record<ChannelName, I18nKey> = {
+  ntfy: 's_ch_ntfy',
+  gotify: 's_ch_gotify',
+  telegram: 's_ch_telegram',
+  syslog: 's_ch_syslog',
+  email: 's_ch_email',
+  webhook: 's_ch_webhook',
+  push: 's_ch_push',
+};
+
+// Orden de presentación y canales que admiten prueba de envío (los del
+// paquete channels; email/webhook/push solo muestran su estado).
+const CHANNEL_ORDER: ChannelName[] = ['telegram', 'ntfy', 'gotify', 'syslog', 'email', 'webhook', 'push'];
+const CHANNEL_TESTABLE: ChannelName[] = ['telegram', 'ntfy', 'gotify', 'syslog'];
+
+// Tarjeta "Canales de alerta" (zona admin): estado de cada canal de
+// infraestructura (config por entorno, sin secretos) + botón Probar para
+// verificar que la entrega funciona de verdad.
+function ChannelsPanel() {
+  const { t, notify } = useApp();
+  const [ch, setCh] = useState<ChannelsStatus | null>(null);
+  const [busy, setBusy] = useState<ChannelName | null>(null);
+  const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    getProvider().getChannels().then((c) => alive && setCh(c)).catch(() => {});
+    return () => { alive = false; };
+  }, []);
+
+  const test = async (name: ChannelName) => {
+    setBusy(name);
+    setResult(null);
+    try {
+      await getProvider().testChannel(name);
+      setResult({ ok: true, text: t('s_ch_ok') });
+      notify(t('s_ch_ok'), 'ok');
+    } catch (e) {
+      const m = errorMessage(e, t);
+      setResult({ ok: false, text: m });
+      notify(m, 'err');
+    }
+    setBusy(null);
+  };
+
+  if (!ch) return <Spinner label={t('loading')} />;
+  return (
+    <div className="card pad admin-card">
+      <h3 className="cardtitle">{t('s_ch_title')}</h3>
+      <p className="muted">{t('s_ch_d')}</p>
+      <div>
+        {CHANNEL_ORDER.map((name) => (
+          <div className="rowitem" key={name}>
+            <div className="grow">
+              <div className="t1" style={{ fontSize: 14 }}>{t(CHANNEL_LABEL[name])}</div>
+              {ch[name].detail && <div className="t2">{ch[name].detail}</div>}
+            </div>
+            <Badge tone={ch[name].configured ? 'ok' : 'warn'} dot={false}>
+              {ch[name].configured ? t('s_ch_on') : t('s_ch_off')}
+            </Badge>
+            {CHANNEL_TESTABLE.includes(name) && (
+              <button className="btn sm" disabled={!ch[name].configured || busy === name}
+                onClick={() => { void test(name); }}>
+                {busy === name ? t('s_ch_testing') : t('s_ch_test')}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+      {result && (
+        <p className={result.ok ? 'thresh-msg' : 'form-err'} role={result.ok ? 'status' : 'alert'}
+          style={{ marginTop: 8 }}>{result.text}</p>
+      )}
+    </div>
+  );
+}
+
 export default function Settings() {
   const { t, family, mode, themeEff, setFamily, setMode, isAdmin, user, refresh, reloadUser, logout, setLang, notify } = useApp();
   const { openModal } = useModal();
@@ -704,7 +782,7 @@ export default function Settings() {
   const [reduceMotion, setReduceMotionState] = useState(getReduceMotion());
   const [installEvt, setInstallEvt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installed, setInstalled] = useState(isStandalone());
-  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | 'apikeys' | null>(null);
+  const [adminPanel, setAdminPanel] = useState<'backup' | 'users' | 'apikeys' | 'channels' | null>(null);
   // Snapshot de los umbrales guardados (para resaltar los campos modificados
   // y limpiar la marca al guardar) + mensaje de feedback local de la tarjeta.
   const [threshSaved, setThreshSaved] = useState<{ cap_warn_pct: number; cap_crit_pct: number; disk_temp_c: number } | null>(null);
@@ -933,6 +1011,15 @@ export default function Settings() {
               <IconChev className="chev" />
             </button>
 
+            {/* 3c. Canales de alerta (desplegable, #134) */}
+            <button type="button" aria-expanded={adminPanel === 'channels'}
+              onClick={() => setAdminPanel(adminPanel === 'channels' ? null : 'channels')}
+              className={`ab-btn${adminPanel === 'channels' ? ' on' : ''}`}>
+              <IconSend size={15} />
+              <span className="hidden-sm">{t('s_ch_title')}</span>
+              <IconChev className="chev" />
+            </button>
+
             {/* 4. Modo demo a la derecha */}
             <div className="ab-right">
               <span>{t('s_demo_enable')}</span>
@@ -991,6 +1078,11 @@ export default function Settings() {
           {adminPanel === 'apikeys' && (
             <div className="ab-panel">
               <APIKeysPanel />
+            </div>
+          )}
+          {adminPanel === 'channels' && (
+            <div className="ab-panel">
+              <ChannelsPanel />
             </div>
           )}
         </div>

@@ -137,6 +137,15 @@ export interface BackupStatus {
   dir: string;
 }
 
+// Canales de alerta (#134): estado sin secretos (GET /api/channels)
+export interface ChannelInfo {
+  configured: boolean;
+  // Detalle no sensible del destino (p.ej. el chat id de Telegram).
+  detail?: string;
+}
+export type ChannelName = 'ntfy' | 'gotify' | 'telegram' | 'syslog' | 'email' | 'webhook' | 'push';
+export type ChannelsStatus = Record<ChannelName, ChannelInfo>;
+
 export type AlertLevel = 'info' | 'warn' | 'crit';
 export interface Alert {
   id: number;

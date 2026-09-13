@@ -5,7 +5,7 @@ import { emitEvent } from './events';
 import { ApiError } from './types';
 import { computeRecommendations } from './recs';
 import type {
-  Alert, BackupFile, BackupStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
+  Alert, BackupFile, BackupStatus, ChannelName, ChannelsStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateSnapshotReq, CreateUserReq,
   Dataset, DatasetProp, DatasetPropsResp, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, SeriesPoint, SeriesResp, SessionUser, Settings, Snapshot, SmartSelftest,
   SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UserInfo, VersionInfo,
   APIKeyCreated, APIKeyInfo,
@@ -282,6 +282,20 @@ export class MockProvider implements DataProvider {
     return { ...this.backupLast };
   };
   importBackup = async (_f: File) => { await delay(800); };
+  // Canales de alerta (#134): estado de ejemplo (config por entorno en real).
+  getChannels = async (): Promise<ChannelsStatus> => {
+    await delay();
+    return {
+      ntfy: { configured: true, detail: 'https://ntfy.sh/easyzfs-demo' },
+      telegram: { configured: true, detail: '-1001234567890' },
+      gotify: { configured: false },
+      syslog: { configured: false },
+      email: { configured: false },
+      webhook: { configured: true },
+      push: { configured: false },
+    };
+  };
+  testChannel = async (_name: ChannelName) => { await delay(700); };
   getAlerts = async () => { await delay(); return this.alerts.map((a) => ({ ...a })); };
   ackAlert = async (id: number) => {
     await delay();
