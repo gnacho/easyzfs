@@ -48,6 +48,13 @@ type Pool struct {
 	RaidzVdevs []string `json:"raidz_vdevs,omitempty"`
 }
 
+// MissingPool — pool conocido (visto antes por el colector) que ya no aparece
+// en zpool list: no está importado (#136). Solo lectura: la app no importa.
+type MissingPool struct {
+	Name     string    `json:"name"`
+	LastSeen time.Time `json:"last_seen"`
+}
+
 // Capabilities — capacidades derivadas de la versión de OpenZFS del host
 // (contrato: GET /api/version → capabilities).
 type Capabilities struct {

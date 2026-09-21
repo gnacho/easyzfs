@@ -62,6 +62,10 @@ type Config struct {
 	ZpoolInterval      time.Duration // EASYZFS_ZPOOL_INTERVAL en segundos (def 10)
 	ZpoolAlertInterval time.Duration // EASYZFS_ZPOOL_ALERT_INTERVAL en segundos (def 60)
 	ZpoolIdleInterval  time.Duration // EASYZFS_ZPOOL_IDLE_INTERVAL en segundos (def 300)
+
+	// PoolMissingAfter — un pool conocido que no se ve en zpool list durante
+	// este tiempo dispara alerta crítica pool_missing (#136). En segundos.
+	PoolMissingAfter time.Duration // EASYZFS_POOL_MISSING_AFTER (def 300)
 }
 
 // DataDir — directorio de datos del daemon (deriva de DB_PATH): ahí viven la
@@ -122,6 +126,8 @@ func Load() *Config {
 		ZpoolInterval:      time.Duration(envInt("EASYZFS_ZPOOL_INTERVAL", 10)) * time.Second,
 		ZpoolAlertInterval: time.Duration(envInt("EASYZFS_ZPOOL_ALERT_INTERVAL", 60)) * time.Second,
 		ZpoolIdleInterval:  time.Duration(envInt("EASYZFS_ZPOOL_IDLE_INTERVAL", 300)) * time.Second,
+
+		PoolMissingAfter: time.Duration(envInt("EASYZFS_POOL_MISSING_AFTER", 300)) * time.Second,
 	}
 	if cfg.Demo {
 		cfg.Mock = true // demo implica colectores mock

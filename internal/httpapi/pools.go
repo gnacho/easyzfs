@@ -7,6 +7,17 @@ import (
 )
 
 // listPools — GET /api/pools (caché; vdevs con temp cruzada con discos).
+// missingPools — pools conocidos que no aparecen en zpool list desde hace
+// más de la ventana configurada (#136). Banner informativo del dashboard.
+func (s *Server) missingPools(w http.ResponseWriter, r *http.Request) {
+	m, err := s.alerter.MissingPools(r.Context())
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "db", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, m)
+}
+
 func (s *Server) listPools(w http.ResponseWriter, r *http.Request) {
 	pools := s.pools.Pools()
 	temps := map[string]float64{}

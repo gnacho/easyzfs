@@ -30,6 +30,10 @@ type Alerter struct {
 	wh   *webhook.Notifier // puede ser nil (webhook desactivado)
 	mail *notifier.Mailer  // puede ser nil (email desactivado)
 	ch   *channels.Client  // puede ser nil (ntfy/gotify/syslog desactivados)
+
+	// poolMissingAfter — ventana para alertar de pool conocido no importado
+	// (#136). 0 = default (5 min).
+	poolMissingAfter time.Duration
 }
 
 // New crea el Alerter.
@@ -49,6 +53,16 @@ func (a *Alerter) SetEmail(m *notifier.Mailer) { a.mail = m }
 
 // SetChannels conecta los canales ntfy/gotify/syslog (opcional; nil = sin ellos).
 func (a *Alerter) SetChannels(c *channels.Client) { a.ch = c }
+
+// SetPoolMissingAfter fija la ventana de detección de pools no importados
+// (#136); 0 o negativo restaura el default (5 min).
+func (a *Alerter) SetPoolMissingAfter(d time.Duration) {
+	if d <= 0 {
+		a.poolMissingAfter = 5 * time.Minute
+		return
+	}
+	a.poolMissingAfter = d
+}
 
 // Raise inserta una alerta sin metadatos estructurados (kind "").
 func (a *Alerter) Raise(ctx context.Context, level, source, target, message string) {
@@ -243,6 +257,92 @@ func (a *Alerter) EvaluatePools(ctx context.Context, pools []model.Pool) {
 				"scrub_errors", map[string]any{"pool": p.Name, "errors": p.Scrub.Errors})
 		}
 	}
+	a.trackPools(ctx, pools)
+}
+
+// trackPools persiste los pools vistos en known_pools y alerta (crit,
+// kind pool_missing) de los conocidos que llevan más de poolMissingAfter
+// sin aparecer en zpool list (#136). Distingue "nunca visto" (instalación
+// fresca: tabla vacía, sin alertas) de "visto antes y ahora ausente".
+// Solo lectura: nunca se intenta importar.
+func (a *Alerter) trackPools(ctx context.Context, pools []model.Pool) {
+	now := time.Now().UTC()
+	if a.poolMissingAfter <= 0 {
+		a.poolMissingAfter = 5 * time.Minute
+	}
+	seen := make(map[string]bool, len(pools))
+	for _, p := range pools {
+		seen[p.Name] = true
+		if _, err := a.db.ExecContext(ctx,
+			`INSERT INTO known_pools(name, first_seen_at, last_seen_at) VALUES(?,?,?)
+			 ON CONFLICT(name) DO UPDATE SET last_seen_at=excluded.last_seen_at`,
+			p.Name, now.Format(time.RFC3339), now.Format(time.RFC3339)); err != nil {
+			log.Printf("alerts: known_pools upsert %s: %v", p.Name, err)
+		}
+	}
+	cutoff := now.Add(-a.poolMissingAfter).Format(time.RFC3339)
+	rows, err := a.db.QueryContext(ctx,
+		"SELECT name, last_seen_at FROM known_pools WHERE last_seen_at < ?", cutoff)
+	if err != nil {
+		log.Printf("alerts: known_pools listar: %v", err)
+		return
+	}
+	defer rows.Close()
+	type missing struct {
+		name     string
+		lastSeen time.Time
+	}
+	var missingPools []missing
+	for rows.Next() {
+		var m missing
+		var last string
+		if err := rows.Scan(&m.name, &last); err != nil {
+			log.Printf("alerts: known_pools scan: %v", err)
+			return
+		}
+		if seen[m.name] {
+			continue // ya reapareció: last_seen está fresco, no debería pasar
+		}
+		m.lastSeen = parseTS(last)
+		missingPools = append(missingPools, m)
+	}
+	if err := rows.Err(); err != nil {
+		log.Printf("alerts: known_pools: %v", err)
+		return
+	}
+	for _, m := range missingPools {
+		mins := int(now.Sub(m.lastSeen).Minutes())
+		a.RaiseKind(ctx, "crit", "pool."+m.name, "pools:"+m.name,
+			fmt.Sprintf("Pool %s no importado (no aparece en zpool list; visto por última vez hace %d min)",
+				m.name, mins),
+			"pool_missing", map[string]any{"pool": m.name, "mins": mins})
+	}
+}
+
+// MissingPools devuelve los pools conocidos que no aparecen en zpool list
+// desde hace más de poolMissingAfter (#136). Contrato de GET /api/pools/missing.
+func (a *Alerter) MissingPools(ctx context.Context) ([]model.MissingPool, error) {
+	if a.poolMissingAfter <= 0 {
+		a.poolMissingAfter = 5 * time.Minute
+	}
+	cutoff := time.Now().UTC().Add(-a.poolMissingAfter).Format(time.RFC3339)
+	rows, err := a.db.QueryContext(ctx,
+		"SELECT name, last_seen_at FROM known_pools WHERE last_seen_at < ? ORDER BY name", cutoff)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []model.MissingPool{}
+	for rows.Next() {
+		var m model.MissingPool
+		var last string
+		if err := rows.Scan(&m.Name, &last); err != nil {
+			return nil, err
+		}
+		m.LastSeen = parseTS(last)
+		out = append(out, m)
+	}
+	return out, rows.Err()
 }
 
 // EvaluateDisks aplica umbrales de temperatura y estado SMART.

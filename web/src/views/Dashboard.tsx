@@ -41,10 +41,14 @@ export default function Dashboard() {
   const perf = useData((p) => p.getPerformance());
   const disks = useData((p) => p.getDisks());
   const recs = useData((p) => p.getRecommendations());
+  const missing = useData((p) => p.getMissingPools());
 
   // Suscripción a eventos en tiempo real: refresca KPIs y progreso de scrub
   useEffect(() => subscribeEvents((ev) => {
-    if (ev.type === 'overview' || ev.type === 'alert.new' || ev.type === 'pool.status') ov.reload();
+    if (ev.type === 'overview' || ev.type === 'alert.new' || ev.type === 'pool.status') {
+      ov.reload();
+      missing.reload();
+    }
     if (ev.type === 'scrub.progress') {
       pools.setData((cur) => cur?.map((p) => p.name === ev.pool
         ? { ...p, scrub: { ...p.scrub, state: 'running', kind: ev.kind ?? p.scrub.kind, pct: ev.pct, eta_sec: ev.eta_sec } }
@@ -104,6 +108,28 @@ export default function Dashboard() {
                   ? <div className="empty">{t('rec_empty')}</div>
                   : (recs.data ?? []).map((r) => <RecLine key={`${r.dev}:${r.kind}`} r={r} />)}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Pools conocidos que no aparecen en zpool list (#136): aviso crítico
+            persistente hasta que el pool vuelva o se importe desde Pools. */}
+        {(missing.data?.length ?? 0) > 0 && (
+          <div className="sect" style={{ marginBottom: 14 }}>
+            <div className="card" role="alert" data-testid="missing-pools-banner">
+              {missing.data!.map((m) => {
+                const mins = Math.max(1, Math.round((Date.now() - new Date(m.last_seen).getTime()) / 60000));
+                return (
+                  <div className="alert" key={m.name}>
+                    <div className="ico" style={{ background: 'var(--err-soft)', color: 'var(--err)' }}>!</div>
+                    <div className="grow" style={{ flex: 1, minWidth: 0 }}>
+                      <b>{t('dash_missing_title')}: {m.name}</b>
+                      <div className="muted" style={{ marginTop: 2 }}>{t('dash_missing_body', { pools: m.name, mins })}</div>
+                    </div>
+                    <button className="btn sm" onClick={() => navigate('pools')}>{t('dash_see_all')}</button>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

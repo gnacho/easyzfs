@@ -161,8 +161,8 @@ func TestPreferencesEndpoints(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("GET preferences: body no JSON: %v", err)
 	}
-	if len(resp.Preferences) != 5 {
-		t.Fatalf("tipos = %d, esperado 5", len(resp.Preferences))
+	if len(resp.Preferences) != 6 {
+		t.Fatalf("tipos = %d, esperado 6", len(resp.Preferences))
 	}
 	for _, p := range resp.Preferences {
 		if !p.Enabled {

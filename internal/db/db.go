@@ -179,6 +179,15 @@ var migrations = []string{
 	  json       TEXT NOT NULL,
 	  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 	);`,
+	// v23: pools conocidos (#136). Se persiste qué pools ha visto el colector
+	// y cuándo, para alertar cuando un pool conocido deja de importarse
+	// (p. ej. fallo de auto-import tras un corte de luz). Solo lectura: la app
+	// nunca importa por su cuenta.
+	`CREATE TABLE IF NOT EXISTS known_pools (
+	  name         TEXT PRIMARY KEY,
+	  first_seen_at TEXT NOT NULL,
+	  last_seen_at  TEXT NOT NULL
+	);`,
 }
 
 // Open abre la BD con WAL, busy_timeout y una sola conexión escritora.

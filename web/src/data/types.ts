@@ -243,6 +243,12 @@ export interface Pool {
   raidz_vdevs?: string[];
 }
 
+// Pool conocido que ya no aparece en zpool list (GET /api/pools/missing, #136).
+export interface MissingPool {
+  name: string;
+  last_seen: string; // RFC3339
+}
+
 // Entrada de 'zpool history -i' (GET /api/pools/{name}/history).
 export interface PoolHistoryEntry {
   ts: string;
