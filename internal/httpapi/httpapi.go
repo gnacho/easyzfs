@@ -170,6 +170,7 @@ func (s *Server) Handler() http.Handler {
 	a.HandleFunc("POST /api/system-timers/migrate", s.auth.RequireAdmin(s.sysTimerMigrate))
 	// pools (mutaciones: admin — son potencialmente destructivas)
 	a.HandleFunc("GET /api/pools", s.listPools)
+	a.HandleFunc("GET /api/pools/missing", s.missingPools)
 	a.HandleFunc("POST /api/pools", s.auth.RequireAdmin(s.createPool))
 	a.HandleFunc("POST /api/pools/import", s.auth.RequireAdmin(s.importPool))
 	a.HandleFunc("POST /api/pools/{name}/scrub", s.auth.RequireAdmin(s.scrubPool))

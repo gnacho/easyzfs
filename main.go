@@ -92,6 +92,7 @@ func main() {
 
 	h := hub.NewHub()
 	alerter := alerts.New(database, h, stStore)
+	alerter.SetPoolMissingAfter(cfg.PoolMissingAfter)
 
 	// Webhook saliente (issue #18): worker async con cola acotada + DLQ. La URL
 	// se resuelve de settings en cada envío (dinámica, editable por UI); secret,

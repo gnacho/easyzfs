@@ -18,6 +18,7 @@ var catalogo = map[string]map[string]textos{
 	"es": {
 		"pool_capacity": {"Capacidad de pool", "El pool {pool} está al {pct}% de capacidad (umbral {threshold}%)."},
 		"pool_status":   {"Estado de pool", "El pool {pool} está {status}."},
+		"pool_missing":  {"Pool no importado", "El pool {pool} no está importado (no aparece en zpool list; visto hace {mins} min)."},
 		"scrub_errors":  {"Scrub con errores", "El scrub de {pool} terminó con {errors} errores."},
 		"disk_temp":     {"Disco caliente", "El disco {dev} está a {temp} °C (umbral {threshold} °C)."},
 		"smart_status":  {"Aviso SMART", "{dev}: {detail}."},
@@ -35,6 +36,7 @@ var catalogo = map[string]map[string]textos{
 	"en": {
 		"pool_capacity": {"Pool capacity", "Pool {pool} is at {pct}% capacity (threshold {threshold}%)."},
 		"pool_status":   {"Pool status", "Pool {pool} is {status}."},
+		"pool_missing":  {"Pool not imported", "Pool {pool} is not imported (missing from zpool list; last seen {mins} min ago)."},
 		"scrub_errors":  {"Scrub errors", "Scrub of {pool} finished with {errors} errors."},
 		"disk_temp":     {"Hot disk", "Disk {dev} is at {temp} °C (threshold {threshold} °C)."},
 		"smart_status":  {"SMART warning", "{dev}: {detail}."},

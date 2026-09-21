@@ -21,7 +21,7 @@ import (
 
 // Tipos — catálogo de tipos de alerta configurables por el usuario (casan con
 // notification_preferences.tipo y con las claves del catálogo i18n).
-var Tipos = []string{"pool_capacity", "pool_status", "scrub_errors", "disk_temp", "smart_status"}
+var Tipos = []string{"pool_capacity", "pool_status", "pool_missing", "scrub_errors", "disk_temp", "smart_status"}
 
 // TipoValido — ¿tipo de alerta conocido?
 func TipoValido(tipo string) bool {

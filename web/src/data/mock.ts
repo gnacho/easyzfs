@@ -438,6 +438,7 @@ export class MockProvider implements DataProvider {
 
   // ---- Pools ----
   getPools = async () => { await delay(); return this.pools.map((p) => ({ ...p, vdevs: p.vdevs.map((v) => ({ ...v })), scrub: { ...p.scrub } })); };
+  getMissingPools = async () => { await delay(); return []; };
   createPool = async (r: CreatePoolReq) => {
     await delay(400);
     if (r.confirm !== r.name) throw new ApiError(400, 'confirm_required', `Escribe "${r.name}" para confirmar`);

@@ -4,7 +4,7 @@ import { ApiError } from './types';
 import { notifyAuthExpired } from './events';
 import type {
   ActivityItem, Alert, APIKeyCreated, APIKeyInfo, BackupFile, BackupStatus, ChannelName, ChannelPatch, ChannelsStatus, CreateDatasetReq, CreateJobReq, CreatePoolReq, CreateReplicationReq, CreateSnapshotReq, CreateUserReq,
-  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
+  Dataset, DatasetProp, DatasetPropsResp, DiffEntry, Disk, DiskSmartLogResp, DiskSmartResp, Job, JobHistoryItem, Lang, LoginResult, LongOp, MissingPool, Overview, Performance, Pool, PoolHistoryEntry, PushAlertTipo, PushPreference, PushQuietHours, PushSubscriptionJSON,
   Recommendation, ReplicationJob, ReplicationSSHKey, ReplicationTestResult, SessionUser, Settings, SeriesResp,
   SnapshotGroup, SystemTimer, SystemTimersResp, TwoFARecovery, TwoFASetup, TwoFAStatus, UpdateJobReq, UpdateReplicationReq, UpdateStatus, UserInfo, VersionInfo,
 } from './types';
@@ -154,6 +154,7 @@ export class HttpProvider implements DataProvider {
   deleteAPIKey = (id: number) => del<void>(`/keys/${id}`);
 
   getPools = () => get<Pool[]>('/pools');
+  getMissingPools = () => get<MissingPool[]>('/pools/missing');
   createPool = (r: CreatePoolReq) => post<void>('/pools', r);
   importPool = async (name?: string): Promise<string[]> => {
     const r = await post<{ importable?: string[] } | string[]>('/pools/import', name ? { name } : {});
