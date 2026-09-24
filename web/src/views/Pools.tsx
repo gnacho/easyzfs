@@ -6,8 +6,6 @@ import { useApp } from '../ui/store';
 import { Spinner } from '../components/ui';
 import { PoolCard } from '../components/PoolCard';
 import { useModal } from '../components/Modal';
-import { getProvider } from '../data';
-import { errorMessage } from '../ui/store';
 
 type Filter = 'all' | 'ok' | 'warn';
 
@@ -16,7 +14,6 @@ export default function Pools() {
   const { openModal } = useModal();
   const { data, loading, reload, setData } = useData((p) => p.getPools());
   const [filter, setFilter] = useState<Filter>('all');
-  const [msg, setMsg] = useState('');
 
   // Tiempo real: progreso de scrub y temperaturas de vdevs sin recargar todo
   useEffect(() => subscribeEvents((ev) => {
@@ -35,14 +32,6 @@ export default function Pools() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }), []);
 
-  const importPool = async () => {
-    setMsg('');
-    try {
-      const list = await getProvider().importPool();
-      setMsg(list.length ? `Importables: ${list.join(', ')}` : t('empty'));
-    } catch (e) { setMsg(errorMessage(e, t)); }
-  };
-
   const filtered = (data ?? []).filter((p) =>
     filter === 'all' ? true : filter === 'ok' ? p.status === 'ONLINE' : p.status !== 'ONLINE');
 
@@ -58,12 +47,11 @@ export default function Pools() {
         {filtered.map((p) => <PoolCard key={p.name} pool={p} onChanged={reload} />)}
       </div>
       {data && filtered.length === 0 && <div className="empty">{t('empty')}</div>}
-      {msg && <p className="desc" style={{ marginTop: 12, fontSize: 13, color: 'var(--text2)' }}>{msg}</p>}
       <div className="sect">
         <button className="btn primary" disabled={!isAdmin} title={!isAdmin ? t('no_permission') : undefined}
           onClick={() => openModal('newpool')}>{t('pool_create')}</button>
         <button className="btn" style={{ marginLeft: 8 }} disabled={!isAdmin}
-          title={!isAdmin ? t('no_permission') : undefined} onClick={importPool}>{t('pool_import')}</button>
+          title={!isAdmin ? t('no_permission') : undefined} onClick={() => openModal('importpool')}>{t('pool_import')}</button>
       </div>
     </div>
   );

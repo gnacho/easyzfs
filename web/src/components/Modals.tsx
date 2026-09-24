@@ -59,6 +59,7 @@ export function ModalHost() {
   switch (modal.name) {
     case 'newsnap': return <SnapshotModal preset={p.dataset as string | undefined} onClose={closeModal} />;
     case 'newpool': return <NewPoolModal onClose={closeModal} />;
+    case 'importpool': return <ImportPoolModal preset={p.name as string | undefined} onClose={closeModal} />;
     case 'newds': return <NewDatasetModal vol={!!p.vol} onClose={closeModal} />;
     case 'editds': return <EditDatasetModal ds={p.ds as Dataset} onClose={closeModal} />;
     case 'propsds': return <DatasetPropsModal ds={p.ds as Dataset} onClose={closeModal} />;
@@ -336,6 +337,81 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
       </>)}
+    </ModalBox>
+  );
+}
+
+// ---------- importar pool existente (zpool import) ----------
+// Lista los pools importables ('zpool import') y permite importar uno con
+// confirmación escrita. Tras importar, refresca para que el pool aparezca en
+// las vistas y desaparezca el aviso de "pool sin importar" (#138).
+function ImportPoolModal({ preset, onClose }: { preset?: string; onClose: () => void }) {
+  const { t, refresh, isAdmin, notify } = useApp();
+  const [list, setList] = useState<string[] | null>(null);
+  const [sel, setSel] = useState(preset ?? '');
+  const [confirm, setConfirm] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    getProvider().importPool()
+      .then((names) => { if (alive) setList(names); })
+      .catch((e) => { if (alive) { setList([]); setErr(errorMessage(e, t)); } });
+    return () => { alive = false; };
+  }, [t]);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sel) return;
+    setBusy(true); setErr('');
+    try {
+      await getProvider().importPool(sel);
+      refresh(); onClose();
+      notify(t('toast_pool_imported'), 'ok');
+    } catch (ex) { const msg = errorMessage(ex, t); setErr(msg); notify(msg, 'err'); setBusy(false); }
+  };
+
+  const presetMissing = !!preset && list !== null && !list.includes(preset);
+
+  return (
+    <ModalBox onClose={onClose} label={t('imp_title')}>
+      <form onSubmit={submit}>
+        <h3>{t('imp_title')}</h3>
+        <p className="desc">{t('imp_desc')}</p>
+        {!list && <div style={{ padding: '18px 0', textAlign: 'center' }}><Spinner label={t('loading')} /></div>}
+        {list && list.length === 0 && (
+          <>
+            <div className="empty">{t('imp_empty')}</div>
+            {preset && <p className="form-err" role="alert">{t('imp_not_importable', { pool: preset })}</p>}
+          </>
+        )}
+        {list && list.length > 0 && (<>
+          <label id="imp-group-lbl">{t('imp_select')}</label>
+          <div role="radiogroup" aria-labelledby="imp-group-lbl">
+            {list.map((name) => (
+              <div key={name} className={`diskpick ${sel === name ? 'sel' : ''}`} role="radio"
+                aria-checked={sel === name} tabIndex={0}
+                onClick={() => { setSel(name); setConfirm(''); }}
+                onKeyDown={(e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setSel(name); setConfirm(''); } }}>
+                <span className="mono">{name}</span>
+                <span className="muted" style={{ flex: 1 }}>{t('imp_pool_hint')}</span>
+              </div>
+            ))}
+          </div>
+          {presetMissing && <p className="form-err" role="alert">{t('imp_not_importable', { pool: preset })}</p>}
+          <p className="desc" style={{ marginTop: 12, color: 'var(--warn)' }}>⚠️ {t('imp_warn')}</p>
+          <label htmlFor="imp-confirm">{t('ex_confirm_lbl_pool')}</label>
+          <input id="imp-confirm" placeholder={sel} value={confirm}
+            onChange={(e) => setConfirm(e.target.value)} autoComplete="off" />
+        </>)}
+        {err && <p className="form-err" role="alert">{err}</p>}
+        <div className="m-actions">
+          <button type="button" className="btn" onClick={onClose}>{t('cancel')}</button>
+          <SubmitBtn label={t('imp_btn')} busy={busy}
+            disabled={!isAdmin || !sel || confirm.trim() !== sel} />
+        </div>
+      </form>
     </ModalBox>
   );
 }
