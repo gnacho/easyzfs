@@ -362,6 +362,11 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.24
+
+- **Import an existing pool from the web UI (#138)**: the *Pools* view now has an actionable "Import existing pool" action that lists the importable pools (`zpool import`), lets you pick one and requires typing its name to confirm. The Dashboard "known pool is not imported" banner also gets an *Import* button per missing pool, so a pool that fails to auto-import (for example after a power loss) can be brought back from the UI without a shell. Admin only; errors from `zpool import` are surfaced to the user.
+- **Warn when a known pool is no longer imported (#136)**: pools the collector has seen before are remembered, and if one disappears from `zpool list` for more than `EASYZFS_POOL_MISSING_AFTER` (default 300 s) a critical `pool_missing` alert is raised and a persistent banner appears on the Dashboard. A fresh install never alerts for a pool it has never seen, and repeated detections are de-duplicated. Read-only: EasyZFS never imports a pool on its own.
+
 ### v2.9.23
 
 - **Telegram alert channel (#134)**: alerts can now reach a Telegram chat through the Bot API (`sendMessage`), configured with a bot token and a chat id. It uses the same alert pipeline as the other channels (per-event, ES/EN templates, severity prefix).
