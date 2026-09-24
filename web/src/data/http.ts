@@ -158,7 +158,9 @@ export class HttpProvider implements DataProvider {
   createPool = (r: CreatePoolReq) => post<void>('/pools', r);
   importPool = async (name?: string): Promise<string[]> => {
     const r = await post<{ importable?: string[] } | string[]>('/pools/import', name ? { name } : {});
-    return Array.isArray(r) ? r : (r.importable ?? []);
+    // Con nombre el backend responde 202 sin cuerpo (r = undefined); sin nombre
+    // devuelve {importable:[...]}. No asumir que r existe.
+    return Array.isArray(r) ? r : (r?.importable ?? []);
   };
   scrubAction = (pool: string, action: 'start' | 'pause' | 'stop') =>
     post<void>(`/pools/${enc(pool)}/scrub`, { action });

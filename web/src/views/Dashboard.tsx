@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { subscribeEvents } from '../data/events';
 import { useData } from '../ui/useData';
 import { useApp, alertTargetView } from '../ui/store';
+import { useModal } from '../components/Modal';
 import { fmtBytes, fmtBytesPair, fmtDateTime, fmtInt, fmtPct, timeAgo } from '../ui/format';
 import { KpiCard, Spinner } from '../components/ui';
 import { PoolCard } from '../components/PoolCard';
@@ -35,7 +36,8 @@ function AlertRow({ a }: { a: Alert }) {
 }
 
 export default function Dashboard() {
-  const { t, navigate } = useApp();
+  const { t, navigate, isAdmin } = useApp();
+  const { openModal } = useModal();
   const ov = useData((p) => p.getOverview());
   const pools = useData((p) => p.getPools());
   const perf = useData((p) => p.getPerformance());
@@ -126,6 +128,8 @@ export default function Dashboard() {
                       <b>{t('dash_missing_title')}: {m.name}</b>
                       <div className="muted" style={{ marginTop: 2 }}>{t('dash_missing_body', { pools: m.name, mins })}</div>
                     </div>
+                    <button className="btn sm" disabled={!isAdmin} title={!isAdmin ? t('no_permission') : undefined}
+                      onClick={() => openModal('importpool', { name: m.name })}>{t('dash_missing_import')}</button>
                     <button className="btn sm" onClick={() => navigate('pools')}>{t('dash_see_all')}</button>
                   </div>
                 );
