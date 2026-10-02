@@ -370,6 +370,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.25
+
+- **Actualización de dependencias del frontend (#140)**: revisión rutinaria del stack (React 19.3, Vite 8.3.2, @vitejs/plugin-react 6.1.1, autoprefixer 10.6.1, postcss 8.5.28). Solo versiones menores, sin cambios de código ni funcionalidad; el build y la suite de tests siguen en verde y sin vulnerabilidades conocidas.
+
 ### v2.9.24
 
 - **Importar un pool existente desde la web (#138)**: la vista *Pools* ahora tiene una acción "Importar pool existente" que lista los pools importables (`zpool import`), permite elegir uno y exige escribir su nombre para confirmar. El banner del Panel "pool conocido sin importar" añade también un botón *Importar* por pool ausente, de forma que un pool que no se auto-importa (por ejemplo tras un corte de luz) se puede recuperar desde la interfaz sin consola. Solo administradores; los errores de `zpool import` se muestran al usuario.
