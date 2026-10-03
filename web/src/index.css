@@ -554,6 +554,7 @@ table.data td.num{font-family:var(--font-mono);font-size:13.5px}
 .overlay{
   position:fixed;inset:0;background:rgba(10,12,10,.5);z-index:60;
   display:flex;align-items:flex-end;justify-content:center;padding:0;
+  -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
 }
 @media(min-width:640px){.overlay{align-items:center;padding:20px}}
 .modal{
@@ -561,13 +562,14 @@ table.data td.num{font-family:var(--font-mono);font-size:13.5px}
   max-height:88vh;overflow-y:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom));
 }
 @media(min-width:640px){.modal{border-radius:14px;padding-bottom:22px}}
-/* Diálogo grande (wizard de update): en desktop ocupa casi todo el viewport y
-   la zona de notas crece y hace scroll interno; el checkbox y los botones se
-   quedan abajo. En móvil (<640px) no aplica: sigue la hoja anclada abajo. */
+/* Diálogo grande (wizard de update): en desktop tiene tamaño fijo tipo Pulse
+   (800x600, con tope al viewport) y la zona de notas crece y hace scroll
+   interno; el checkbox y los botones se quedan abajo. En móvil (<640px) no
+   aplica: sigue la hoja anclada abajo. */
 @media(min-width:640px){
   .modal.modal-xlarge{
-    width:calc(100vw - 2rem);max-width:calc(100vw - 2rem);
-    height:calc(100vh - 2rem);max-height:calc(100vh - 2rem);
+    width:800px;max-width:calc(100vw - 2rem);
+    height:600px;max-height:calc(100vh - 2rem);
     display:flex;flex-direction:column;overflow:hidden;
   }
   .modal.modal-xlarge>*{flex-shrink:0}
