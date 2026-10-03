@@ -370,6 +370,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.26
+
+- **Asistente de actualización más grande (#142).** El asistente de actualización ahora ocupa casi toda la ventana en escritorio, con las notas de la release formateadas (cabeceras en negrita, viñetas) en un área con scroll que crece y las acciones ancladas abajo. En móvil se mantiene la hoja inferior.
+
 ### v2.9.25
 
 - **Actualización de dependencias del frontend (#140)**: revisión rutinaria del stack (React 19.3, Vite 8.3.2, @vitejs/plugin-react 6.1.1, autoprefixer 10.6.1, postcss 8.5.28). Solo versiones menores, sin cambios de código ni funcionalidad; el build y la suite de tests siguen en verde y sin vulnerabilidades conocidas.

@@ -362,6 +362,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.26
+
+- **Bigger update wizard (#142).** The in-app update wizard now opens near-viewport on desktop, with the release notes rendered as a formatted, scrollable list (bold section headers, bullets) that grows to fill the dialog and the actions pinned to the bottom. Mobile keeps the bottom sheet.
+
 ### v2.9.25
 
 - **Frontend dependency refresh (#140)**: routine stack review (React 19.3, Vite 8.3.2, @vitejs/plugin-react 6.1.1, autoprefixer 10.6.1, postcss 8.5.28). Minor versions only, no code or functionality changes; build and test suite stay green with zero known vulnerabilities.
