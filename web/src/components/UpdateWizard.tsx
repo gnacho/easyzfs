@@ -27,6 +27,15 @@ const STEP_ORDER = ['downloading', 'installing', 'restarting'] as const;
 
 type Phase = 'confirm' | 'progress' | 'restarting' | 'error';
 
+// Notas de release en bruto (markdown-lite de git) -> líneas limpias:
+// se quitan vacíos y trailers Co-authored-by/Signed-off-by.
+function cleanNoteLines(notes: string): string[] {
+  return notes
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !/^(co-authored-by|signed-off-by):/i.test(l));
+}
+
 export function UpdateWizard({ onClose }: UpdateWizardProps) {
   const { t } = useApp();
   const [status, setStatus] = useState<UpdateStatus | null>(null);
@@ -204,7 +213,7 @@ export function UpdateWizard({ onClose }: UpdateWizardProps) {
   const activeIdx = STEP_ORDER.indexOf(step as (typeof STEP_ORDER)[number]);
 
   return (
-    <ModalBox onClose={handleClose} label={t('uz_title')}>
+    <ModalBox onClose={handleClose} label={t('uz_title')} xlarge>
       <h3>{t('uz_title')}</h3>
 
       {phase === 'confirm' && (
@@ -216,7 +225,15 @@ export function UpdateWizard({ onClose }: UpdateWizardProps) {
             <span className="uz-ver uz-latest">{status.latest || ''}</span>
           </div>
           {status.releaseNotes && (
-            <p className="uz-notes">{status.releaseNotes}</p>
+            <div className="uz-notes">
+              {cleanNoteLines(status.releaseNotes).map((line, i) => {
+                const h = line.match(/^(#{1,3})\s+(.*)$/);
+                if (h) return <div key={i} className="uz-notes-h">{h[2]}</div>;
+                const b = line.match(/^[-*]\s+(.*)$/);
+                if (b) return <div key={i} className="uz-notes-li">{b[1]}</div>;
+                return <div key={i} className="uz-notes-p">{line}</div>;
+              })}
+            </div>
           )}
           {failChecks.length > 0 && (
             <div className="uz-checks" role="alert">

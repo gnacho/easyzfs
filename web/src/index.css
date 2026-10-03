@@ -561,6 +561,18 @@ table.data td.num{font-family:var(--font-mono);font-size:13.5px}
   max-height:88vh;overflow-y:auto;padding:22px 20px calc(22px + env(safe-area-inset-bottom));
 }
 @media(min-width:640px){.modal{border-radius:14px;padding-bottom:22px}}
+/* Diálogo grande (wizard de update): en desktop ocupa casi todo el viewport y
+   la zona de notas crece y hace scroll interno; el checkbox y los botones se
+   quedan abajo. En móvil (<640px) no aplica: sigue la hoja anclada abajo. */
+@media(min-width:640px){
+  .modal.modal-xlarge{
+    width:calc(100vw - 2rem);max-width:calc(100vw - 2rem);
+    height:calc(100vh - 2rem);max-height:calc(100vh - 2rem);
+    display:flex;flex-direction:column;overflow:hidden;
+  }
+  .modal.modal-xlarge>*{flex-shrink:0}
+  .modal.modal-xlarge>.uz-notes{flex:1 1 auto;min-height:0;overflow-y:auto}
+}
 .modal h3{font-size:17px;font-weight:700;margin-bottom:4px}
 .modal .desc{font-size:13px;color:var(--text2)}
 .modal .m-actions{display:flex;gap:9px;justify-content:flex-end;margin-top:22px;flex-wrap:wrap}
@@ -571,6 +583,11 @@ table.data td.num{font-family:var(--font-mono);font-size:13.5px}
 .uz-arrow{color:var(--text3);font-size:13px}
 .uz-latest{font-weight:600;color:var(--accent)}
 .uz-notes{margin:12px 0 0;font-size:12.5px;color:var(--text3);line-height:1.55}
+.uz-notes-h{font-weight:700;color:var(--text);margin:10px 0 2px}
+.uz-notes-h:first-child{margin-top:0}
+.uz-notes-p{margin:2px 0}
+.uz-notes-li{position:relative;padding-left:14px;margin:2px 0}
+.uz-notes-li::before{content:"-";position:absolute;left:2px;color:var(--text3)}
 .uz-checks{display:flex;flex-direction:column;gap:4px;margin:12px 0 0;font-size:12.5px;line-height:1.5;color:var(--err)}
 .uz-down{display:flex;gap:8px;align-items:flex-start;margin:14px 0 2px;font-size:12.5px;line-height:1.5;color:var(--warn)}
 .uz-down input{margin:2px 0 0;width:auto;padding:0;flex-shrink:0;accent-color:var(--warn)}
