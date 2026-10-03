@@ -33,7 +33,7 @@ const FOCUSABLE = 'button, [href], input, select, textarea, [tabindex]:not([tabi
 
 // Contenedor visual del modal con gestión de foco y teclado.
 // label = título del diálogo (el mismo texto del h3): nombre accesible del role="dialog".
-// xlarge = diálogo casi a viewport completo en desktop (columna flex con scroll
+// xlarge = diálogo tipo Pulse en desktop (800x600, columna flex con scroll
 // interno); en móvil sigue siendo la hoja anclada abajo (ver .modal-xlarge en CSS).
 export function ModalBox({ children, onClose, wide, xlarge, label }: {
   children: ReactNode; onClose: () => void; wide?: boolean; xlarge?: boolean; label: string;
