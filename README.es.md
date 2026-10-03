@@ -370,6 +370,10 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.27
+
+- **Asistente de actualización ajustado (#144).** El asistente ya no ocupa casi toda la pantalla: unos 800x600 en escritorio con las notas haciendo scroll dentro, y la página de fondo ahora se ve claramente difuminada, no solo oscurecida.
+
 ### v2.9.26
 
 - **Asistente de actualización más grande (#142).** El asistente de actualización ahora ocupa casi toda la ventana en escritorio, con las notas de la release formateadas (cabeceras en negrita, viñetas) en un área con scroll que crece y las acciones ancladas abajo. En móvil se mantiene la hoja inferior.

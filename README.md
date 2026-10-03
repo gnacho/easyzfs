@@ -362,6 +362,10 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.27
+
+- **Update wizard resized (#144).** The wizard no longer fills the screen: about 800x600 on desktop with the release notes scrolling inside, and the page behind is now clearly blurred instead of just dimmed.
+
 ### v2.9.26
 
 - **Bigger update wizard (#142).** The in-app update wizard now opens near-viewport on desktop, with the release notes rendered as a formatted, scrollable list (bold section headers, bullets) that grows to fill the dialog and the actions pinned to the bottom. Mobile keeps the bottom sheet.
