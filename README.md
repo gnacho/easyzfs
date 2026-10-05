@@ -92,7 +92,7 @@ tool in its category.
 - **Go, single static binary**: a 24/7 daemon on a small LXC: ~12 MB,
   minimal RSS, no runtime to maintain, an upgrade is swapping one file.
 - **`modernc.org/sqlite` (pure Go)**: keeps `CGO_ENABLED=0` so the binary
-  is fully static and needs no C toolchain on the NAS. Only 2 Go
+  is fully static and needs no C toolchain on the NAS. Only a small set of Go
   dependencies, on purpose.
 - **Collectors + cache, never CLI from HTTP**: collectors poll
   `zpool`/`smartctl`/sensors into an in-memory cache and publish SSE;
@@ -121,6 +121,8 @@ tool in its category.
   temperature, SMART warnings); see [Push notifications](#push-notifications)
 - Demo mode (`DEMO=1`): realistic mock data, all mutations return 403, so
   it's safe to show off
+- Optional MCP endpoint for AI assistants (`EASYZFS_MCP_ENABLED=1`); see
+  [AI assistants](#ai-assistants-mcp)
 - PWA: installable, dark/light theme, i18n es/en/auto
 - Embedded SQLite (WAL) for users, sessions, settings, alerts, series and
   job history
@@ -261,6 +263,8 @@ The service reads `/etc/easyzfs/env`:
 | `DEMO` | - | `1` = demo mode (mock + mutations blocked) |
 | `MOCK` | - | `1` = mock collectors |
 | `COOKIE_SECURE` | - | `1` = Secure cookie (behind TLS proxy) |
+| `EASYZFS_MCP_ENABLED` | - | `1` = MCP endpoint for AI assistants at `/mcp` |
+| `EASYZFS_MCP_RATE_PER_MIN` | `60` | Per-IP rate limit for `/mcp` requests |
 | `EASYZFS_SUDO` | auto | `1`/`0` forces or disables `sudo -n` on zpool/zfs/smartctl/lsblk/crontab |
 | `RETENTION_DAYS` | `30` | Series retention (daily purge 03:30) |
 | `EASYZFS_ZPOOL_INTERVAL` | `10` | Full collection interval (seconds) while the web UI is open |
@@ -271,6 +275,42 @@ The service reads `/etc/easyzfs/env`:
 | `VAPID_SUBJECT` | `mailto:easyzfs@localhost` | VAPID contact (`mailto:`, required by Safari) |
 
 Restart after changes: `sudo systemctl restart easyzfs`.
+
+## AI assistants (MCP)
+
+EasyZFS can expose a local [MCP](https://modelcontextprotocol.io/) endpoint
+for AI assistants. It is disabled by default and is read-only:
+
+1. Add `EASYZFS_MCP_ENABLED=1` to `/etc/easyzfs/env` and restart the service.
+2. Create a read-only API key in **Settings → API keys**.
+3. Point your MCP client at `http://<host>:8080/mcp` and send the key as
+   `Authorization: Bearer ez_...`.
+
+The endpoint never accepts the browser session cookie. The first tool set is
+read-only and answers from the collector caches: `server_status`,
+`list_pools`, `pool_health`, `list_datasets`, `list_snapshots`, `list_disks`
+and `alerts`. `/mcp` is rate-limited per IP, 60 requests/minute by default,
+tunable with `EASYZFS_MCP_RATE_PER_MIN`.
+
+OpenCode example:
+
+```json
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "easyzfs": {
+      "type": "remote",
+      "url": "http://127.0.0.1:8080/mcp",
+      "oauth": false,
+      "headers": {
+        "Authorization": "Bearer {env:EASYZFS_MCP_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Set `EASYZFS_MCP_TOKEN` to the read-only API key shown once in Settings.
 
 ## Demo and mock modes
 
@@ -322,6 +362,7 @@ internal/
   alerts/               thresholds (capacity, temp, SMART, scrub) → alerts table + SSE
   hub/                  SSE broker (25s heartbeat, X-Accel-Buffering: no)
   httpapi/              REST handlers (read cache, NEVER run CLI)
+  mcp/                  MCP endpoint for AI assistants (Bearer-only, read-only tools)
   model/                API contract types
   executil/             defensive exec.CommandContext with timeout (auto sudo -n if not root)
 ```

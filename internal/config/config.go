@@ -66,6 +66,12 @@ type Config struct {
 	// PoolMissingAfter — un pool conocido que no se ve en zpool list durante
 	// este tiempo dispara alerta crítica pool_missing (#136). En segundos.
 	PoolMissingAfter time.Duration // EASYZFS_POOL_MISSING_AFTER (def 300)
+
+	// MCP (Model Context Protocol, #146): servidor embebido /mcp para
+	// asistentes de IA. Desactivado por defecto; requiere EASYZFS_MCP_ENABLED=1
+	// y autentica con API keys de solo lectura existentes (ez_...).
+	MCPEnabled    bool // EASYZFS_MCP_ENABLED=1
+	MCPRatePerMin int  // EASYZFS_MCP_RATE_PER_MIN (def 60)
 }
 
 // DataDir — directorio de datos del daemon (deriva de DB_PATH): ahí viven la
@@ -97,7 +103,6 @@ func Load() *Config {
 		VAPIDPrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
 		VAPIDSubject:    env("VAPID_SUBJECT", "mailto:easyzfs@localhost"),
 
-
 		WebhookSecret:  os.Getenv("WEBHOOK_SECRET"),
 		WebhookTimeout: time.Duration(envInt("WEBHOOK_TIMEOUT", 10)) * time.Second,
 		WebhookRetries: envInt("WEBHOOK_RETRIES", 3),
@@ -111,14 +116,14 @@ func Load() *Config {
 		SMTPTimeout:    time.Duration(envInt("SMTP_TIMEOUT", 10)) * time.Second,
 		SMTPTestTo:     os.Getenv("SMTP_TEST_TO"),
 
-		NtfyURL:         os.Getenv("NTFY_URL"),
-		NtfyToken:       os.Getenv("NTFY_TOKEN"),
-		GotifyURL:       os.Getenv("GOTIFY_URL"),
-		GotifyToken:     os.Getenv("GOTIFY_TOKEN"),
-		SyslogHost:      os.Getenv("SYSLOG_HOST"),
-		SyslogPort:      envInt("SYSLOG_PORT", 514),
-		SyslogProto:     env("SYSLOG_PROTO", "udp"),
-		SyslogFacility:  envInt("SYSLOG_FACILITY", 1),
+		NtfyURL:        os.Getenv("NTFY_URL"),
+		NtfyToken:      os.Getenv("NTFY_TOKEN"),
+		GotifyURL:      os.Getenv("GOTIFY_URL"),
+		GotifyToken:    os.Getenv("GOTIFY_TOKEN"),
+		SyslogHost:     os.Getenv("SYSLOG_HOST"),
+		SyslogPort:     envInt("SYSLOG_PORT", 514),
+		SyslogProto:    env("SYSLOG_PROTO", "udp"),
+		SyslogFacility: envInt("SYSLOG_FACILITY", 1),
 
 		TelegramBotToken: os.Getenv("TELEGRAM_BOT_TOKEN"),
 		TelegramChatID:   os.Getenv("TELEGRAM_CHAT_ID"),
@@ -128,6 +133,9 @@ func Load() *Config {
 		ZpoolIdleInterval:  time.Duration(envInt("EASYZFS_ZPOOL_IDLE_INTERVAL", 300)) * time.Second,
 
 		PoolMissingAfter: time.Duration(envInt("EASYZFS_POOL_MISSING_AFTER", 300)) * time.Second,
+
+		MCPEnabled:    envBool("EASYZFS_MCP_ENABLED"),
+		MCPRatePerMin: envInt("EASYZFS_MCP_RATE_PER_MIN", 60),
 	}
 	if cfg.Demo {
 		cfg.Mock = true // demo implica colectores mock
