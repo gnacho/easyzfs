@@ -11,6 +11,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.5.0
 	github.com/SherClockHolmes/webpush-go v1.4.0
 	github.com/creativeprojects/go-selfupdate v1.6.0
+	github.com/mark3labs/mcp-go v1.1.1
 	github.com/pquerna/otp v1.5.0
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/wneessen/go-mail v0.8.1
@@ -26,6 +27,7 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/google/go-github/v86 v86.0.0 // indirect
 	github.com/google/go-querystring v1.2.0 // indirect
+	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-retryablehttp v0.7.8 // indirect
@@ -33,7 +35,10 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/spf13/cast v1.7.1 // indirect
 	github.com/ulikunitz/xz v0.5.15 // indirect
+	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	gitlab.com/gitlab-org/api/client-go v1.46.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect

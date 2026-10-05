@@ -33,6 +33,7 @@ import (
 	"easyzfs/internal/httpapi"
 	"easyzfs/internal/hub"
 	"easyzfs/internal/longops"
+	"easyzfs/internal/mcp"
 	"easyzfs/internal/notifier"
 	"easyzfs/internal/push"
 	"easyzfs/internal/replication"
@@ -202,6 +203,21 @@ func main() {
 	authManager := auth.NewManager(database, cfg.SessionSecret, cfg.CookieSecure)
 	authManager.SetAPIKeys(keyStore)
 
+	// MCP para asistentes de IA (#146): opt-in por env, Bearer-only con API keys
+	// de solo lectura y tools de solo lectura sobre caches. Se monta fuera del
+	// middleware de sesion: nunca acepta cookie.
+	var mcpSrv *mcp.Server
+	if cfg.MCPEnabled {
+		mcpSrv = mcp.New(mcp.Deps{
+			Pools: providers.Pools, Disks: providers.Disks,
+			Perf: providers.Perf, Caps: providers.Caps,
+			Alerter: alerter, Jobs: jobStore,
+			Version: version, Build: build, ZFSVersion: zfsVersion, Demo: cfg.Demo,
+			RatePerMin: cfg.MCPRatePerMin,
+		})
+		log.Printf("MCP habilitado en /mcp (rate %d/min)", cfg.MCPRatePerMin)
+	}
+
 	srv := httpapi.NewServer(httpapi.Deps{
 		Cfg: cfg, DB: database, Auth: authManager,
 		Users: userStore, APIKeys: keyStore, Alerter: alerter, Settings: stStore,
@@ -215,6 +231,9 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.Handle("/api/", srv.Handler())
+	if mcpSrv != nil {
+		mux.Handle("/mcp", mcpSrv.Handler(keyStore))
+	}
 
 	// SPA embebida: estáticos + fallback a index.html.
 	webFS, err := fs.Sub(distFS, "dist")
