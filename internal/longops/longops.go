@@ -113,6 +113,12 @@ func (m *Manager) Start(typ, target, name string, args ...string) (*Op, error) {
 
 // watch consume la salida línea a línea y cierra el ciclo de vida de la op.
 func (m *Manager) watch(op *Op, cmd *exec.Cmd, stdout io.Reader) {
+	// Drenar la salida a EOF ANTES de Wait(): con StdoutPipe, Wait cierra el
+	// extremo de lectura de la tubería al ver salir el proceso, así que llamar
+	// Wait antes de agotar las lecturas puede truncar lo buffered (en un
+	// runner cargado se vio lines=[] con un printf que escribía y moría ya).
+	// EOF llega solo cuando el proceso cierra su stdout al morir, así que
+	// este orden garantiza capturar TODAS las líneas antes de reapsar.
 	scanDone := make(chan struct{})
 	go func() {
 		defer close(scanDone)
@@ -122,8 +128,8 @@ func (m *Manager) watch(op *Op, cmd *exec.Cmd, stdout io.Reader) {
 			m.appendLine(op, sc.Text())
 		}
 	}()
-	err := cmd.Wait()
 	<-scanDone
+	err := cmd.Wait()
 	ended := time.Now().UTC()
 	m.mu.Lock()
 	op.Ended = &ended
