@@ -138,7 +138,7 @@ export interface DataProvider {
   getDisks(): Promise<Disk[]>;
   getRecommendations(): Promise<Recommendation[]>;
   smartTest(dev: string, type: 'short' | 'long'): Promise<void>;
-  poweroffDisk(dev: string): Promise<void>;
+  poweroffDisk(dev: string, confirm?: string): Promise<void>;
   identifyDisk(dev: string): Promise<void>;
 
   // Notificaciones push

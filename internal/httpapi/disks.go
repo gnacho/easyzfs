@@ -79,10 +79,19 @@ func mountedDisks(ctx context.Context) map[string]bool {
 	return m
 }
 
-// powerOff — POST /api/disks/{dev}/poweroff → 202.
-// Solo discos libres: vetado si es miembro de un pool o tiene montajes activos.
+// powerOff — POST /api/disks/{dev}/poweroff {confirm?} → 202.
+// Discos libres: doble clic en la UI (sin confirm escrito). Miembros de pool:
+// requiere confirmación escrita con el nombre del dispositivo (hot swap); el
+// pool quedará DEGRADED hasta reemplazar o volver a encender el disco.
+// Montajes activos/swap: siempre vetado (apagar rompería el sistema).
 func (s *Server) powerOff(w http.ResponseWriter, r *http.Request) {
 	dev := r.PathValue("dev")
+	var body struct {
+		Confirm string `json:"confirm"`
+	}
+	if !decodeJSON(w, r, &body) {
+		return
+	}
 	pools := s.pools.Pools()
 	names := make([]string, 0, len(pools))
 	vdevs := map[string][]string{}
@@ -105,10 +114,10 @@ func (s *Server) powerOff(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if p := poolForDisk(names, vdevs, dev, aliases...); p != "" {
-		writeErr(w, http.StatusConflict, "dev_in_use", "el disco pertenece al pool '"+p+"'")
-		return
-	}
-	if mountedDisks(r.Context())[dev] {
+		if !requireConfirm(w, body.Confirm, dev) {
+			return
+		}
+	} else if mountedDisks(r.Context())[dev] {
 		writeErr(w, http.StatusConflict, "dev_mounted", "el disco tiene particiones montadas o swap activo")
 		return
 	}
