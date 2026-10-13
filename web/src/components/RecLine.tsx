@@ -2,11 +2,12 @@
 // Reutiliza el patrón visual de AlertRow (icono tonal + texto).
 import type { Recommendation } from '../data/types';
 import { useApp } from '../ui/store';
+import { IconError, IconInfo, IconWarn } from './icons';
 
 export function RecLine({ r }: { r: Recommendation }) {
   const { t } = useApp();
   const tone = r.level === 'crit' ? 'err' : r.level === 'warn' ? 'warn' : 'info';
-  const ico = r.level === 'crit' ? '!' : r.level === 'warn' ? '⚠' : 'i';
+  const Ico = r.level === 'crit' ? IconError : r.level === 'warn' ? IconWarn : IconInfo;
   const reasons: string[] = [];
   if (r.realloc_sectors) reasons.push(t('dk_realloc', { n: r.realloc_sectors }));
   if (r.pending_sectors) reasons.push(t('dk_pending', { n: r.pending_sectors }));
@@ -14,7 +15,7 @@ export function RecLine({ r }: { r: Recommendation }) {
   if ((r.crc_recent ?? 0) > 0) reasons.push(t('dk_crc_recent', { n: r.crc_recent!, total: r.crc_errors ?? 0 }));
   return (
     <div className="alert">
-      <div className="ico" style={{ background: `var(--${tone}-soft)`, color: `var(--${tone})` }}>{ico}</div>
+      <div className={`ico ${tone}`}><Ico size={17} /></div>
       <div className="grow" style={{ flex: 1, minWidth: 0 }}>
         <b>{t('rec_' + r.kind)}</b>
         {' · '}<span className="mono" style={{ fontWeight: 650 }}>{r.dev}</span>

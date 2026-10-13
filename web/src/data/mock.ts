@@ -565,14 +565,26 @@ export class MockProvider implements DataProvider {
     await delay(120);
     const now = Date.now() / 1000;
     const step = (days * 86400) / points;
+    const poolMatch = source.match(/^pool\.(.+)\.used_pct$/);
     const base = source.startsWith('disk.') ? 42 : 60; // temp vs used_pct
     const amp = source.startsWith('disk.') ? 4 : 15;
     const out: SeriesPoint[] = [];
     for (let i = 0; i < points; i++) {
       const ts = now - (points - i) * step;
       const wave = Math.sin(i / 9) * amp + Math.sin(i / 3) * amp * 0.2;
-      const val = Math.max(5, Math.min(100, base + wave + ((i * 7) % 5)));
+      const noise = poolMatch ? 0 : ((i * 7) % 5);
+      const val = Math.max(5, Math.min(100, base + wave + noise));
       out.push({ ts: Math.round(ts), value: Math.round(val * 10) / 10 });
+    }
+    if (poolMatch) {
+      // La serie de un pool debe terminar en su ocupación real; el generador
+      // sintético (base + onda) no lo hacía y la gráfica contradecía la barra.
+      const pool = this.pools.find((p) => p.name === poolMatch[1]);
+      if (pool && pool.total_bytes > 0) {
+        const target = (pool.used_bytes / pool.total_bytes) * 100;
+        const shift = target - out[out.length - 1].value;
+        for (const p of out) p.value = Math.max(0, Math.min(100, Math.round((p.value + shift) * 10) / 10));
+      }
     }
     return { source, points: out };
   };

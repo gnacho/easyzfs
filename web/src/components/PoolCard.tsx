@@ -6,7 +6,8 @@ import { t } from '../ui/i18n';
 import { fmtBytes, fmtBytesPair, fmtPct, fmtRatio, timeAgo } from '../ui/format';
 import { statusLabel } from '../ui/labels';
 import { Badge, InfoBubble, Switch } from './ui';
-import { Sparkline } from './Sparkline';
+import { IconCheck, IconError, IconWarn } from './icons';
+import { UsageChart } from './UsageChart';
 import { useModal } from './Modal';
 import { useEffect, useState } from 'react';
 
@@ -124,10 +125,21 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
         <span className={`led ${ledCls}`} />
         <div className="grow">
           <div className="pool-name">
-            {pool.name} <Badge tone={ok ? 'ok' : 'warn'}>{statusLabel(pool.status, t)}</Badge>
+            {pool.name} <Badge tone={ok ? 'ok' : 'warn'}>
+              <span style={{ display: 'inline-flex' }}>{ok ? <IconCheck size={12} /> : <IconWarn size={12} />}</span>
+              {statusLabel(pool.status, t)}
+            </Badge>
             {pool.checkpoint && <Badge tone="info">{t('ck_badge')}</Badge>}
           </div>
-          <div className="pool-raid">{pool.topo} <TopoHelp topo={pool.topo} /></div>
+          <div className="pool-raid">{pool.topo} <TopoHelp topo={pool.topo} />
+            <span className="pool-raid-sep">·</span>
+            <span className="pool-trim">
+              <b>{t('pool_autotrim')}</b>
+              <Switch checked={trimOverride ?? pool.autotrim} onChange={() => { void toggleAutotrim(); }}
+                disabled={!isAdmin} ariaLabel={t('pool_autotrim')} />
+              <InfoBubble title={t('pool_autotrim')}>{t('pool_autotrim_hint')}</InfoBubble>
+            </span>
+          </div>
         </div>
         <div className="pool-cap">
           <div className="big">
@@ -143,33 +155,26 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
           role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}>
           <i style={{ width: `${Math.min(100, Math.max(0, pct))}%` }} />
         </div>
-        {hist.length > 0 && (
-          <div className="sparks" aria-label={t('pool_history_series')}>
-            {hist.sort((a, b) => a.days - b.days).map((h) => (
-              <span key={h.days} className="spark" title={t('pool_history_days', { days: h.days })}>
-                <Sparkline points={h.points} width={72} height={26}
-                  ariaLabel={t('pool_history_days', { days: h.days })} />
-                <em>{h.days}d</em>
-              </span>
-            ))}
+        <div className="pool-usage">
+          <div className="pu-left">
+            {hist.length > 0 && (() => {
+              const series = hist.find((h) => h.days === 30) ?? hist[0];
+              return (<>
+                <span className="pu-title">{t('pool_history_days', { days: series.days })}</span>
+                <UsageChart points={series.points} days={series.days} width={300} height={48} />
+              </>);
+            })()}
           </div>
-        )}
-      </div>
-
-      <div className="poolmeta">
-        <span>{t('pool_comp')} <b>{fmtRatio(pool.comp_ratio)}</b></span>
-        <span>{t('pool_frag')} <b>{fmtPct(pool.frag_pct)}</b></span>
-        <span>
-          {t('pool_last_scrub')}{' '}
-          <b>{running ? t('pool_in_progress') : timeAgo(pool.scrub.ts, t)}</b>
-          {' '}· <b>{pool.scrub.errors} {t('pool_errors')}</b>
-        </span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-          <Switch checked={trimOverride ?? pool.autotrim} onChange={() => { void toggleAutotrim(); }}
-            disabled={!isAdmin} ariaLabel={t('pool_autotrim')} />
-          <b>{t('pool_autotrim')}</b>
-          <InfoBubble title={t('pool_autotrim')}>{t('pool_autotrim_hint')}</InfoBubble>
-        </span>
+          <div className="pu-data">
+            <span>{t('pool_comp')} <b>{fmtRatio(pool.comp_ratio)}</b></span>
+            <span>{t('pool_frag')} <b>{fmtPct(pool.frag_pct)}</b></span>
+            <span>
+              {t('pool_last_scrub')}{' '}
+              <b>{running ? t('pool_in_progress') : timeAgo(pool.scrub.ts, t)}</b>
+              {' '}· <b>{pool.scrub.errors} {t('pool_errors')}</b>
+            </span>
+          </div>
+        </div>
       </div>
 
       {running && (<>
@@ -221,7 +226,10 @@ export function PoolCard({ pool, onChanged }: { pool: Pool; onChanged: () => voi
           return (
           <div className={`vdev${v.status !== 'ONLINE' ? ' faulted' : ''}`} key={v.dev} style={v.replacing ? { flexWrap: 'wrap' } : undefined}>
             <span className={`led ${v.status === 'ONLINE' ? 'g' : v.status === 'OFFLINE' ? 'o' : 'r'}`} />
-            <span className={`badge ${v.status === 'ONLINE' ? 'ok' : 'err'}`} style={{ padding: '2px 7px' }}>{statusLabel(v.status, t)}</span>
+            <span className={`badge ${v.status === 'ONLINE' ? 'ok' : 'err'}`} style={{ padding: '2px 7px' }}>
+              <span style={{ display: 'inline-flex' }}>{v.status === 'ONLINE' ? <IconCheck size={11} /> : <IconError size={11} />}</span>
+              {statusLabel(v.status, t)}
+            </span>
             <span className="dname" title={v.dev}>{shortDev(v)}</span>
             {v.replacing && (
               <span className="badge info" style={{ padding: '1px 7px' }} title={t('vdev_new_hint')}>{t('vdev_new')}</span>

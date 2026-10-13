@@ -7,7 +7,7 @@ import { AppProvider, useApp, alertTargetView } from './ui/store';
 import type { ViewId } from './ui/store';
 import { ModalProvider, ModalHost, useModal } from './components/ModalHost';
 import { ToastHost } from './components/Toast';
-import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconMonitor, IconChev, IconFoldLeft, IconFoldRight, IconUser, IconList } from './components/icons';
+import { Logo, IconHome, IconPool, IconData, IconSnap, IconTask, IconDisk, IconGear, IconBell, IconMoon, IconSun, IconMonitor, IconChev, IconFoldLeft, IconFoldRight, IconUser, IconList, IconError, IconInfo, IconWarn } from './components/icons';
 import { Spinner } from './components/ui';
 import ErrorBoundary from './components/ErrorBoundary';
 import PullToRefresh from './components/PullToRefresh';
@@ -93,6 +93,7 @@ function AlertsPanel({ onClose }: { onClose: () => void }) {
       <div style={{ maxHeight: 320, overflowY: 'auto' }}>
         {pending.map((a) => {
           const tone = a.level === 'crit' ? 'err' : a.level === 'warn' ? 'warn' : 'info';
+          const Ico = a.level === 'crit' ? IconError : a.level === 'warn' ? IconWarn : IconInfo;
           const view = alertTargetView(a.target);
           const go = view ? () => { navigate(view); onClose(); } : undefined;
           return (
@@ -101,9 +102,7 @@ function AlertsPanel({ onClose }: { onClose: () => void }) {
               title={view ? t('al_goto') : undefined}
               onClick={go}
               onKeyDown={go ? (e) => { if (e.key === 'Enter') go(); } : undefined}>
-              <div className="ico" style={{ background: `var(--${tone}-soft)`, color: `var(--${tone})` }}>
-                {a.level === 'crit' ? '!' : a.level === 'warn' ? '⚠' : 'i'}
-              </div>
+              <div className={`ico ${tone}`}><Ico size={17} /></div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <b style={{ fontSize: 13 }}>{a.message}</b>
                 <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
@@ -292,8 +291,8 @@ function Shell() {
               );
             })}
           </nav>
-          {!collapsed && <SideStats />}
           <div className="sidefoot">
+            {!collapsed && <SideStats />}
             <div className="sideactions">
               <a href="#/settings" className={active === 'settings' ? 'active' : ''}
                 aria-current={active === 'settings' ? 'page' : undefined}

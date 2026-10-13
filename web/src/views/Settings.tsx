@@ -11,7 +11,7 @@ import { getProvider } from '../data';
 import { errorMessage, useApp } from '../ui/store';
 import { fmtBytes, timeAgo } from '../ui/format';
 import { Seg, Select, Spinner, Switch, Badge } from '../components/ui';
-import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconLanguages, IconSend } from '../components/icons';
+import { Logo, IconCode, IconList, IconHeart, IconShield, IconCheck, IconUpload, IconCamera, IconChev, IconData, IconUser, IconX, IconTrash, IconLock, IconBell, IconMail, IconPencil, IconLogout, IconLanguages, IconSend, IconError, IconWarn } from '../components/icons';
 import { useModal } from '../components/Modal';
 import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
@@ -133,7 +133,7 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
         <div style={{ marginTop: 6 }}>
           {plan.checks.map((c) => (
             <div key={c.id} className="d" style={{ fontSize: 12, opacity: c.status === 'pass' ? .7 : 1, color: c.status === 'fail' ? 'var(--err)' : c.status === 'warn' ? 'var(--warn)' : 'inherit' }}>
-              {c.status === 'fail' ? '✗ ' : c.status === 'warn' ? '⚠ ' : '✓ '}{c.summary}
+              {c.status === 'fail' ? <IconError size={12} /> : c.status === 'warn' ? <IconWarn size={12} /> : <IconCheck size={12} />}{' '}{c.summary}
             </div>
           ))}
         </div>

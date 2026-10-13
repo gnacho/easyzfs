@@ -61,7 +61,7 @@ function getKey(key: string): string | null {
 function migrateLegacy(): void {
   if (localStorage.getItem(THEME_KEY) !== null) return;
   const legacy = getKey(THEMODE_KEY);
-  let family: ThemeFamily = 'modern';
+  let family: ThemeFamily = 'classic';
   let mode: ThemeMode = 'system';
   if (legacy === 'light' || legacy === 'dark' || legacy === 'auto') {
     family = 'classic'; mode = legacy === 'auto' ? 'system' : legacy;
@@ -97,9 +97,9 @@ export const FAMILY_ACCENTS: Record<ThemeFamily, { default: string; options: Acc
     ],
   },
   modern: {
-    default: 'violet',
+    default: 'steel',
     options: [
-      { v: 'violet', light: ['#6d3df5', 'rgba(109,61,245,.11)'], dark: ['#7c5cfc', 'rgba(124,92,252,.15)'], labelKey: 'acc_violet' },
+      { v: 'steel', light: ACCENTS.steel.light, dark: ACCENTS.steel.dark, labelKey: 'acc_steel' },
       { v: 'emerald', light: ACCENTS.emerald.light, dark: ACCENTS.emerald.dark, labelKey: 'acc_emerald' },
       { v: 'cyan', light: ACCENTS.cyan.light, dark: ACCENTS.cyan.dark, labelKey: 'acc_cyan' },
       { v: 'amber', light: ACCENTS.amber.light, dark: ACCENTS.amber.dark, labelKey: 'acc_amber' },
@@ -124,11 +124,11 @@ export const FAMILY_ACCENTS: Record<ThemeFamily, { default: string; options: Acc
 };
 
 // ---- Tema (familia) ----
-// DEFAULT sin preferencia guardada: Modern + modo system (sigue al SO).
+// DEFAULT sin preferencia guardada: Classic + modo system (sigue al SO).
 export function getFamily(): ThemeFamily {
   migrateLegacy();
   const f = localStorage.getItem(THEME_KEY) as ThemeFamily | null;
-  return f && FAMILIES.includes(f) ? f : 'modern';
+  return f && FAMILIES.includes(f) ? f : 'classic';
 }
 
 export function getMode(): ThemeMode {

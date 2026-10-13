@@ -28,6 +28,9 @@ export const IconFoldLeft = (p: P) => base(p, <><path d="m11 17-5-5 5-5" /><path
 export const IconFoldRight = (p: P) => base(p, <><path d="m6 17 5-5-5-5" /><path d="m13 17 5-5-5-5" /></>);
 export const IconUser = (p: P) => base(p, <><circle cx="12" cy="8" r="4" /><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" /></>);
 export const IconCheck = (p: P) => base({ size: 11, strokeWidth: 3.2, ...p }, <path d="m5 12 5 5 9-10" />);
+export const IconWarn = (p: P) => base(p, <><path d="M12 3.5 21 20H3z" /><path d="M12 9.5V14" /><path d="M12 17.2h.01" /></>);
+export const IconError = (p: P) => base(p, <><circle cx="12" cy="12" r="8.5" /><path d="m9 9 6 6M15 9l-6 6" /></>);
+export const IconInfo = (p: P) => base(p, <><circle cx="12" cy="12" r="8.5" /><path d="M12 11v5" /><path d="M12 7.8h.01" /></>);
 export const IconMonitor = (p: P) => base(p, <><rect x="2" y="4" width="20" height="13" rx="2" /><path d="M8 21h8M12 17v4" /></>);
 export const IconUpload = (p: P) => base(p, <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m17 8-5-5-5 5" /><path d="M12 3v12" /></>);
 export const IconCode = (p: P) => base(p, <><path d="m16 18 6-6-6-6" /><path d="m8 6-6 6 6 6" /></>);

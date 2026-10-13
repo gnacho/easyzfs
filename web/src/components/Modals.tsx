@@ -323,7 +323,7 @@ function NewPoolModal({ onClose }: { onClose: () => void }) {
           </div>
         ))}
         <p className="desc" style={{ marginTop: 14 }}>
-          ⚠️ {t('np_warn')} {usable > 0 && <>{t('np_usable')}: <b>~{fmtBytes(usable)}</b>.</>}
+          {t('np_warn')} {usable > 0 && <>{t('np_usable')}: <b>~{fmtBytes(usable)}</b>.</>}
         </p>
         {sel.size < minDisks && <p className="form-err">{t('np_need_disks', { n: minDisks })}</p>}
         <label htmlFor="np-confirm">{t('ex_confirm_lbl_pool')}</label>
@@ -400,7 +400,7 @@ function ImportPoolModal({ preset, onClose }: { preset?: string; onClose: () => 
             ))}
           </div>
           {presetMissing && <p className="form-err" role="alert">{t('imp_not_importable', { pool: preset })}</p>}
-          <p className="desc" style={{ marginTop: 12, color: 'var(--warn)' }}>⚠️ {t('imp_warn')}</p>
+          <p className="desc" style={{ marginTop: 12, color: 'var(--warn)' }}>{t('imp_warn')}</p>
           <label htmlFor="imp-confirm">{t('ex_confirm_lbl_pool')}</label>
           <input id="imp-confirm" placeholder={sel} value={confirm}
             onChange={(e) => setConfirm(e.target.value)} autoComplete="off" />
@@ -1551,7 +1551,7 @@ function RollbackModal({ full, onClose }: { full: string; onClose: () => void })
       <form onSubmit={submit}>
         <h3>{t('rb_title')}</h3>
         <p className="desc">{t('rb_desc1')} <b className="mono">{ds}</b> {t('rb_desc2')} <b className="mono">{snap}</b>.</p>
-        <p className="desc" style={{ marginTop: 10, color: 'var(--err)' }}>⚠️ {t('rb_warn')}</p>
+        <p className="desc" style={{ marginTop: 10, color: 'var(--err)' }}>{t('rb_warn')}</p>
         <label htmlFor="rb-confirm">{t('rb_confirm_lbl')}</label>
         <input id="rb-confirm" placeholder={ds} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
         {err && <p className="form-err" role="alert">{err}</p>}
@@ -1898,7 +1898,7 @@ function NewReplModal({ onClose }: { onClose: () => void }) {
               disabled={testState === 'busy' || !host.trim() || !user.trim()}>
               {testState === 'busy' ? t('repl_testing') : t('repl_test')}
             </button>
-            {testState === 'ok' && <span style={{ fontSize: 12.5, color: 'var(--ok)' }}>✓ {t('repl_test_ok')} <b className="mono">{testMsg}</b></span>}
+            {testState === 'ok' && <span style={{ fontSize: 12.5, color: 'var(--ok)' }}>{t('repl_test_ok')} <b className="mono">{testMsg}</b></span>}
             {testState === 'fail' && <span className="form-err" style={{ margin: 0, fontSize: 12.5 }}>{testMsg}</span>}
           </div>
           {sshkey && (
