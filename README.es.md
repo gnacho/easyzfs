@@ -412,6 +412,16 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.29
+
+- **Apagado de discos de pool desde la interfaz (#113)**: todas las filas de disco tienen su botón de apagado. Para un disco que pertenece a un pool, un modal exige escribir el nombre del dispositivo para confirmar (el pool pasa a DEGRADED mientras el disco está apagado), lo que permite sustituciones en caliente sin shell.
+- **Errores CRC en el modal de detalle de disco (#112)**: los errores CRC recientes y estables se muestran como línea destacada en el detalle, en lugar de la columna de salud.
+- **Identificar fuera de la fila (#114)**: la acción de identificar vive ahora en el modal de detalle y en el diálogo de replace, donde es útil de verdad.
+- **Discos en móvil sin scroll horizontal (#117)**: las acciones se colapsan a iconos y la rejilla de información apila tamaño/temperatura en pantallas estrechas.
+- **Las operaciones largas conservan su salida (#151)**: rewrite y replicación ya no pierden las últimas líneas de salida cuando el proceso termina rápido.
+- **Demo**: las visitas se registran con GoatCounter inyectado en runtime, solo en la instancia pública de demo (#152).
+- **Seguridad**: source-map-js actualizado a 1.2.2 en /web (#149).
+
 ### v2.9.28
 
 - **Renovación visual de la interfaz (#148)**: Archivo sustituye a Space Grotesk como fuente de la UI (JetBrains Mono sigue para los datos), el panel pasa a una rejilla compacta de 12 columnas (KPIs, salud de discos y rendimiento lado a lado, pools en paralelo, alertas, temperaturas y registro de eventos en una fila) y las tarjetas de pool estrenan una gráfica de ocupación de 30 días con valor actual, delta y rango. Los badges y las alertas usan iconos de trazo con estilo de contorno, y Classic pasa a ser el tema por defecto en instalaciones nuevas (el acento por defecto de Modern ahora es acero en lugar de violeta). Las preferencias de tema existentes se conservan. Contribución de @gerard-domatix.

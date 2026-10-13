@@ -403,6 +403,16 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.29
+
+- **Power off pool disks from the UI (#113)**: every disk row has a power-off action. For a disk that belongs to a pool, a modal requires typing the device name to confirm (the pool goes DEGRADED while the disk is off), enabling hot-swap replacement without a shell.
+- **CRC errors in the disk detail modal (#112)**: recent and stable CRC errors are shown as a highlighted line in the detail modal instead of the health column.
+- **Identify out of the table row (#114)**: the identify action now lives in the disk detail modal and the replace dialog, where it is actually useful.
+- **Mobile disks without horizontal scroll (#117)**: actions collapse to icons and the info grid stacks size/temp on narrow screens.
+- **Long operations keep their output (#151)**: rewrite/replication no longer lose their last output lines when the process exits quickly.
+- **Demo**: visits are tracked with GoatCounter injected at runtime, only on the public demo instance (#152).
+- **Security**: source-map-js bumped to 1.2.2 in /web (#149).
+
 ### v2.9.28
 
 - **Web UI refresh (#148)**: Archivo replaces Space Grotesk as the UI font (JetBrains Mono stays for data), the Dashboard moves to a compact 12-column grid (KPI strip, disk health and performance side by side, pools in parallel, alerts, temperatures and event log in one row), and pool cards show a 30-day usage chart with the current value, delta and range. Status badges and alerts switch to stroke icons with an outline style, and Classic becomes the default theme for new installs (Modern's default accent is now steel instead of violet). Existing theme preferences are kept. Contribution by @gerard-domatix.
