@@ -689,6 +689,8 @@ table.data td.num{font-family:var(--font-mono);font-size:13.5px}
   background:var(--warn-soft);color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 35%,transparent);
   border-radius:12px;font-size:13px;font-weight:600;
 }
+/* punto de "modo demo": latido suave (único consumidor de pulse desde #148) */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .demobar .dot{width:8px;height:8px;border-radius:50%;background:var(--warn);animation:pulse 2s infinite;flex-shrink:0}
 
 /* banda "reconstruir RAID" dentro de la tarjeta de pool */
