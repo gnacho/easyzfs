@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	"errors"
@@ -240,7 +241,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("embed dist: %v", err)
 	}
-	mux.Handle("/", spaHandler(http.FS(webFS)))
+	mux.Handle("/", spaHandler(http.FS(webFS), gcIndexOverride(cfg.Demo, webFS)))
 
 	httpSrv := &http.Server{
 		Addr: cfg.ListenAddr,
@@ -289,8 +290,20 @@ func main() {
 // se revalidan (no-cache) para que un despliegue nuevo se vea al recargar;
 // /assets/* es inmutable (Vite les pone hash en el nombre — si el hash cambia,
 // es un fichero distinto); el resto (iconos, manifest) con caché corta.
-func spaHandler(fsys http.FileSystem) http.Handler {
+// indexOverride, si no está vacío, sustituye al index.html del FS (tracker
+// GoatCounter de la demo, gcIndexOverride).
+func spaHandler(fsys http.FileSystem, indexOverride []byte) http.Handler {
 	fileSrv := http.FileServer(fsys)
+	// serveIndex sirve el index: override de la demo si lo hay, o el del FS.
+	serveIndex := func(w http.ResponseWriter, r *http.Request) {
+		if len(indexOverride) > 0 {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write(indexOverride)
+			return
+		}
+		r.URL.Path = "/"
+		fileSrv.ServeHTTP(w, r)
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 		switch {
@@ -301,18 +314,45 @@ func spaHandler(fsys http.FileSystem) http.Handler {
 		default:
 			w.Header().Set("Cache-Control", "public, max-age=3600")
 		}
-		if path == "/" {
-			path = "/index.html"
-		}
-		f, err := fsys.Open(path)
-		if err != nil {
-			// fallback SPA: cualquier ruta no encontrada devuelve index.html
-			w.Header().Set("Cache-Control", "no-cache")
-			r.URL.Path = "/"
+		switch {
+		case path == "/" || path == "/index.html":
+			serveIndex(w, r)
+		default:
+			if _, err := fsys.Open(path); err != nil {
+				// fallback SPA: cualquier ruta no encontrada devuelve index.html
+				serveIndex(w, r)
+				return
+			}
 			fileSrv.ServeHTTP(w, r)
-			return
 		}
-		f.Close()
-		fileSrv.ServeHTTP(w, r)
 	})
+}
+
+// gcIndexOverride inyecta el tracker GoatCounter en el index.html de la SPA
+// SOLO en la demo pública (issue #103): exige DEMO=1 y GC_ORIGIN (p. ej.
+// https://stats.easyzfs.cloudless.club). Se inyecta en RUNTIME y no en build
+// para que el asset oficial de cada release lleve el tracker en la demo sin
+// builds especiales; una instalación normal no define GC_ORIGIN y sirve el
+// index intacto (nunca llama a casa). Los hits se registran con prefijo
+// /demo en el mismo site que la landing. Devuelve nil para servir el index
+// tal cual.
+func gcIndexOverride(demo bool, fsys fs.FS) []byte {
+	origin := strings.TrimRight(os.Getenv("GC_ORIGIN"), "/")
+	if !demo || origin == "" {
+		return nil
+	}
+	raw, err := fs.ReadFile(fsys, "index.html")
+	if err != nil {
+		log.Printf("gc: no pude leer index.html, sin tracker: %v", err)
+		return nil
+	}
+	snippet := `<script>window.goatcounter={path:function(p){return '/demo'+p}}</script>` +
+		`<script async data-goatcounter="` + origin + `/count" src="` + origin + `/count.js"></script>`
+	out := bytes.Replace(raw, []byte("</head>"), []byte(snippet+"</head>"), 1)
+	if len(out) == len(raw) {
+		log.Printf("gc: index.html sin </head>, tracker no inyectado")
+		return nil
+	}
+	log.Printf("gc: tracker GoatCounter activo en la demo (%s)", origin)
+	return out
 }
