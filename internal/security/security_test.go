@@ -43,3 +43,26 @@ func TestMiddlewareCabecerasSeguridad(t *testing.T) {
 		t.Errorf("X-Content-Type-Options = %q, quiero nosniff", got)
 	}
 }
+
+// TestCSPConGCOrigin (#103): el origen del tracker GoatCounter (solo demo
+// pública) se añade a script-src y connect-src; sin env, la CSP base queda
+// intacta.
+func TestCSPConGCOrigin(t *testing.T) {
+	t.Setenv("GC_ORIGIN", "https://stats.example")
+	csp := cspValue()
+	if !strings.Contains(csp, "script-src 'self' 'unsafe-inline' https://stats.example") {
+		t.Errorf("CSP sin el origen en script-src: %q", csp)
+	}
+	if !strings.Contains(csp, "connect-src 'self' https://api.github.com https://stats.example") {
+		t.Errorf("CSP sin el origen en connect-src: %q", csp)
+	}
+
+	t.Setenv("GC_ORIGIN", "")
+	csp = cspValue()
+	if strings.Contains(csp, "stats.example") {
+		t.Errorf("la CSP base no debe mencionar el origen del tracker: %q", csp)
+	}
+	if !strings.Contains(csp, "connect-src 'self' https://api.github.com") {
+		t.Errorf("CSP base rota: %q", csp)
+	}
+}
