@@ -412,6 +412,12 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.28
+
+- **Renovación visual de la interfaz (#148)**: Archivo sustituye a Space Grotesk como fuente de la UI (JetBrains Mono sigue para los datos), el panel pasa a una rejilla compacta de 12 columnas (KPIs, salud de discos y rendimiento lado a lado, pools en paralelo, alertas, temperaturas y registro de eventos en una fila) y las tarjetas de pool estrenan una gráfica de ocupación de 30 días con valor actual, delta y rango. Los badges y las alertas usan iconos de trazo con estilo de contorno, y Classic pasa a ser el tema por defecto en instalaciones nuevas (el acento por defecto de Modern ahora es acero en lugar de violeta). Las preferencias de tema existentes se conservan. Contribución de @gerard-domatix.
+- **Corregido**: el punto del banner de demo conserva su animación de latido tras la limpieza de badges (follow-up de #148).
+- **Docs**: añadida política de seguridad (SECURITY.md).
+
 ### v2.9.27
 
 - **Asistente de actualización ajustado (#144).** El asistente ya no ocupa casi toda la pantalla: unos 800x600 en escritorio con las notas haciendo scroll dentro, y la página de fondo ahora se ve claramente difuminada, no solo oscurecida.

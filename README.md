@@ -403,6 +403,12 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.28
+
+- **Web UI refresh (#148)**: Archivo replaces Space Grotesk as the UI font (JetBrains Mono stays for data), the Dashboard moves to a compact 12-column grid (KPI strip, disk health and performance side by side, pools in parallel, alerts, temperatures and event log in one row), and pool cards show a 30-day usage chart with the current value, delta and range. Status badges and alerts switch to stroke icons with an outline style, and Classic becomes the default theme for new installs (Modern's default accent is now steel instead of violet). Existing theme preferences are kept. Contribution by @gerard-domatix.
+- **Fixed**: the demo bar dot keeps its pulse animation after the badge cleanup (#148 follow-up).
+- **Docs**: security policy added (SECURITY.md).
+
 ### v2.9.27
 
 - **Update wizard resized (#144).** The wizard no longer fills the screen: about 800x600 on desktop with the release notes scrolling inside, and the page behind is now clearly blurred instead of just dimmed.
