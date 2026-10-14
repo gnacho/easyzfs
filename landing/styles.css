@@ -523,6 +523,55 @@ footer {
   .reveal { opacity: 1; transform: none; transition: none; }
 }
 
+/* ============ MOVIMIENTO DE ESTADO (issue #63) ============ */
+/* Hover/focus: 160ms (pulido de producción, discreto); pulsación: scale(0.97)
+   como feedback táctil. Solo color/transform (barato, interrumpible). La
+   ventana lightbox entra con fade + escala mínima; el cierre queda instantáneo
+   (salir es más urgente que entrar). El icono de tema solo anima al cambiarlo
+   por click del usuario (app.js), nunca en la carga inicial. */
+.btn-primary, .btn-ghost, .copybtn, .kofi, .icon-btn,
+.slider-arrow, .lightbox-close, .lightbox-arrow, .lang-select {
+  transition: background-color 160ms ease, border-color 160ms ease,
+    color 160ms ease, filter 160ms ease, transform 120ms ease;
+}
+.btn-primary:active, .btn-ghost:active, .copybtn:active,
+.kofi:active, .icon-btn:active, .slider-arrow:active,
+.lightbox-close:active, .lightbox-arrow:active {
+  transform: scale(0.97);
+}
+.featrow, table.cmp tbody tr { transition: background-color 160ms ease; }
+.nav-links a, .foot-col a { transition: color 160ms ease; }
+
+.lightbox { animation: lightbox-in 180ms ease-out; }
+.lightbox img { animation: lightbox-img-in 200ms ease-out; }
+@keyframes lightbox-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes lightbox-img-in {
+  from { opacity: 0; transform: scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+
+#themeIcon { transform-origin: center; }
+.themeicon-swap { animation: icon-swap 240ms ease; }
+@keyframes icon-swap {
+  from { opacity: 0; transform: rotate(-24deg) scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary, .btn-ghost, .copybtn, .kofi, .icon-btn,
+  .slider-arrow, .lightbox-close, .lightbox-arrow, .lang-select {
+    transition: none;
+  }
+  .btn-primary:active, .btn-ghost:active, .copybtn:active,
+  .kofi:active, .icon-btn:active, .slider-arrow:active,
+  .lightbox-close:active, .lightbox-arrow:active { transform: none; }
+  .featrow, table.cmp tbody tr, .nav-links a, .foot-col a { transition: none; }
+  .lightbox, .lightbox img, .themeicon-swap { animation: none; }
+}
+
 /* ============ RESPONSIVE ============ */
 @media (max-width: 1024px) {
   .club-inner { flex-direction: column; align-items: flex-start; gap: 1.25rem; }
