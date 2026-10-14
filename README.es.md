@@ -412,6 +412,12 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.30
+
+- **La lista de usuarios se refresca tras las mutaciones (#98)**: crear o borrar un usuario en Ajustes actualiza la lista al instante; antes se quedaba congelada hasta salir de la vista.
+- **Pull-to-refresh guardado dentro de diálogos (#64)**: hacer scroll o tirar dentro de un modal en móvil ya no recarga toda la app; el pull-to-refresh sigue funcionando en la página.
+- **Pulido de movimiento en la landing (#154)**: transiciones de hover/pulsación, lightbox animado y feedback del icono de tema en el sitio público (cosmético; no forma parte del binario).
+
 ### v2.9.29
 
 - **Apagado de discos de pool desde la interfaz (#113)**: todas las filas de disco tienen su botón de apagado. Para un disco que pertenece a un pool, un modal exige escribir el nombre del dispositivo para confirmar (el pool pasa a DEGRADED mientras el disco está apagado), lo que permite sustituciones en caliente sin shell.

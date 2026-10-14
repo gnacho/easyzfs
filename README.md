@@ -403,6 +403,12 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.30
+
+- **Users list refreshes after mutations (#98)**: creating or deleting a user in Settings updates the list immediately; it used to stay stale until you left the view.
+- **Pull-to-refresh guarded inside dialogs (#64)**: scrolling or pulling inside a modal on mobile no longer reloads the whole app; pull-to-refresh keeps working on the page.
+- **Landing motion polish (#154)**: hover/press transitions, animated lightbox entrance and theme-icon feedback on the public landing site (cosmetic; not part of the binary).
+
 ### v2.9.29
 
 - **Power off pool disks from the UI (#113)**: every disk row has a power-off action. For a disk that belongs to a pool, a modal requires typing the device name to confirm (the pool goes DEGRADED while the disk is off), enabling hot-swap replacement without a shell.
