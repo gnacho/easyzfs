@@ -1,21 +1,35 @@
 // Pull-to-refresh móvil (issue #20, patrón Keynest PR #79): al tirar hacia
 // abajo desde el top de la página recarga la app, permitiendo coger un deploy
 // nuevo sin cerrar y reabrirla. Solo actúa cuando window.scrollY <= 0 y el
-// gesto es un pull vertical con un solo dedo. CSS nativo de EasyZFS.
+// gesto es un pull vertical con un solo dedo. Con un modal o el panel de
+// alertas abierto NO actúa (#64): el scroll interno del diálogo deja
+// window.scrollY a 0 y el gesto recargaba la página entera. CSS nativo.
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { IconRefresh } from './icons';
+import { useModal } from './Modal';
 
 const THRESHOLD = 70;
 
 export default function PullToRefresh({ children }: { children: ReactNode }) {
+  const { modal } = useModal();
   const startY = useRef<number | null>(null);
   const pullRef = useRef(0);
   const [pull, setPull] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
+  // Ref sincronizado en render: los handlers del efecto ([] deps) leen el
+  // estado del modal sin re-registrar los listeners.
+  const modalOpen = useRef(false);
+  modalOpen.current = modal !== null;
 
   useEffect(() => {
     const onTouchStart = (e: TouchEvent) => {
+      // #64: ni modal abierto ni gesto nacido dentro de un diálogo (modal,
+      // panel de alertas): su scroll interno no debe armar el pull.
+      if (modalOpen.current || (e.target as Element | null)?.closest?.('[role="dialog"]')) {
+        startY.current = null;
+        return;
+      }
       if (window.scrollY <= 0 && e.touches.length === 1) {
         startY.current = e.touches[0].clientY;
       } else {

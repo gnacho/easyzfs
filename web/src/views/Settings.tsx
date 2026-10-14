@@ -973,7 +973,7 @@ function ChannelsPanel() {
 }
 
 export default function Settings() {
-  const { t, family, mode, themeEff, setFamily, setMode, isAdmin, user, refresh, reloadUser, logout, setLang, notify } = useApp();
+  const { t, family, mode, themeEff, setFamily, setMode, isAdmin, user, dataVersion, reloadUser, logout, setLang, notify } = useApp();
   const { openModal } = useModal();
   const [settings, setSettings] = useState<SettingsData | null>(null);
   const [users, setUsers] = useState<Awaited<ReturnType<ReturnType<typeof getProvider>['getUsers']>> | null>(null);
@@ -1012,8 +1012,10 @@ export default function Settings() {
     getProvider().getVersion().then((v) => alive && setVersion(v)).catch(() => {});
     if (isAdmin) getProvider().getUsers().then((u) => alive && setUsers(u)).catch(() => {});
     return () => { alive = false; };
+    // dataVersion (no refresh, que es estable): recarga settings/users cuando
+    // cualquier mutación global pide refresh() (#98: crear/borrar usuario).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdmin, refresh]);
+  }, [isAdmin, dataVersion]);
 
   // Instalación PWA: captura el evento y detecta cuando queda instalada
   useEffect(() => {
