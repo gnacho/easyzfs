@@ -74,6 +74,13 @@
     themeBtn.addEventListener('click', function () {
       const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
       applyTheme(next);
+      // Micro-animación del icono SOLO en cambio por click (#63): la carga
+      // inicial no anima. Se reinicia con un reflow si ya tuviera la clase.
+      if (!reduceMotion && themeIcon) {
+        themeIcon.classList.remove('themeicon-swap');
+        void themeIcon.getBoundingClientRect();
+        themeIcon.classList.add('themeicon-swap');
+      }
     });
   }
 
