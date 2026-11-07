@@ -3,7 +3,13 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 BUILD   ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -s -w -X main.version=$(VERSION) -X main.build=$(BUILD)
 
-.PHONY: build web go clean
+.PHONY: build web go clean preview
+
+# preview: binario de validación etiquetado como prerelease de la SIGUIENTE
+# versión (#155), para que el updater lo deje en paz durante la validación y
+# lo sustituya solo al cortar la release.
+preview:
+	$(MAKE) build VERSION=$$(scripts/preview-version.sh)
 
 build: web go
 

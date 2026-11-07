@@ -14,7 +14,10 @@ const REFRESH_MS = 30 * 60 * 1000;
 export type ReleaseState =
   | { kind: 'unknown' }
   | { kind: 'uptodate' }
-  | { kind: 'available'; version: string; url: string; notes: string };
+  | { kind: 'available'; version: string; url: string; notes: string }
+  // Build de desarrollo o preview (#155): no hay release mayor en semver, pero
+  // decir "al día" es mentira. Se señala la última release real y su enlace.
+  | { kind: 'devbuild'; version: string; url: string };
 
 // Notifica a los suscritos (ribbon / badge) que hay un resultado nuevo.
 type Listener = () => void;
@@ -46,13 +49,19 @@ export function useReleaseCheck(_currentVersion: string | undefined, enabled: bo
               url: st.releaseUrl || RELEASES_URL,
               notes: st.releaseNotes || '',
             });
+          } else if (st && st.devBuild) {
+            setState({
+              kind: 'devbuild',
+              version: (st.latest || '').replace(/^v/, ''),
+              url: st.releaseUrl || RELEASES_URL,
+            });
           } else {
             setState({ kind: 'uptodate' });
           }
         })
         .catch(() => {
           // Sin sesión/red: conserva el estado (available) o marca desconocido.
-          if (alive) setState((p) => (p.kind === 'available' ? p : { kind: 'unknown' }));
+          if (alive) setState((p) => (p.kind === 'available' || p.kind === 'devbuild' ? p : { kind: 'unknown' }));
         });
     };
     refresh();

@@ -17,7 +17,7 @@ import { AvatarCropDialog } from '../components/AvatarCropDialog';
 import { TwoFAPanel } from '../components/TwoFA';
 import { APIKeysPanel } from '../components/APIKeysPanel';
 import { usePush } from '../data/push';
-import { useReleaseCheck, refreshUpdateState } from '../ui/releasecheck';
+import { useReleaseCheck, refreshUpdateState, RELEASES_URL } from '../ui/releasecheck';
 import { FAMILY_ACCENTS, getAccent, setAccent, getDensity, setDensity, getReduceMotion, setReduceMotion, currentFamilyAccentId } from '../ui/theme';
 import type { Density, ThemeFamily, ThemeMode } from '../ui/theme';
 import type { I18nKey } from '../ui/i18n';
@@ -72,6 +72,15 @@ function ReleaseIcon({ version }: { version: string | undefined }) {
       </a>
     );
   }
+  if (rel.kind === 'devbuild') {
+    return (
+      <a href={rel.url} target="_blank" rel="noreferrer" className="relico dev"
+        title={t(rel.version ? 'ab_devbuild' : 'ab_devbuild_short', { v: rel.version })}
+        aria-label={t(rel.version ? 'ab_devbuild' : 'ab_devbuild_short', { v: rel.version })}>
+        <IconWarn size={14} />
+      </a>
+    );
+  }
   if (rel.kind === 'uptodate') {
     return (
       <span className="relico ok" title={t('ab_uptodate', { v: version ?? '' })} role="status">
@@ -90,7 +99,7 @@ function ReleaseIcon({ version }: { version: string | undefined }) {
 function UpdateCheckRow({ version }: { version: string | undefined }) {
   const { t } = useApp();
   const { openModal } = useModal();
-  const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'error'>('idle');
+  const [state, setState] = useState<'idle' | 'checking' | 'uptodate' | 'available' | 'devbuild' | 'error'>('idle');
   const [status, setStatus] = useState<UpdateStatus | null>(null);
   const [plan, setPlan] = useState<{ canApply: boolean; checks: { id: string; status: string; title: string; summary: string }[] } | null>(null);
 
@@ -102,7 +111,7 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
       const [st, plan] = await Promise.all([getProvider().checkUpdate(), getProvider().getUpdatePlan()]);
       setStatus(st);
       setPlan(plan);
-      setState(st.available ? 'available' : 'uptodate');
+      setState(st.available ? 'available' : st.devBuild ? 'devbuild' : 'uptodate');
       refreshUpdateState(); // que el ribbon global se actualice tras el check manual
     } catch {
       setState('error');
@@ -114,6 +123,11 @@ function UpdateCheckRow({ version }: { version: string | undefined }) {
       <div className="upd-line">
         <span className="upd-status">
           {state === 'available' ? t('ab_newver', { v: status?.latest ?? '' })
+            : state === 'devbuild' ? (
+              <a href={status?.releaseUrl || RELEASES_URL} target="_blank" rel="noreferrer">
+                {t(status?.latest ? 'ab_devbuild' : 'ab_devbuild_short', { v: status?.latest ?? '' })}
+              </a>
+            )
             : state === 'error' ? t('ab_upderr')
             : state === 'uptodate' ? t('ab_uptodate', { v: version ?? '' })
             : null}
