@@ -412,6 +412,13 @@ Dependencias Go (mantenidas a 2 a propósito):
 
 ## Registro de cambios
 
+### v2.9.31
+
+- **Las builds de desarrollo y preview ya no dicen estar al día (#155)**: cualquier versión prerelease (o build dev) muestra un aviso ámbar con enlace a la última release en lugar del estado verde de actualizado. Nunca se ofrece instalar una release anterior a la build actual. Nuevo target `make preview` que etiqueta los binarios preview como prerelease del siguiente parche (`2.9.31-alpha.<sha>`), para que las previews dejen de quedar por encima de todas las releases.
+- **Las notas del asistente ganan título y enlace (#158)**: la caja de notas tiene ahora título y enlace "Ver en GitHub", además de las etiquetas Actual/Disponible traducidas.
+- **Seguridad**: vite actualizado a 8.3.6 en /web, cerrando seis alertas de dependabot (#160).
+
+
 ### v2.9.30
 
 - **La lista de usuarios se refresca tras las mutaciones (#98)**: crear o borrar un usuario en Ajustes actualiza la lista al instante; antes se quedaba congelada hasta salir de la vista.

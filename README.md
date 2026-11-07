@@ -403,6 +403,13 @@ Go dependencies (kept to 2 on purpose):
 
 ## Changelog
 
+### v2.9.31
+
+- **Dev and preview builds no longer claim to be up to date (#155)**: any prerelease version (or a dev build) now shows an amber notice linking to the latest release instead of the green up-to-date state. A release older than the current build is never offered for install. New `make preview` target tags preview binaries as a prerelease of the next patch version (`2.9.31-alpha.<sha>`), so previews stop sorting above every stable release.
+- **Update wizard notes get a title and a release link (#158)**: the notes box now has a title and a "View on GitHub" link, plus localized Current/Available labels.
+- **Security**: vite bumped to 8.3.6 in /web, clearing six dependabot alerts (#160).
+
+
 ### v2.9.30
 
 - **Users list refreshes after mutations (#98)**: creating or deleting a user in Settings updates the list immediately; it used to stay stale until you left the view.
