@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 func TestIsRestartConfigured(t *testing.T) {
@@ -136,5 +138,50 @@ func TestSubscribeBroadcastProgress(t *testing.T) {
 	case st := <-ch:
 		t.Fatalf("no debería llegar tras cancel: %+v", st)
 	default:
+	}
+}
+
+// #155: una preview nunca debe presentarse como "estás al día".
+func TestIsDevBuild(t *testing.T) {
+	casos := []struct {
+		v   string
+		dev bool
+	}{
+		{"2.9.30", false},             // release limpia
+		{"2.9.31-alpha.abc123", true}, // política nueva: prerelease de la siguiente
+		{"2.9.99-maina19a014", true},  // previews viejas, por encima de toda release
+		{"2.9.99-117revive", true},
+		{"2.9.29-3-gabc123", true}, // git describe entre tags
+		{"dev", true},              // build local sin versión semver
+		{"", true},
+	}
+	for _, c := range casos {
+		if got := isDevBuild(c.v); got != c.dev {
+			t.Errorf("isDevBuild(%q) = %v, esperaba %v", c.v, got, c.dev)
+		}
+	}
+}
+
+func TestStatusMarcaDevBuild(t *testing.T) {
+	if !New("v2.9.99-maina19a014", t.TempDir(), "").Status().DevBuild {
+		t.Error("una preview 2.9.99-* debe venir marcada como devBuild")
+	}
+	if New("v2.9.30", t.TempDir(), "").Status().DevBuild {
+		t.Error("una release limpia no debe venir marcada como devBuild")
+	}
+}
+
+// #155, política de etiquetado: la preview debe quedar entre la última release
+// y la siguiente, nunca por encima de todas como hacían las viejas 2.9.99-*.
+func TestPoliticaPreviewsSemver(t *testing.T) {
+	preview := semver.MustParse("2.9.31-alpha.abc123")
+	if !preview.GreaterThan(semver.MustParse("2.9.30")) {
+		t.Error("la preview debe ser mayor que la última release para no ser pisada")
+	}
+	if !preview.LessThan(semver.MustParse("2.9.31")) {
+		t.Error("la preview debe ser menor que la siguiente release para que el updater la ofrezca")
+	}
+	if !semver.MustParse("2.9.99-maina19a014").GreaterThan(semver.MustParse("2.9.30")) {
+		t.Error("este test documenta el problema: las viejas previews quedaban por encima de todo")
 	}
 }

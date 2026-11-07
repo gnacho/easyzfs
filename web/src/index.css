@@ -318,6 +318,7 @@ aside.sidebar.collapsed .sideactions a{justify-content:center;padding:9px 0;flex
 .relico{display:inline-flex;align-items:center;gap:5px;margin-left:10px;font-size:12px;font-weight:700;vertical-align:1px}
 .relico.ok{color:var(--ok)}
 .relico.new{color:var(--accent);text-decoration:none}
+.relico.dev{color:var(--warn);text-decoration:none}
  main.main{flex:1;max-width:1600px;margin:0 auto;padding:20px 18px calc(86px + env(safe-area-inset-bottom));min-width:0}
 
 /* Pull-to-refresh móvil (issue #20): indicador que aparece al tirar hacia

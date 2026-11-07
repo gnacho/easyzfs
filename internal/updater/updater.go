@@ -62,6 +62,12 @@ type Status struct {
 	ReleaseNotes      string `json:"releaseNotes,omitempty"`
 	ReleaseURL        string `json:"releaseUrl,omitempty"`
 	RestartConfigured bool   `json:"restartConfigured"`
+	// DevBuild indica que el binario en ejecución NO es una release (prerelease
+	// semver o versión no semver, p.ej. 'dev' o un build local). Con las viejas
+	// previews '2.9.99-*' la comparación semver las deja por encima de toda
+	// release y Available queda false para siempre (#155): la UI debe decir
+	// "build de desarrollo" y señalar Latest en lugar de "estás al día".
+	DevBuild bool `json:"devBuild,omitempty"`
 }
 
 // Progress — paso actual durante un apply.
@@ -81,6 +87,7 @@ type Updater struct {
 	restartServiceUnit string
 
 	mu               sync.Mutex
+	currentDevBuild  bool   // el binario en ejecución no es una release (#155)
 	currentLatest    string // última versión detectada (cache del último Check)
 	currentNotes     string
 	currentURL       string
@@ -99,6 +106,7 @@ type Updater struct {
 func New(current, dataDir, ghToken string) *Updater {
 	return &Updater{
 		current:            stripV(current),
+		currentDevBuild:    isDevBuild(stripV(current)),
 		dataDir:            dataDir,
 		ghToken:            ghToken,
 		restartPathUnit:    restartPathUnit,
@@ -112,6 +120,21 @@ func stripV(v string) string {
 		return v[1:]
 	}
 	return v
+}
+
+// isDevBuild detecta un binario que no es una release: prerelease semver
+// ('2.9.31-alpha.abc123', las viejas previews '2.9.99-main...' o el formato de
+// 'git describe' '2.9.29-3-gabc123') o directamente una versión no semver
+// ('dev', un build local sucio). Las releases limpias ('2.9.30') devuelven false.
+func isDevBuild(v string) bool {
+	if v == "" {
+		return true
+	}
+	ver, err := semver.NewVersion(v)
+	if err != nil {
+		return true
+	}
+	return ver.Prerelease() != ""
 }
 
 // newUpdater crea una instancia de go-selfupdate con el checksum validator. Si
@@ -228,7 +251,7 @@ func (u *Updater) Status() Status {
 
 // statusLocked construye el Status sin adquirir el mutex. Llamar con mu.
 func (u *Updater) statusLocked() Status {
-	s := Status{Current: u.current, Latest: u.currentLatest, Available: u.currentAvailable, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL, RestartConfigured: u.isRestartConfigured()}
+	s := Status{Current: u.current, Latest: u.currentLatest, Available: u.currentAvailable, InProgress: u.inProgress, ReleaseNotes: u.currentNotes, ReleaseURL: u.currentURL, RestartConfigured: u.isRestartConfigured(), DevBuild: u.currentDevBuild}
 	if u.inProgress && u.progressStep != "" {
 		s.Progress = &Progress{Step: u.progressStep, Percentage: u.progressPct}
 	}
@@ -317,7 +340,7 @@ func (u *Updater) Check(ctx context.Context) (Status, error) {
 	u.currentAvailable = available
 	u.mu.Unlock()
 
-	return Status{Current: u.current, Latest: latestV, Available: available, ReleaseNotes: notes, ReleaseURL: releaseURL, RestartConfigured: u.isRestartConfigured()}, nil
+	return Status{Current: u.current, Latest: latestV, Available: available, ReleaseNotes: notes, ReleaseURL: releaseURL, RestartConfigured: u.isRestartConfigured(), DevBuild: u.currentDevBuild}, nil
 }
 
 // Start lanza el chequeo inicial y un ticker de 24 h (patrón NetPulse/Pulse):

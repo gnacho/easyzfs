@@ -94,6 +94,7 @@ export interface UpdateStatus {
   restartConfigured?: boolean;
   releaseNotes?: string; // notas del release (changelog) truncadas
   releaseUrl?: string;   // enlace a la release en GitHub
+  devBuild?: boolean;    // binario que no es una release (#155): no decir "al día"
 }
 
 // Capacidades derivadas de la versión de OpenZFS (feature-gating, lote A).
