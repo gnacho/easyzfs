@@ -220,12 +220,19 @@ export function UpdateWizard({ onClose }: UpdateWizardProps) {
         <>
           <p className="desc">{t('uz_confirm')}</p>
           <div className="uz-versions">
-            <span className="uz-ver">{status.current || ''}</span>
+            <div className="uz-ver-col">
+              <span className="uz-ver-label">{t('uz_current')}</span>
+              <span className="uz-ver">{status.current || ''}</span>
+            </div>
             <span className="uz-arrow" aria-hidden="true">→</span>
-            <span className="uz-ver uz-latest">{status.latest || ''}</span>
+            <div className="uz-ver-col">
+              <span className="uz-ver-label">{t('uz_latest')}</span>
+              <span className="uz-ver uz-latest">{status.latest || ''}</span>
+            </div>
           </div>
           {status.releaseNotes && (
             <div className="uz-notes">
+              <div className="uz-notes-title">{t('uz_notes_title')}</div>
               {cleanNoteLines(status.releaseNotes).map((line, i) => {
                 const h = line.match(/^(#{1,3})\s+(.*)$/);
                 if (h) return <div key={i} className="uz-notes-h">{h[2]}</div>;
@@ -233,6 +240,11 @@ export function UpdateWizard({ onClose }: UpdateWizardProps) {
                 if (b) return <div key={i} className="uz-notes-li">{b[1]}</div>;
                 return <div key={i} className="uz-notes-p">{line}</div>;
               })}
+              {status.releaseUrl && (
+                <a className="uz-link" href={status.releaseUrl} target="_blank" rel="noopener noreferrer">
+                  {t('uz_release_url')} ↗
+                </a>
+              )}
             </div>
           )}
           {failChecks.length > 0 && (
