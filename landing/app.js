@@ -272,3 +272,17 @@
     return 'light';
   }
 })();
+
+/* Clic en la demo: se cuenta como evento de GoatCounter (path demo-click) para
+   verlo en las estadísticas y poder filtrar solo eventos en goatdash. */
+(() => {
+  const HOST = 'demo.easyzfs.cloudless.club';
+  document.addEventListener('click', (e) => {
+    const t = e.target;
+    if (!t || typeof t.closest !== 'function') return;
+    if (!t.closest('a[href*="' + HOST + '"]')) return;
+    const gc = window.goatcounter;
+    if (!gc || typeof gc.count !== 'function') return;
+    gc.count({ path: 'demo-click', title: 'Demo click', event: true });
+  }, true);
+})();
